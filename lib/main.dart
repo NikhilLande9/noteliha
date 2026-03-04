@@ -284,14 +284,40 @@ class DeltaSyncTracker {
 }
 
 class ThemeHelper {
-  static Color getThemeColor(ColorTheme theme) => switch (theme) {
-    ColorTheme.default_ => Colors.teal.shade100,
-    ColorTheme.sunset => Colors.orange.shade200,
-    ColorTheme.orange => Colors.orange.shade300,
-    ColorTheme.forest => Colors.green.shade200,
-    ColorTheme.lavender => Colors.purple.shade200,
-    ColorTheme.rose => Colors.pink.shade200,
-  };
+  static Color getThemeColor(ColorTheme theme, {bool isDarkMode = false}) {
+    if (isDarkMode) {
+      return switch (theme) {
+        ColorTheme.default_ => Colors.teal.shade700,
+        ColorTheme.sunset => Colors.orange.shade700,
+        ColorTheme.orange => Colors.orange.shade600,
+        ColorTheme.forest => Colors.green.shade700,
+        ColorTheme.lavender => Colors.purple.shade700,
+        ColorTheme.rose => Colors.pink.shade700,
+      };
+    }
+    return switch (theme) {
+      ColorTheme.default_ => Colors.teal.shade100,
+      ColorTheme.sunset => Colors.orange.shade200,
+      ColorTheme.orange => Colors.orange.shade300,
+      ColorTheme.forest => Colors.green.shade200,
+      ColorTheme.lavender => Colors.purple.shade200,
+      ColorTheme.rose => Colors.pink.shade200,
+    };
+  }
+
+  /// Determines if text should be light or dark based on background color brightness
+  static Color getTextColorForBackground(Color backgroundColor) {
+    // Calculate perceived brightness of the background color
+    final brightness = backgroundColor.computeLuminance();
+    // If background is bright, use dark text; if dark, use light text
+    return brightness > 0.5 ? Colors.black87 : Colors.white;
+  }
+
+  /// Determines if secondary text should be light or dark
+  static Color getSecondaryTextColorForBackground(Color backgroundColor) {
+    final brightness = backgroundColor.computeLuminance();
+    return brightness > 0.5 ? Colors.black54 : Colors.white70;
+  }
 
   static String getThemeName(ColorTheme theme) => switch (theme) {
     ColorTheme.default_ => 'Default',
@@ -1014,43 +1040,6 @@ class _NoteListScreenState extends State<NoteListScreen> {
       ),
       body: Column(
         children: [
-          if (prov.syncStatusMessage != null && !prov.isSyncing)
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              color: prov.syncStatus == SyncStatus.error
-                  ? colorScheme.errorContainer
-                  : colorScheme.primaryContainer,
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Icon(
-                    prov.syncStatus == SyncStatus.error
-                        ? Icons.error_outline_rounded
-                        : Icons.check_circle_outline_rounded,
-                    size: 18,
-                    color: prov.syncStatus == SyncStatus.error
-                        ? colorScheme.onErrorContainer
-                        : colorScheme.onPrimaryContainer,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      prov.syncStatusMessage ?? '',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: prov.syncStatus == SyncStatus.error
-                            ? colorScheme.onErrorContainer
-                            : colorScheme.onPrimaryContainer,
-                      ),
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-            ),
           Expanded(
             child: notes.isEmpty
                 ? Center(
@@ -1200,7 +1189,10 @@ class _NoteCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final noteColor = ThemeHelper.getThemeColor(note.colorTheme);
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final noteColor = ThemeHelper.getThemeColor(note.colorTheme, isDarkMode: isDarkMode);
+    final textColor = ThemeHelper.getTextColorForBackground(noteColor);
+    final secondaryTextColor = ThemeHelper.getSecondaryTextColorForBackground(noteColor);
     final preview = _getPreviewText();
 
     return Material(
@@ -1219,11 +1211,11 @@ class _NoteCard extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  if (note.pinned) const Padding(padding: EdgeInsets.only(right: 6), child: Icon(Icons.push_pin_rounded, size: 14)),
+                  if (note.pinned) Padding(padding: const EdgeInsets.only(right: 6), child: Icon(Icons.push_pin_rounded, size: 14, color: textColor)),
                   Expanded(
                     child: Text(
                       note.title.isNotEmpty ? note.title : '(Untitled)',
-                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, letterSpacing: -0.2),
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, letterSpacing: -0.2, color: textColor),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -1231,7 +1223,7 @@ class _NoteCard extends StatelessWidget {
                   const SizedBox(width: 8),
                   Text(
                     DateFormat('MMM d').format(note.updatedAt),
-                    style: TextStyle(fontSize: 11, color: colorScheme.onSurface.withAlpha(120), fontWeight: FontWeight.w500),
+                    style: TextStyle(fontSize: 11, color: secondaryTextColor, fontWeight: FontWeight.w500),
                   ),
                 ],
               ),
@@ -1241,7 +1233,7 @@ class _NoteCard extends StatelessWidget {
                   preview,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 13, color: colorScheme.onSurface.withAlpha(160), height: 1.4),
+                  style: TextStyle(fontSize: 13, color: secondaryTextColor, height: 1.4),
                 ),
               ],
               const SizedBox(height: 8),
@@ -1250,17 +1242,17 @@ class _NoteCard extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: colorScheme.onSurface.withAlpha(18),
+                      color: textColor.withAlpha(30),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        ThemeHelper.getNoteTypeIcon(note.noteType),
+                        Icon(Icons.note_rounded, size: 14, color: textColor),
                         const SizedBox(width: 4),
                         Text(
                           note.noteType.name[0].toUpperCase() + note.noteType.name.substring(1),
-                          style: TextStyle(fontSize: 11, color: colorScheme.onSurface.withAlpha(160), fontWeight: FontWeight.w500),
+                          style: TextStyle(fontSize: 11, color: textColor, fontWeight: FontWeight.w500),
                         ),
                       ],
                     ),
@@ -1269,12 +1261,12 @@ class _NoteCard extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: colorScheme.onSurface.withAlpha(18),
+                      color: textColor.withAlpha(30),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
                       note.category,
-                      style: TextStyle(fontSize: 11, color: colorScheme.onSurface.withAlpha(160), fontWeight: FontWeight.w500),
+                      style: TextStyle(fontSize: 11, color: textColor, fontWeight: FontWeight.w500),
                     ),
                   ),
                 ],
@@ -1298,213 +1290,256 @@ class SettingsScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Settings'), backgroundColor: colorScheme.surface),
-      body: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      body: Column(
         children: [
-          _SectionHeader(title: 'Account'),
-          Card(
-            child: prov.user == null
-                ? ListTile(
-              leading: CircleAvatar(
-                backgroundColor: colorScheme.primaryContainer,
-                child: Icon(Icons.person_outline_rounded, color: colorScheme.onPrimaryContainer),
-              ),
-              title: const Text('Sign in with Google', style: TextStyle(fontWeight: FontWeight.w600)),
-              subtitle: const Text('Sync notes across devices'),
-              trailing: FilledButton.tonal(
-                onPressed: () => prov.signIn(),
-                child: const Text('Sign In'),
-              ),
-            )
-                : Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 28,
-                        backgroundImage: prov.user!.photoUrl != null ? NetworkImage(prov.user!.photoUrl!) : null,
-                        backgroundColor: colorScheme.primaryContainer,
-                        child: prov.user!.photoUrl == null
-                            ? Text(
-                          prov.user!.email[0].toUpperCase(),
-                          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: colorScheme.onPrimaryContainer),
-                        )
-                            : null,
+          if (prov.syncStatusMessage != null && !prov.isSyncing)
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              color: prov.syncStatus == SyncStatus.error
+                  ? colorScheme.errorContainer
+                  : colorScheme.primaryContainer,
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Icon(
+                    prov.syncStatus == SyncStatus.error
+                        ? Icons.error_outline_rounded
+                        : Icons.check_circle_outline_rounded,
+                    size: 18,
+                    color: prov.syncStatus == SyncStatus.error
+                        ? colorScheme.onErrorContainer
+                        : colorScheme.onPrimaryContainer,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      prov.syncStatusMessage ?? '',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: prov.syncStatus == SyncStatus.error
+                            ? colorScheme.onErrorContainer
+                            : colorScheme.onPrimaryContainer,
                       ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              children: [
+                _SectionHeader(title: 'Account'),
+                Card(
+                  child: prov.user == null
+                      ? ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: colorScheme.primaryContainer,
+                      child: Icon(Icons.person_outline_rounded, color: colorScheme.onPrimaryContainer),
+                    ),
+                    title: const Text('Sign in with Google', style: TextStyle(fontWeight: FontWeight.w600)),
+                    subtitle: const Text('Sync notes across devices'),
+                    trailing: FilledButton.tonal(
+                      onPressed: () => prov.signIn(),
+                      child: const Text('Sign In'),
+                    ),
+                  )
+                      : Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Row(
                           children: [
-                            Text(
-                              prov.user!.displayName ?? 'Google User',
-                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                            CircleAvatar(
+                              radius: 28,
+                              backgroundImage: prov.user!.photoUrl != null ? NetworkImage(prov.user!.photoUrl!) : null,
+                              backgroundColor: colorScheme.primaryContainer,
+                              child: prov.user!.photoUrl == null
+                                  ? Text(
+                                prov.user!.email[0].toUpperCase(),
+                                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: colorScheme.onPrimaryContainer),
+                              )
+                                  : null,
                             ),
-                            const SizedBox(height: 2),
-                            Text(
-                              prov.user!.email,
-                              style: TextStyle(fontSize: 13, color: colorScheme.onSurfaceVariant),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    prov.user!.displayName ?? 'Google User',
+                                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    prov.user!.email,
+                                    style: TextStyle(fontSize: 13, color: colorScheme.onSurfaceVariant),
+                                  ),
+                                ],
+                              ),
                             ),
                           ],
+                        ),
+                      ),
+                      const Divider(height: 1),
+                      ListTile(
+                        leading: Icon(Icons.cloud_upload_outlined, color: colorScheme.primary),
+                        title: const Text('Upload Backup'),
+                        subtitle: const Text('Push local notes to Google Drive'),
+                        onTap: () async {
+                          final confirmed = await showDialog<bool>(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              title: const Text('Upload Backup'),
+                              content: const Text('Push all local notes to Google Drive? This will overwrite notes with the same name on Drive.'),
+                              actions: [
+                                TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+                                FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Upload')),
+                              ],
+                            ),
+                          );
+                          if (confirmed == true) prov.uploadNotes();
+                        },
+                      ),
+                      ListTile(
+                        leading: Icon(Icons.cloud_download_outlined, color: colorScheme.primary),
+                        title: const Text('Restore from Drive'),
+                        subtitle: const Text('Pull notes from Google Drive'),
+                        onTap: () async {
+                          final confirmed = await showDialog<bool>(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              title: const Text('Restore from Drive'),
+                              content: const Text('Download all notes from Google Drive? Newer cloud versions will overwrite local notes.'),
+                              actions: [
+                                TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+                                FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Restore')),
+                              ],
+                            ),
+                          );
+                          if (confirmed == true) prov.downloadNotes();
+                        },
+                      ),
+                      ListTile(
+                        leading: Icon(Icons.delete_sweep_outlined, color: colorScheme.primary),
+                        title: const Text('Recycle Bin'),
+                        subtitle: const Text('View deleted notes'),
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const RecycleBinScreen()),
+                        ),
+                      ),
+                      const Divider(height: 1),
+                      ListTile(
+                        leading: Icon(Icons.logout_rounded, color: colorScheme.error),
+                        title: Text('Sign Out', style: TextStyle(color: colorScheme.error)),
+                        onTap: () async {
+                          final confirmed = await showDialog<bool>(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              title: const Text('Sign Out'),
+                              content: const Text('Your notes will remain on this device.'),
+                              actions: [
+                                TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+                                FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Sign Out')),
+                              ],
+                            ),
+                          );
+                          if (confirmed == true) prov.signOut();
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+                _SectionHeader(title: 'Appearance'),
+                Card(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SwitchListTile(
+                        secondary: Icon(
+                          settings.isDarkMode ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
+                          color: colorScheme.primary,
+                        ),
+                        title: const Text('Dark Mode', style: TextStyle(fontWeight: FontWeight.w500)),
+                        subtitle: Text(settings.isDarkMode ? 'On' : 'Off'),
+                        value: settings.isDarkMode,
+                        onChanged: (_) => settings.toggleDarkMode(),
+                      ),
+                      const Divider(height: 1, indent: 16, endIndent: 16),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
+                        child: Text(
+                          'App Color',
+                          style: TextStyle(fontWeight: FontWeight.w500, color: colorScheme.onSurface),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(12, 4, 12, 14),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: AppTheme.values.map((theme) {
+                            final isSelected = settings.appTheme == theme;
+                            final color = AppSettingsProvider.seedColor(theme);
+                            return GestureDetector(
+                              onTap: () => settings.setAppTheme(theme),
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 200),
+                                width: 52,
+                                height: 52,
+                                decoration: BoxDecoration(
+                                  color: color.withAlpha(isSelected ? 255 : 180),
+                                  shape: BoxShape.circle,
+                                  border: isSelected ? Border.all(color: colorScheme.onSurface, width: 3) : null,
+                                  boxShadow: isSelected
+                                      ? [BoxShadow(color: color.withAlpha(120), blurRadius: 10, spreadRadius: 2)]
+                                      : null,
+                                ),
+                                child: isSelected ? const Icon(Icons.check_rounded, color: Colors.white, size: 22) : null,
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+                        child: Center(
+                          child: Text(
+                            AppSettingsProvider.themeName(settings.appTheme),
+                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: colorScheme.primary),
+                          ),
                         ),
                       ),
                     ],
                   ),
                 ),
-                const Divider(height: 1),
-                ListTile(
-                  leading: Icon(Icons.cloud_upload_outlined, color: colorScheme.primary),
-                  title: const Text('Upload Backup'),
-                  subtitle: const Text('Push local notes to Google Drive'),
-                  onTap: () async {
-                    final confirmed = await showDialog<bool>(
-                      context: context,
-                      builder: (ctx) => AlertDialog(
-                        title: const Text('Upload Backup'),
-                        content: const Text('Push all local notes to Google Drive? This will overwrite notes with the same name on Drive.'),
-                        actions: [
-                          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-                          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Upload')),
-                        ],
+                const SizedBox(height: 20),
+                _SectionHeader(title: 'About'),
+                Card(
+                  child: Column(
+                    children: [
+                      ListTile(
+                        leading: Icon(Icons.info_outline_rounded, color: colorScheme.primary),
+                        title: const Text('Version'),
+                        trailing: Text('1.0.0', style: TextStyle(color: colorScheme.onSurfaceVariant)),
                       ),
-                    );
-                    if (confirmed == true) prov.uploadNotes();
-                  },
-                ),
-                ListTile(
-                  leading: Icon(Icons.cloud_download_outlined, color: colorScheme.primary),
-                  title: const Text('Restore from Drive'),
-                  subtitle: const Text('Pull notes from Google Drive'),
-                  onTap: () async {
-                    final confirmed = await showDialog<bool>(
-                      context: context,
-                      builder: (ctx) => AlertDialog(
-                        title: const Text('Restore from Drive'),
-                        content: const Text('Download all notes from Google Drive? Newer cloud versions will overwrite local notes.'),
-                        actions: [
-                          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-                          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Restore')),
-                        ],
+                      ListTile(
+                        leading: Icon(Icons.storage_rounded, color: colorScheme.primary),
+                        title: const Text('Storage'),
+                        subtitle: const Text('Offline-first with Google Drive sync'),
                       ),
-                    );
-                    if (confirmed == true) prov.downloadNotes();
-                  },
-                ),
-                ListTile(
-                  leading: Icon(Icons.delete_sweep_outlined, color: colorScheme.primary),
-                  title: const Text('Recycle Bin'),
-                  subtitle: const Text('View deleted notes'),
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const RecycleBinScreen()),
+                    ],
                   ),
                 ),
-                const Divider(height: 1),
-                ListTile(
-                  leading: Icon(Icons.logout_rounded, color: colorScheme.error),
-                  title: Text('Sign Out', style: TextStyle(color: colorScheme.error)),
-                  onTap: () async {
-                    final confirmed = await showDialog<bool>(
-                      context: context,
-                      builder: (ctx) => AlertDialog(
-                        title: const Text('Sign Out'),
-                        content: const Text('Your notes will remain on this device.'),
-                        actions: [
-                          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-                          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Sign Out')),
-                        ],
-                      ),
-                    );
-                    if (confirmed == true) prov.signOut();
-                  },
-                ),
+                const SizedBox(height: 32),
               ],
             ),
           ),
-          const SizedBox(height: 20),
-          _SectionHeader(title: 'Appearance'),
-          Card(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SwitchListTile(
-                  secondary: Icon(
-                    settings.isDarkMode ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
-                    color: colorScheme.primary,
-                  ),
-                  title: const Text('Dark Mode', style: TextStyle(fontWeight: FontWeight.w500)),
-                  subtitle: Text(settings.isDarkMode ? 'On' : 'Off'),
-                  value: settings.isDarkMode,
-                  onChanged: (_) => settings.toggleDarkMode(),
-                ),
-                const Divider(height: 1, indent: 16, endIndent: 16),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
-                  child: Text(
-                    'App Color',
-                    style: TextStyle(fontWeight: FontWeight.w500, color: colorScheme.onSurface),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 4, 12, 14),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: AppTheme.values.map((theme) {
-                      final isSelected = settings.appTheme == theme;
-                      final color = AppSettingsProvider.seedColor(theme);
-                      return GestureDetector(
-                        onTap: () => settings.setAppTheme(theme),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          width: 52,
-                          height: 52,
-                          decoration: BoxDecoration(
-                            color: color.withAlpha(isSelected ? 255 : 180),
-                            shape: BoxShape.circle,
-                            border: isSelected ? Border.all(color: colorScheme.onSurface, width: 3) : null,
-                            boxShadow: isSelected
-                                ? [BoxShadow(color: color.withAlpha(120), blurRadius: 10, spreadRadius: 2)]
-                                : null,
-                          ),
-                          child: isSelected ? const Icon(Icons.check_rounded, color: Colors.white, size: 22) : null,
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
-                  child: Center(
-                    child: Text(
-                      AppSettingsProvider.themeName(settings.appTheme),
-                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: colorScheme.primary),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-          _SectionHeader(title: 'About'),
-          Card(
-            child: Column(
-              children: [
-                ListTile(
-                  leading: Icon(Icons.info_outline_rounded, color: colorScheme.primary),
-                  title: const Text('Version'),
-                  trailing: Text('1.0.0', style: TextStyle(color: colorScheme.onSurfaceVariant)),
-                ),
-                ListTile(
-                  leading: Icon(Icons.storage_rounded, color: colorScheme.primary),
-                  title: const Text('Storage'),
-                  subtitle: const Text('Offline-first with Google Drive sync'),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 32),
         ],
       ),
     );
@@ -1631,10 +1666,11 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.note == null ? 'New Note' : 'Edit Note'),
-        backgroundColor: ThemeHelper.getThemeColor(_editingNote.colorTheme),
+        backgroundColor: ThemeHelper.getThemeColor(_editingNote.colorTheme, isDarkMode: isDarkMode),
         actions: [
           if (_isLoading) const Padding(
             padding: EdgeInsets.all(16.0),
@@ -1661,23 +1697,26 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
               ),
               const PopupMenuItem(value: 'add_image', child: Text('Add Image')),
               const PopupMenuItem(enabled: false, child: Text('Color Theme:')),
-              ...ColorTheme.values.map((theme) => PopupMenuItem(
-                value: theme,
-                child: Row(
-                  children: [
-                    Container(width: 20, height: 20, color: ThemeHelper.getThemeColor(theme), margin: const EdgeInsets.only(right: 8)),
-                    Text(ThemeHelper.getThemeName(theme)),
-                    if (theme == _editingNote.colorTheme) const Padding(padding: EdgeInsets.only(left: 8), child: Icon(Icons.check, size: 16)),
-                  ],
-                ),
-              )),
+              ...ColorTheme.values.map((theme) {
+                final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+                return PopupMenuItem(
+                  value: theme,
+                  child: Row(
+                    children: [
+                      Container(width: 20, height: 20, color: ThemeHelper.getThemeColor(theme, isDarkMode: isDarkMode), margin: const EdgeInsets.only(right: 8)),
+                      Text(ThemeHelper.getThemeName(theme)),
+                      if (theme == _editingNote.colorTheme) const Padding(padding: EdgeInsets.only(left: 8), child: Icon(Icons.check, size: 16)),
+                    ],
+                  ),
+                );
+              }),
               if (widget.note != null) const PopupMenuItem(value: 'delete', child: Text('Delete')),
             ],
           ),
         ],
       ),
       body: Container(
-        color: ThemeHelper.getThemeColor(_editingNote.colorTheme),
+        color: ThemeHelper.getThemeColor(_editingNote.colorTheme, isDarkMode: isDarkMode),
         child: Padding(
           padding: const EdgeInsets.all(12.0),
           child: Column(

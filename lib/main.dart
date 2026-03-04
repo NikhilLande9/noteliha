@@ -1163,14 +1163,14 @@ class _NoteListScreenState extends State<NoteListScreen> {
         ),
         actions: [
           if (prov.isSyncing)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 14),
               child: SizedBox(
                 width: 20,
                 height: 20,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  color: colorScheme.primary,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
                 ),
               ),
             ),
@@ -1461,10 +1461,9 @@ class _NoteCard extends StatelessWidget {
               Row(
                 children: [
                   if (note.pinned)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 6),
-                      child: Icon(Icons.push_pin_rounded, size: 14,
-                          color: colorScheme.onSurface.withAlpha(150)),
+                    const Padding(
+                      padding: EdgeInsets.only(right: 6),
+                      child: Icon(Icons.push_pin_rounded, size: 14),
                     ),
                   Expanded(
                     child: Text(
@@ -1763,7 +1762,7 @@ class SettingsScreen extends StatelessWidget {
                                 : null,
                           ),
                           child: isSelected
-                              ? Icon(Icons.check_rounded,
+                              ? const Icon(Icons.check_rounded,
                               color: Colors.white, size: 22)
                               : null,
                         ),

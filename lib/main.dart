@@ -1,11 +1,3 @@
-// noteliha - Complete Refactor with Granular Delta Sync
-// Single-file architecture with:
-// - Granular delta sync (individual {noteId}.json files on Drive)
-// - Exponential backoff (500ms → 750ms → 1.1s → 1.65s → 2.5s)
-// - High-performance search index (denormalized Hive box)
-// - Last-Write-Wins conflict resolution (timestamp-based)
-// - All model logic integrated (Checklist, Itinerary, MealPlan, Recipe)
-
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -20,29 +12,24 @@ import 'package:uuid/uuid.dart';
 import 'package:intl/intl.dart';
 import 'package:image_picker/image_picker.dart';
 
-// ==================== CONSTANTS ====================
-
 const String kNotesBox = 'notes_box_v4';
 const String kImagesBox = 'images_box_v1';
 const String kSearchIndexBox = 'search_index_box_v2';
 const String kSyncMetaBox = 'sync_meta_box_v2';
-const String kDriveFolderName = '.lihuka_notes_app';
+const String kDriveFolderName = '.liha_notes_app';
 
-// Exponential backoff configuration
 const int kInitialBackoffMs = 500;
 const double kBackoffMultiplier = 1.5;
 const int kMaxRetries = 5;
 const int kMaxBackoffMs = 30000;
 
 enum NoteType { normal, checklist, itinerary, mealPlan, recipe }
-enum ColorTheme { default_, sunset, ocean, forest, lavender, rose }
+enum ColorTheme { default_, sunset, orange, forest, lavender, rose }
 enum SyncStatus { idle, syncing, error }
 enum AppTheme { amber, teal, indigo, rose, slate }
 
-// ==================== APP SETTINGS PROVIDER ====================
-
 class AppSettingsProvider extends ChangeNotifier {
-  AppTheme _appTheme = AppTheme.amber;
+  AppTheme _appTheme = AppTheme.teal;
   bool _isDarkMode = false;
 
   AppTheme get appTheme => _appTheme;
@@ -64,14 +51,6 @@ class AppSettingsProvider extends ChangeNotifier {
     AppTheme.slate  => 'Slate',
   };
 
-  static IconData themeIcon(AppTheme theme) => switch (theme) {
-    AppTheme.amber  => Icons.wb_sunny_rounded,
-    AppTheme.teal   => Icons.waves_rounded,
-    AppTheme.indigo => Icons.nights_stay_rounded,
-    AppTheme.rose   => Icons.local_florist_rounded,
-    AppTheme.slate  => Icons.terrain_rounded,
-  };
-
   void setAppTheme(AppTheme theme) {
     _appTheme = theme;
     notifyListeners();
@@ -83,11 +62,8 @@ class AppSettingsProvider extends ChangeNotifier {
   }
 }
 
-// ==================== DATA MODELS ====================
-
 class ChecklistItem {
-  String id;
-  String text;
+  String id, text;
   bool checked;
 
   ChecklistItem({required this.id, required this.text, this.checked = false});
@@ -113,12 +89,8 @@ class ItineraryItem {
   });
 
   Map<String, dynamic> toJson() => {
-    'id': id,
-    'location': location,
-    'date': date,
-    'arrivalTime': arrivalTime,
-    'departureTime': departureTime,
-    'notes': notes,
+    'id': id, 'location': location, 'date': date,
+    'arrivalTime': arrivalTime, 'departureTime': departureTime, 'notes': notes,
   };
   factory ItineraryItem.fromJson(Map<String, dynamic> json) => ItineraryItem(
     id: json['id'] ?? const Uuid().v4(),
@@ -143,12 +115,8 @@ class MealPlanItem {
   });
 
   Map<String, dynamic> toJson() => {
-    'id': id,
-    'day': day,
-    'breakfast': breakfast,
-    'lunch': lunch,
-    'dinner': dinner,
-    'snacks': snacks,
+    'id': id, 'day': day, 'breakfast': breakfast,
+    'lunch': lunch, 'dinner': dinner, 'snacks': snacks,
   };
   factory MealPlanItem.fromJson(Map<String, dynamic> json) => MealPlanItem(
     id: json['id'] ?? const Uuid().v4(),
@@ -172,11 +140,8 @@ class RecipeData {
   });
 
   Map<String, dynamic> toJson() => {
-    'ingredients': ingredients,
-    'instructions': instructions,
-    'prepTime': prepTime,
-    'cookTime': cookTime,
-    'servings': servings,
+    'ingredients': ingredients, 'instructions': instructions,
+    'prepTime': prepTime, 'cookTime': cookTime, 'servings': servings,
   };
   factory RecipeData.fromJson(Map<String, dynamic> json) => RecipeData(
     ingredients: json['ingredients'] ?? '',
@@ -220,20 +185,14 @@ class Note {
         imageIds = imageIds ?? [];
 
   Map<String, dynamic> toJson() => {
-    'id': id,
-    'title': title,
-    'content': content,
-    'updatedAt': updatedAt.toIso8601String(),
-    'deleted': deleted,
-    'category': category,
-    'pinned': pinned,
-    'noteType': noteType.index,
-    'colorTheme': colorTheme.index,
+    'id': id, 'title': title, 'content': content,
+    'updatedAt': updatedAt.toIso8601String(), 'deleted': deleted,
+    'category': category, 'pinned': pinned,
+    'noteType': noteType.index, 'colorTheme': colorTheme.index,
     'checklistItems': checklistItems.map((i) => i.toJson()).toList(),
     'itineraryItems': itineraryItems.map((i) => i.toJson()).toList(),
     'mealPlanItems': mealPlanItems.map((i) => i.toJson()).toList(),
-    'recipeData': recipeData?.toJson(),
-    'imageIds': imageIds,
+    'recipeData': recipeData?.toJson(), 'imageIds': imageIds,
   };
 
   factory Note.fromJson(Map<String, dynamic> json) => Note(
@@ -246,18 +205,10 @@ class Note {
     pinned: json['pinned'] ?? false,
     noteType: NoteType.values[json['noteType'] ?? 0],
     colorTheme: ColorTheme.values[json['colorTheme'] ?? 0],
-    checklistItems: (json['checklistItems'] as List?)
-        ?.map((i) => ChecklistItem.fromJson(i))
-        .toList() ?? [],
-    itineraryItems: (json['itineraryItems'] as List?)
-        ?.map((i) => ItineraryItem.fromJson(i))
-        .toList() ?? [],
-    mealPlanItems: (json['mealPlanItems'] as List?)
-        ?.map((i) => MealPlanItem.fromJson(i))
-        .toList() ?? [],
-    recipeData: json['recipeData'] != null
-        ? RecipeData.fromJson(json['recipeData'])
-        : null,
+    checklistItems: (json['checklistItems'] as List?)?.map((i) => ChecklistItem.fromJson(Map<String, dynamic>.from(i as Map))).toList() ?? [],
+    itineraryItems: (json['itineraryItems'] as List?)?.map((i) => ItineraryItem.fromJson(Map<String, dynamic>.from(i as Map))).toList() ?? [],
+    mealPlanItems: (json['mealPlanItems'] as List?)?.map((i) => MealPlanItem.fromJson(Map<String, dynamic>.from(i as Map))).toList() ?? [],
+    recipeData: json['recipeData'] != null ? RecipeData.fromJson(Map<String, dynamic>.from(json['recipeData'] as Map)) : null,
     imageIds: (json['imageIds'] as List?)?.cast<String>() ?? [],
   );
 }
@@ -267,14 +218,11 @@ class NoteAdapter extends TypeAdapter<Note> {
   final typeId = 100;
 
   @override
-  Note read(BinaryReader reader) =>
-      Note.fromJson(Map<String, dynamic>.from(reader.read() as Map));
+  Note read(BinaryReader reader) => Note.fromJson(Map<String, dynamic>.from(reader.read() as Map));
 
   @override
   void write(BinaryWriter writer, Note obj) => writer.write(obj.toJson());
 }
-
-// ==================== SYNC METADATA & TRACKING ====================
 
 class SyncMetadata {
   String noteId;
@@ -300,14 +248,11 @@ class SyncMetadata {
     noteId: json['noteId'] ?? '',
     lastSyncedAt: DateTime.tryParse(json['lastSyncedAt'] ?? '') ?? DateTime.now(),
     driveFileId: json['driveFileId'],
-    cloudUpdatedAt: json['cloudUpdatedAt'] != null
-        ? DateTime.tryParse(json['cloudUpdatedAt'])
-        : null,
+    cloudUpdatedAt: json['cloudUpdatedAt'] != null ? DateTime.tryParse(json['cloudUpdatedAt']) : null,
   );
 }
 
 class DeltaSyncTracker {
-  // FIX 1: Added default unnamed constructor so DeltaSyncTracker() works
   DeltaSyncTracker();
 
   DateTime? lastFullSyncAt;
@@ -324,14 +269,9 @@ class DeltaSyncTracker {
 
   factory DeltaSyncTracker.fromJson(Map<String, dynamic> json) {
     final tracker = DeltaSyncTracker();
-    tracker.lastFullSyncAt = json['lastFullSyncAt'] != null
-        ? DateTime.tryParse(json['lastFullSyncAt'])
-        : null;
-    tracker.lastDeltaSyncAt = json['lastDeltaSyncAt'] != null
-        ? DateTime.tryParse(json['lastDeltaSyncAt'])
-        : null;
-    tracker.pendingUploads =
-    Set<String>.from((json['pendingUploads'] as List?) ?? []);
+    tracker.lastFullSyncAt = json['lastFullSyncAt'] != null ? DateTime.tryParse(json['lastFullSyncAt']) : null;
+    tracker.lastDeltaSyncAt = json['lastDeltaSyncAt'] != null ? DateTime.tryParse(json['lastDeltaSyncAt']) : null;
+    tracker.pendingUploads = Set<String>.from((json['pendingUploads'] as List?) ?? []);
     final versions = json['noteVersions'] as Map?;
     if (versions != null) {
       versions.forEach((k, v) {
@@ -343,13 +283,11 @@ class DeltaSyncTracker {
   }
 }
 
-// ==================== THEME HELPER ====================
-
 class ThemeHelper {
   static Color getThemeColor(ColorTheme theme) => switch (theme) {
-    ColorTheme.default_ => Colors.amber.shade100,
+    ColorTheme.default_ => Colors.teal.shade100,
     ColorTheme.sunset => Colors.orange.shade200,
-    ColorTheme.ocean => Colors.blue.shade200,
+    ColorTheme.orange => Colors.orange.shade300,
     ColorTheme.forest => Colors.green.shade200,
     ColorTheme.lavender => Colors.purple.shade200,
     ColorTheme.rose => Colors.pink.shade200,
@@ -358,7 +296,7 @@ class ThemeHelper {
   static String getThemeName(ColorTheme theme) => switch (theme) {
     ColorTheme.default_ => 'Default',
     ColorTheme.sunset => 'Sunset',
-    ColorTheme.ocean => 'Ocean',
+    ColorTheme.orange => 'Orange',
     ColorTheme.forest => 'Forest',
     ColorTheme.lavender => 'Lavender',
     ColorTheme.rose => 'Rose',
@@ -373,33 +311,22 @@ class ThemeHelper {
   };
 }
 
-// ==================== ENHANCED NOTES PROVIDER ====================
-
 class NotesProvider extends ChangeNotifier {
-  // Storage boxes
   Box<dynamic>? _notesBox;
   Box<String>? _imagesBox;
   Box<String>? _searchIndexBox;
   Box<dynamic>? _syncMetaBox;
 
-  // State
   GoogleSignInAccount? _currentUser;
   SyncStatus _syncStatus = SyncStatus.idle;
   String? _syncStatusMessage;
   Timer? _syncStatusTimer;
-  Timer? _autoSyncTimer;
   late GoogleSignIn _googleSignIn;
 
-  // Sync tracking
   late DeltaSyncTracker _deltaTracker;
   String? _driveFolderId;
-  final Duration _autoSyncInterval = const Duration(minutes: 5);
-
-  // Exponential backoff state
   int _currentRetryCount = 0;
-  // FIX 4 (warning): Removed unused _currentBackoffMs field
 
-  // Getters
   List<Note> get notes {
     if (_notesBox == null) return [];
     final list = _notesBox!.values.cast<Note>().where((n) => !n.deleted).toList();
@@ -410,9 +337,7 @@ class NotesProvider extends ChangeNotifier {
     return list;
   }
 
-  List<Note> get recycleBin =>
-      _notesBox?.values.cast<Note>().where((n) => n.deleted).toList() ?? [];
-
+  List<Note> get recycleBin => _notesBox?.values.cast<Note>().where((n) => n.deleted).toList() ?? [];
   GoogleSignInAccount? get user => _currentUser;
   SyncStatus get syncStatus => _syncStatus;
   String? get syncStatusMessage => _syncStatusMessage;
@@ -420,11 +345,8 @@ class NotesProvider extends ChangeNotifier {
 
   NotesProvider() {
     _googleSignIn = GoogleSignIn(scopes: [drive.DriveApi.driveFileScope]);
-    // FIX 1: DeltaSyncTracker() now works with the added default constructor
     _deltaTracker = DeltaSyncTracker();
   }
-
-  // ==================== INITIALIZATION ====================
 
   Future<void> init() async {
     try {
@@ -436,20 +358,12 @@ class NotesProvider extends ChangeNotifier {
       _loadDeltaSyncTracker();
       _rebuildSearchIndex();
 
-      // FIX 2: The listener callback receives GoogleSignInAccount? directly,
-      // not a GoogleSignIn object. Use the parameter directly as the account.
       _googleSignIn.onCurrentUserChanged.listen((GoogleSignInAccount? account) {
         _currentUser = account;
         notifyListeners();
-        if (_currentUser != null) {
-          _startAutoSync();
-        } else {
-          _stopAutoSync();
-        }
       });
 
       _currentUser = await _googleSignIn.signInSilently();
-      if (_currentUser != null) _startAutoSync();
       notifyListeners();
     } catch (e) {
       debugPrint('Init error: $e');
@@ -459,27 +373,8 @@ class NotesProvider extends ChangeNotifier {
   @override
   void dispose() {
     _syncStatusTimer?.cancel();
-    _stopAutoSync();
     super.dispose();
   }
-
-  // ==================== AUTO SYNC ====================
-
-  void _startAutoSync() {
-    _stopAutoSync();
-    _autoSyncTimer = Timer.periodic(_autoSyncInterval, (_) {
-      if (_currentUser != null && !isSyncing) {
-        syncNotes();
-      }
-    });
-  }
-
-  void _stopAutoSync() {
-    _autoSyncTimer?.cancel();
-    _autoSyncTimer = null;
-  }
-
-  // ==================== SEARCH INDEX MANAGEMENT ====================
 
   void _rebuildSearchIndex() {
     if (_notesBox == null || _searchIndexBox == null) return;
@@ -491,8 +386,7 @@ class NotesProvider extends ChangeNotifier {
 
   void _updateSearchIndex(Note note) {
     if (_searchIndexBox == null) return;
-    final searchText =
-    '${note.title} ${note.content} ${note.category}'.toLowerCase();
+    final searchText = '${note.title} ${note.content} ${note.category}'.toLowerCase();
     _searchIndexBox!.put(note.id, searchText);
   }
 
@@ -520,8 +414,6 @@ class NotesProvider extends ChangeNotifier {
 
     return results;
   }
-
-  // ==================== NOTE CRUD ====================
 
   Future<void> addNote(
       String title,
@@ -603,8 +495,6 @@ class NotesProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ==================== IMAGE MANAGEMENT ====================
-
   Future<String> saveImage(File imageFile) async {
     final bytes = await imageFile.readAsBytes();
     final imageId = const Uuid().v4();
@@ -614,19 +504,12 @@ class NotesProvider extends ChangeNotifier {
 
   String? getImage(String imageId) => _imagesBox?.get(imageId);
 
-  Future<void> deleteImage(String imageId) =>
-      _imagesBox?.delete(imageId) ?? Future.value();
-
-  // ==================== AUTH ====================
+  Future<void> deleteImage(String imageId) => _imagesBox?.delete(imageId) ?? Future.value();
 
   Future<void> signIn() async {
     try {
       _currentUser = await _googleSignIn.signIn();
       notifyListeners();
-      if (_currentUser != null) {
-        _startAutoSync();
-        await syncNotes();
-      }
     } catch (e) {
       _setStatus('Sign in failed: $e', isError: true);
     }
@@ -636,21 +519,16 @@ class NotesProvider extends ChangeNotifier {
     try {
       await _googleSignIn.disconnect();
       _currentUser = null;
-      _stopAutoSync();
       notifyListeners();
     } catch (e) {
       debugPrint('Sign out error: $e');
     }
   }
 
-  // ==================== STATUS MANAGEMENT ====================
-
   void _setStatus(String? msg, {bool isError = false}) {
     _syncStatusTimer?.cancel();
     _syncStatusMessage = msg;
-    _syncStatus = isError
-        ? SyncStatus.error
-        : (msg != null ? SyncStatus.syncing : SyncStatus.idle);
+    _syncStatus = isError ? SyncStatus.error : (msg != null ? SyncStatus.syncing : SyncStatus.idle);
     notifyListeners();
 
     if (msg != null && !isSyncing) {
@@ -662,10 +540,6 @@ class NotesProvider extends ChangeNotifier {
     }
   }
 
-  // ==================== EXPONENTIAL BACKOFF RETRY ====================
-
-  /// Retries operation with exponential backoff: 500ms → 750ms → 1.1s → 1.65s → 2.5s
-  /// Max 5 retries, capped at 30 seconds
   Future<T> _retryWithBackoff<T>(
       Future<T> Function() operation, {
         int maxRetries = kMaxRetries,
@@ -683,7 +557,6 @@ class NotesProvider extends ChangeNotifier {
           rethrow;
         }
 
-        // Calculate exponential backoff: 500ms * 1.5^(retryCount-1)
         final delayMs = (kInitialBackoffMs * pow(kBackoffMultiplier, _currentRetryCount - 1))
             .toInt()
             .clamp(kInitialBackoffMs, kMaxBackoffMs);
@@ -693,8 +566,6 @@ class NotesProvider extends ChangeNotifier {
       }
     }
   }
-
-  // ==================== DRIVE FOLDER MANAGEMENT ====================
 
   Future<String> _ensureAppFolder(drive.DriveApi driveApi) async {
     if (_driveFolderId != null) return _driveFolderId!;
@@ -739,9 +610,7 @@ class NotesProvider extends ChangeNotifier {
     }
   }
 
-  // ==================== GRANULAR DELTA SYNC ====================
-
-  Future<void> syncNotes({bool forceFull = false}) async {
+  Future<void> uploadNotes() async {
     if (_currentUser == null || _notesBox == null) {
       _setStatus('Login required', isError: true);
       return;
@@ -749,7 +618,7 @@ class NotesProvider extends ChangeNotifier {
 
     if (isSyncing) return;
 
-    _setStatus('Syncing notes...');
+    _setStatus('Uploading notes…');
     notifyListeners();
 
     try {
@@ -759,64 +628,59 @@ class NotesProvider extends ChangeNotifier {
       final driveApi = drive.DriveApi(authHeaders);
       final folderId = await _ensureAppFolder(driveApi);
 
-      // Decide between delta and full sync
-      final shouldDoDelta = !forceFull &&
-          _deltaTracker.lastDeltaSyncAt != null &&
-          DateTime.now().difference(_deltaTracker.lastDeltaSyncAt!) <
-              const Duration(hours: 1);
-
-      if (shouldDoDelta) {
-        await _performDeltaSync(driveApi, folderId);
-      } else {
-        await _performFullSync(driveApi, folderId);
+      for (final noteId in _deltaTracker.pendingUploads) {
+        final note = _notesBox!.get(noteId);
+        if (note != null) {
+          await _uploadNoteToDrive(driveApi, folderId, note);
+        }
       }
 
-      _deltaTracker.lastDeltaSyncAt = DateTime.now();
       _deltaTracker.pendingUploads.clear();
       _saveDeltaSyncTracker();
 
-      _setStatus('Sync complete');
+      _setStatus('Upload complete');
     } catch (e) {
-      _setStatus('Sync failed: $e', isError: true);
-      debugPrint('Sync error: $e');
+      _setStatus('Upload failed: $e', isError: true);
+      debugPrint('Upload error: $e');
     } finally {
       _syncStatus = SyncStatus.idle;
       notifyListeners();
     }
   }
 
-  /// Delta sync: Upload pending changes + download recent cloud changes
-  Future<void> _performDeltaSync(drive.DriveApi driveApi, String folderId) async {
-    debugPrint('Performing delta sync for ${_deltaTracker.pendingUploads.length} notes');
-
-    // Upload pending local changes
-    for (final noteId in _deltaTracker.pendingUploads) {
-      final note = _notesBox!.get(noteId);
-      if (note != null) {
-        await _uploadNoteToDrive(driveApi, folderId, note);
-      }
+  Future<void> downloadNotes() async {
+    if (_currentUser == null || _notesBox == null) {
+      _setStatus('Login required', isError: true);
+      return;
     }
 
-    // Download recently changed cloud notes
-    await _downloadChangedNotesFromDrive(driveApi, folderId);
-  }
+    if (isSyncing) return;
 
-  /// Full sync: Upload all notes + download all cloud notes
-  Future<void> _performFullSync(drive.DriveApi driveApi, String folderId) async {
-    debugPrint('Performing full sync');
+    _setStatus('Downloading notes…');
+    notifyListeners();
 
-    // Upload all local notes
-    for (final note in _notesBox!.values.cast<Note>()) {
-      await _uploadNoteToDrive(driveApi, folderId, note);
+    try {
+      final authHeaders = await _googleSignIn.authenticatedClient();
+      if (authHeaders == null) throw Exception('Authentication failed');
+
+      final driveApi = drive.DriveApi(authHeaders);
+      final folderId = await _ensureAppFolder(driveApi);
+
+      await _downloadAllNotesFromDrive(driveApi, folderId);
+
+      _deltaTracker.lastDeltaSyncAt = DateTime.now();
+      _saveDeltaSyncTracker();
+
+      _setStatus('Download complete');
+    } catch (e) {
+      _setStatus('Download failed: $e', isError: true);
+      debugPrint('Download error: $e');
+    } finally {
+      _syncStatus = SyncStatus.idle;
+      notifyListeners();
     }
-
-    // Download all cloud notes
-    await _downloadAllNotesFromDrive(driveApi, folderId);
-
-    _deltaTracker.lastFullSyncAt = DateTime.now();
   }
 
-  /// Upload individual note to Drive as {noteId}.json
   Future<void> _uploadNoteToDrive(
       drive.DriveApi driveApi,
       String folderId,
@@ -825,13 +689,8 @@ class NotesProvider extends ChangeNotifier {
     try {
       final fileName = '${note.id}.json';
       final fileContent = jsonEncode(note.toJson());
-      // FIX 3: utf8.encode returns List<int>; wrap in Stream.value correctly
-      // drive.Media expects Stream<List<int>>, so pass the bytes directly.
       final encodedBytes = utf8.encode(fileContent);
-      final media = drive.Media(
-        Stream.value(encodedBytes),
-        encodedBytes.length,
-      );
+      final media = drive.Media(Stream.value(encodedBytes), encodedBytes.length);
 
       final syncMetaJson = _syncMetaBox?.get(note.id);
       SyncMetadata? syncMeta;
@@ -841,7 +700,6 @@ class NotesProvider extends ChangeNotifier {
       }
 
       if (syncMeta?.driveFileId != null) {
-        // Update existing file with exponential backoff
         await _retryWithBackoff(
               () => driveApi.files.update(
             drive.File(),
@@ -851,10 +709,7 @@ class NotesProvider extends ChangeNotifier {
           operationName: 'Update note file: ${note.id}',
         );
       } else {
-        // Create new file with exponential backoff
-        final file = drive.File()
-          ..name = fileName
-          ..parents = [folderId];
+        final file = drive.File()..name = fileName..parents = [folderId];
 
         final created = await _retryWithBackoff(
               () => driveApi.files.create(file, uploadMedia: media),
@@ -869,7 +724,6 @@ class NotesProvider extends ChangeNotifier {
         );
       }
 
-      // Update sync metadata
       syncMeta ??= SyncMetadata(noteId: note.id, lastSyncedAt: DateTime.now());
       syncMeta.lastSyncedAt = DateTime.now();
       syncMeta.cloudUpdatedAt = note.updatedAt;
@@ -883,11 +737,7 @@ class NotesProvider extends ChangeNotifier {
     }
   }
 
-  /// Download all notes from Drive
-  Future<void> _downloadAllNotesFromDrive(
-      drive.DriveApi driveApi,
-      String folderId,
-      ) async {
+  Future<void> _downloadAllNotesFromDrive(drive.DriveApi driveApi, String folderId) async {
     try {
       final fileList = await _retryWithBackoff(
             () => driveApi.files.list(
@@ -898,10 +748,7 @@ class NotesProvider extends ChangeNotifier {
         operationName: 'List drive notes',
       );
 
-      final cloudFiles = fileList.files ?? [];
-      debugPrint('Found ${cloudFiles.length} notes on Drive');
-
-      for (final file in cloudFiles) {
+      for (final file in fileList.files ?? []) {
         if (file.name?.endsWith('.json') ?? false) {
           final noteId = file.name!.replaceAll('.json', '');
           await _downloadNoteFromDrive(driveApi, file.id!, noteId);
@@ -913,73 +760,38 @@ class NotesProvider extends ChangeNotifier {
     }
   }
 
-  /// Download only notes changed since lastDeltaSyncAt
-  Future<void> _downloadChangedNotesFromDrive(
-      drive.DriveApi driveApi,
-      String folderId,
-      ) async {
-    try {
-      final lastSync = _deltaTracker.lastDeltaSyncAt ?? DateTime(2020);
-      final rfc3339LastSync = lastSync.toUtc().toIso8601String();
-
-      final fileList = await _retryWithBackoff(
-            () => driveApi.files.list(
-          q: "'$folderId' in parents and mimeType = 'application/json' and trashed = false and modifiedTime > '$rfc3339LastSync'",
-          $fields: 'files(id, name, modifiedTime)',
-          pageSize: 1000,
-        ),
-        operationName: 'List changed drive notes',
-      );
-
-      final changedFiles = fileList.files ?? [];
-      debugPrint('Found ${changedFiles.length} changed notes on Drive');
-
-      for (final file in changedFiles) {
-        if (file.name?.endsWith('.json') ?? false) {
-          final noteId = file.name!.replaceAll('.json', '');
-          await _downloadNoteFromDrive(driveApi, file.id!, noteId);
-        }
-      }
-    } catch (e) {
-      debugPrint('Error downloading changed notes: $e');
-      rethrow;
-    }
-  }
-
-  /// Download individual note from Drive and apply LWW conflict resolution
   Future<void> _downloadNoteFromDrive(
       drive.DriveApi driveApi,
       String fileId,
       String noteId,
       ) async {
     try {
-      final media = await _retryWithBackoff(
+      final response = await _retryWithBackoff(
             () => driveApi.files.get(
           fileId,
           downloadOptions: drive.DownloadOptions.fullMedia,
-        ) as Future<drive.Media>,
+        ),
         operationName: 'Download note: $noteId',
       );
 
+      // Check if response is actually a Media object (when fullMedia is used)
+      if (response is! drive.Media) {
+        throw Exception('Expected Media response for note $noteId, got ${response.runtimeType}');
+      }
+
+      final media = response;
       final bytes = await media.stream.expand((chunk) => chunk).toList();
       final jsonStr = utf8.decode(bytes);
       final cloudNote = Note.fromJson(jsonDecode(jsonStr));
 
-      // LWW: Compare timestamps, cloud wins if newer
       final localNote = _notesBox!.get(noteId);
-      if (localNote == null ||
-          cloudNote.updatedAt.isAfter(localNote.updatedAt)) {
-        // Cloud version is newer or doesn't exist locally
-        // Validate image IDs exist locally
-        cloudNote.imageIds
-            .removeWhere((imgId) => _imagesBox!.get(imgId) == null);
-
+      if (localNote == null || cloudNote.updatedAt.isAfter(localNote.updatedAt)) {
+        cloudNote.imageIds.removeWhere((imgId) => _imagesBox!.get(imgId) == null);
         await _notesBox!.put(noteId, cloudNote);
         _updateSearchIndex(cloudNote);
+        notifyListeners();
       }
-      // else: local version is newer, keep it (will sync on next update)
 
-      // Update sync metadata
       final meta = SyncMetadata(
         noteId: noteId,
         lastSyncedAt: DateTime.now(),
@@ -987,13 +799,13 @@ class NotesProvider extends ChangeNotifier {
         cloudUpdatedAt: cloudNote.updatedAt,
       );
       await _syncMetaBox?.put(noteId, meta.toJson());
+      _deltaTracker.noteVersions[noteId] = cloudNote.updatedAt;
+      _saveDeltaSyncTracker();
     } catch (e) {
       debugPrint('Error downloading note $noteId: $e');
       rethrow;
     }
   }
-
-  // ==================== DELTA TRACKER PERSISTENCE ====================
 
   void _loadDeltaSyncTracker() {
     final trackerJson = _syncMetaBox?.get('_deltaTracker');
@@ -1001,7 +813,6 @@ class NotesProvider extends ChangeNotifier {
       _deltaTracker = DeltaSyncTracker.fromJson(
           trackerJson is Map ? Map<String, dynamic>.from(trackerJson) : {});
     } else {
-      // FIX 1: DeltaSyncTracker() now works with the added default constructor
       _deltaTracker = DeltaSyncTracker();
     }
   }
@@ -1011,8 +822,6 @@ class NotesProvider extends ChangeNotifier {
   }
 }
 
-// ==================== MAIN APP & UI ====================
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Hive.initFlutter();
@@ -1021,10 +830,7 @@ void main() async {
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(
-          create: (_) => NotesProvider()..init(),
-          lazy: false,
-        ),
+        ChangeNotifierProvider(create: (_) => NotesProvider()..init(), lazy: false),
         ChangeNotifierProvider(create: (_) => AppSettingsProvider()),
       ],
       child: const MyApp(),
@@ -1064,18 +870,6 @@ class MyApp extends StatelessWidget {
             side: BorderSide(color: Colors.grey.shade200),
           ),
         ),
-        inputDecorationTheme: InputDecorationTheme(
-          filled: true,
-          fillColor: Colors.grey.shade50,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: Colors.grey.shade300),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: Colors.grey.shade300),
-          ),
-        ),
       ),
       darkTheme: ThemeData(
         useMaterial3: true,
@@ -1105,8 +899,6 @@ class MyApp extends StatelessWidget {
     );
   }
 }
-
-// ==================== NOTE LIST SCREEN ====================
 
 class NoteListScreen extends StatefulWidget {
   const NoteListScreen({super.key});
@@ -1174,12 +966,6 @@ class _NoteListScreenState extends State<NoteListScreen> {
                 ),
               ),
             ),
-          if (prov.user != null)
-            IconButton(
-              onPressed: () => prov.syncNotes(),
-              icon: const Icon(Icons.sync_rounded),
-              tooltip: 'Sync Now',
-            ),
           IconButton(
             onPressed: () => Navigator.push(
               context,
@@ -1204,17 +990,9 @@ class _NoteListScreenState extends State<NoteListScreen> {
               decoration: InputDecoration(
                 prefixIcon: Icon(Icons.search_rounded, color: colorScheme.onSurfaceVariant),
                 hintText: 'Search notes...',
-                hintStyle: TextStyle(color: colorScheme.onSurfaceVariant),
                 filled: true,
                 fillColor: colorScheme.surfaceContainerHighest.withAlpha(80),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  borderSide: BorderSide.none,
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  borderSide: BorderSide.none,
-                ),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
                   borderSide: BorderSide(color: colorScheme.primary, width: 1.5),
@@ -1243,26 +1021,31 @@ class _NoteListScreenState extends State<NoteListScreen> {
                   ? colorScheme.errorContainer
                   : colorScheme.primaryContainer,
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Icon(
                     prov.syncStatus == SyncStatus.error
                         ? Icons.error_outline_rounded
                         : Icons.check_circle_outline_rounded,
-                    size: 16,
+                    size: 18,
                     color: prov.syncStatus == SyncStatus.error
                         ? colorScheme.onErrorContainer
                         : colorScheme.onPrimaryContainer,
                   ),
-                  const SizedBox(width: 8),
-                  Text(
-                    prov.syncStatusMessage ?? '',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: prov.syncStatus == SyncStatus.error
-                          ? colorScheme.onErrorContainer
-                          : colorScheme.onPrimaryContainer,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      prov.syncStatusMessage ?? '',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: prov.syncStatus == SyncStatus.error
+                            ? colorScheme.onErrorContainer
+                            : colorScheme.onPrimaryContainer,
+                      ),
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ],
@@ -1275,17 +1058,13 @@ class _NoteListScreenState extends State<NoteListScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(
-                    _searchQuery.isEmpty
-                        ? Icons.note_add_outlined
-                        : Icons.search_off_rounded,
+                    _searchQuery.isEmpty ? Icons.note_add_outlined : Icons.search_off_rounded,
                     size: 56,
                     color: colorScheme.onSurfaceVariant.withAlpha(100),
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    _searchQuery.isEmpty
-                        ? 'No notes yet.\nTap + to create one.'
-                        : 'No notes found.',
+                    _searchQuery.isEmpty ? 'No notes yet.\nTap + to create one.' : 'No notes found.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: colorScheme.onSurfaceVariant,
@@ -1312,10 +1091,7 @@ class _NoteListScreenState extends State<NoteListScreen> {
                       ),
                       alignment: Alignment.centerRight,
                       padding: const EdgeInsets.only(right: 20),
-                      child: Icon(
-                        Icons.delete_outline_rounded,
-                        color: colorScheme.onErrorContainer,
-                      ),
+                      child: Icon(Icons.delete_outline_rounded, color: colorScheme.onErrorContainer),
                     ),
                     direction: DismissDirection.endToStart,
                     confirmDismiss: (_) async {
@@ -1335,13 +1111,9 @@ class _NoteListScreenState extends State<NoteListScreen> {
                             ),
                           ],
                         ),
-                      ) ??
-                          false;
+                      ) ?? false;
                     },
-                    onDismissed: (_) => Provider.of<NotesProvider>(
-                      context,
-                      listen: false,
-                    ).softDelete(n.id),
+                    onDismissed: (_) => Provider.of<NotesProvider>(context, listen: false).softDelete(n.id),
                     child: _NoteCard(note: n),
                   ),
                 );
@@ -1362,9 +1134,7 @@ class _NoteListScreenState extends State<NoteListScreen> {
     final colorScheme = Theme.of(context).colorScheme;
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (context) => SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
@@ -1385,11 +1155,7 @@ class _NoteListScreenState extends State<NoteListScreen> {
               ),
               Text(
                 'Choose note type',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: colorScheme.onSurface,
-                ),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: colorScheme.onSurface),
               ),
               const SizedBox(height: 12),
               ...NoteType.values.map((type) => ListTile(
@@ -1401,16 +1167,12 @@ class _NoteListScreenState extends State<NoteListScreen> {
                   type.name[0].toUpperCase() + type.name.substring(1),
                   style: const TextStyle(fontWeight: FontWeight.w500),
                 ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 onTap: () {
                   Navigator.pop(context);
                   Navigator.push(
                     context,
-                    MaterialPageRoute(
-                      builder: (_) => NoteEditorScreen(noteType: type),
-                    ),
+                    MaterialPageRoute(builder: (_) => NoteEditorScreen(noteType: type)),
                   );
                 },
               )),
@@ -1423,16 +1185,13 @@ class _NoteListScreenState extends State<NoteListScreen> {
   }
 }
 
-// ==================== NOTE CARD WIDGET ====================
-
 class _NoteCard extends StatelessWidget {
   final Note note;
   const _NoteCard({required this.note});
 
   String _getPreviewText() => switch (note.noteType) {
     NoteType.normal => note.content,
-    NoteType.checklist =>
-    '${note.checklistItems.length} items · ${note.checklistItems.where((i) => i.checked).length} done',
+    NoteType.checklist => '${note.checklistItems.length} items · ${note.checklistItems.where((i) => i.checked).length} done',
     NoteType.itinerary => '${note.itineraryItems.length} destinations',
     NoteType.mealPlan => '${note.mealPlanItems.length} days planned',
     NoteType.recipe => note.recipeData?.ingredients ?? note.content,
@@ -1460,19 +1219,11 @@ class _NoteCard extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  if (note.pinned)
-                    const Padding(
-                      padding: EdgeInsets.only(right: 6),
-                      child: Icon(Icons.push_pin_rounded, size: 14),
-                    ),
+                  if (note.pinned) const Padding(padding: EdgeInsets.only(right: 6), child: Icon(Icons.push_pin_rounded, size: 14)),
                   Expanded(
                     child: Text(
                       note.title.isNotEmpty ? note.title : '(Untitled)',
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: -0.2,
-                      ),
+                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, letterSpacing: -0.2),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -1480,11 +1231,7 @@ class _NoteCard extends StatelessWidget {
                   const SizedBox(width: 8),
                   Text(
                     DateFormat('MMM d').format(note.updatedAt),
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: colorScheme.onSurface.withAlpha(120),
-                      fontWeight: FontWeight.w500,
-                    ),
+                    style: TextStyle(fontSize: 11, color: colorScheme.onSurface.withAlpha(120), fontWeight: FontWeight.w500),
                   ),
                 ],
               ),
@@ -1494,11 +1241,7 @@ class _NoteCard extends StatelessWidget {
                   preview,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: colorScheme.onSurface.withAlpha(160),
-                    height: 1.4,
-                  ),
+                  style: TextStyle(fontSize: 13, color: colorScheme.onSurface.withAlpha(160), height: 1.4),
                 ),
               ],
               const SizedBox(height: 8),
@@ -1516,13 +1259,8 @@ class _NoteCard extends StatelessWidget {
                         ThemeHelper.getNoteTypeIcon(note.noteType),
                         const SizedBox(width: 4),
                         Text(
-                          note.noteType.name[0].toUpperCase() +
-                              note.noteType.name.substring(1),
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: colorScheme.onSurface.withAlpha(160),
-                            fontWeight: FontWeight.w500,
-                          ),
+                          note.noteType.name[0].toUpperCase() + note.noteType.name.substring(1),
+                          style: TextStyle(fontSize: 11, color: colorScheme.onSurface.withAlpha(160), fontWeight: FontWeight.w500),
                         ),
                       ],
                     ),
@@ -1536,11 +1274,7 @@ class _NoteCard extends StatelessWidget {
                     ),
                     child: Text(
                       note.category,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: colorScheme.onSurface.withAlpha(160),
-                        fontWeight: FontWeight.w500,
-                      ),
+                      style: TextStyle(fontSize: 11, color: colorScheme.onSurface.withAlpha(160), fontWeight: FontWeight.w500),
                     ),
                   ),
                 ],
@@ -1553,8 +1287,6 @@ class _NoteCard extends StatelessWidget {
   }
 }
 
-// ==================== SETTINGS SCREEN ====================
-
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
@@ -1565,25 +1297,19 @@ class SettingsScreen extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Settings'),
-        backgroundColor: colorScheme.surface,
-      ),
+      appBar: AppBar(title: const Text('Settings'), backgroundColor: colorScheme.surface),
       body: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         children: [
-          // ── Profile Section ──────────────────────────────────
           _SectionHeader(title: 'Account'),
           Card(
             child: prov.user == null
                 ? ListTile(
               leading: CircleAvatar(
                 backgroundColor: colorScheme.primaryContainer,
-                child: Icon(Icons.person_outline_rounded,
-                    color: colorScheme.onPrimaryContainer),
+                child: Icon(Icons.person_outline_rounded, color: colorScheme.onPrimaryContainer),
               ),
-              title: const Text('Sign in with Google',
-                  style: TextStyle(fontWeight: FontWeight.w600)),
+              title: const Text('Sign in with Google', style: TextStyle(fontWeight: FontWeight.w600)),
               subtitle: const Text('Sync notes across devices'),
               trailing: FilledButton.tonal(
                 onPressed: () => prov.signIn(),
@@ -1598,18 +1324,12 @@ class SettingsScreen extends StatelessWidget {
                     children: [
                       CircleAvatar(
                         radius: 28,
-                        backgroundImage: prov.user!.photoUrl != null
-                            ? NetworkImage(prov.user!.photoUrl!)
-                            : null,
+                        backgroundImage: prov.user!.photoUrl != null ? NetworkImage(prov.user!.photoUrl!) : null,
                         backgroundColor: colorScheme.primaryContainer,
                         child: prov.user!.photoUrl == null
                             ? Text(
                           prov.user!.email[0].toUpperCase(),
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w700,
-                            color: colorScheme.onPrimaryContainer,
-                          ),
+                          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: colorScheme.onPrimaryContainer),
                         )
                             : null,
                       ),
@@ -1620,18 +1340,12 @@ class SettingsScreen extends StatelessWidget {
                           children: [
                             Text(
                               prov.user!.displayName ?? 'Google User',
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
+                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                             ),
                             const SizedBox(height: 2),
                             Text(
                               prov.user!.email,
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: colorScheme.onSurfaceVariant,
-                              ),
+                              style: TextStyle(fontSize: 13, color: colorScheme.onSurfaceVariant),
                             ),
                           ],
                         ),
@@ -1641,92 +1355,96 @@ class SettingsScreen extends StatelessWidget {
                 ),
                 const Divider(height: 1),
                 ListTile(
-                  leading: Icon(Icons.sync_rounded,
-                      color: colorScheme.primary),
-                  title: const Text('Sync Now'),
-                  subtitle: const Text('Upload & download latest changes'),
-                  onTap: () {
-                    prov.syncNotes();
-                    Navigator.pop(context);
+                  leading: Icon(Icons.cloud_upload_outlined, color: colorScheme.primary),
+                  title: const Text('Upload Backup'),
+                  subtitle: const Text('Push local notes to Google Drive'),
+                  onTap: () async {
+                    final confirmed = await showDialog<bool>(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        title: const Text('Upload Backup'),
+                        content: const Text('Push all local notes to Google Drive? This will overwrite notes with the same name on Drive.'),
+                        actions: [
+                          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+                          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Upload')),
+                        ],
+                      ),
+                    );
+                    if (confirmed == true) prov.uploadNotes();
                   },
                 ),
                 ListTile(
-                  leading: Icon(Icons.delete_sweep_outlined,
-                      color: colorScheme.primary),
+                  leading: Icon(Icons.cloud_download_outlined, color: colorScheme.primary),
+                  title: const Text('Restore from Drive'),
+                  subtitle: const Text('Pull notes from Google Drive'),
+                  onTap: () async {
+                    final confirmed = await showDialog<bool>(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        title: const Text('Restore from Drive'),
+                        content: const Text('Download all notes from Google Drive? Newer cloud versions will overwrite local notes.'),
+                        actions: [
+                          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+                          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Restore')),
+                        ],
+                      ),
+                    );
+                    if (confirmed == true) prov.downloadNotes();
+                  },
+                ),
+                ListTile(
+                  leading: Icon(Icons.delete_sweep_outlined, color: colorScheme.primary),
                   title: const Text('Recycle Bin'),
                   subtitle: const Text('View deleted notes'),
                   onTap: () => Navigator.push(
                     context,
-                    MaterialPageRoute(
-                        builder: (_) => const RecycleBinScreen()),
+                    MaterialPageRoute(builder: (_) => const RecycleBinScreen()),
                   ),
                 ),
                 const Divider(height: 1),
                 ListTile(
-                  leading: Icon(Icons.logout_rounded,
-                      color: colorScheme.error),
-                  title: Text('Sign Out',
-                      style: TextStyle(color: colorScheme.error)),
+                  leading: Icon(Icons.logout_rounded, color: colorScheme.error),
+                  title: Text('Sign Out', style: TextStyle(color: colorScheme.error)),
                   onTap: () async {
                     final confirmed = await showDialog<bool>(
                       context: context,
                       builder: (ctx) => AlertDialog(
                         title: const Text('Sign Out'),
-                        content: const Text(
-                            'Your notes will remain on this device.'),
+                        content: const Text('Your notes will remain on this device.'),
                         actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(ctx, false),
-                            child: const Text('Cancel'),
-                          ),
-                          FilledButton(
-                            onPressed: () => Navigator.pop(ctx, true),
-                            child: const Text('Sign Out'),
-                          ),
+                          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+                          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Sign Out')),
                         ],
                       ),
                     );
-                    if (confirmed == true) {
-                      prov.signOut();
-                    }
+                    if (confirmed == true) prov.signOut();
                   },
                 ),
               ],
             ),
           ),
           const SizedBox(height: 20),
-
-          // ── Appearance Section ───────────────────────────────
           _SectionHeader(title: 'Appearance'),
           Card(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Dark mode toggle
                 SwitchListTile(
                   secondary: Icon(
-                    settings.isDarkMode
-                        ? Icons.dark_mode_rounded
-                        : Icons.light_mode_rounded,
+                    settings.isDarkMode ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
                     color: colorScheme.primary,
                   ),
-                  title: const Text('Dark Mode',
-                      style: TextStyle(fontWeight: FontWeight.w500)),
+                  title: const Text('Dark Mode', style: TextStyle(fontWeight: FontWeight.w500)),
                   subtitle: Text(settings.isDarkMode ? 'On' : 'Off'),
                   value: settings.isDarkMode,
                   onChanged: (_) => settings.toggleDarkMode(),
                 ),
                 const Divider(height: 1, indent: 16, endIndent: 16),
-
-                // App color theme picker
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
                   child: Text(
                     'App Color',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w500,
-                      color: colorScheme.onSurface,
-                    ),
+                    style: TextStyle(fontWeight: FontWeight.w500, color: colorScheme.onSurface),
                   ),
                 ),
                 Padding(
@@ -1745,26 +1463,12 @@ class SettingsScreen extends StatelessWidget {
                           decoration: BoxDecoration(
                             color: color.withAlpha(isSelected ? 255 : 180),
                             shape: BoxShape.circle,
-                            border: isSelected
-                                ? Border.all(
-                              color: colorScheme.onSurface,
-                              width: 3,
-                            )
-                                : null,
+                            border: isSelected ? Border.all(color: colorScheme.onSurface, width: 3) : null,
                             boxShadow: isSelected
-                                ? [
-                              BoxShadow(
-                                color: color.withAlpha(120),
-                                blurRadius: 10,
-                                spreadRadius: 2,
-                              )
-                            ]
+                                ? [BoxShadow(color: color.withAlpha(120), blurRadius: 10, spreadRadius: 2)]
                                 : null,
                           ),
-                          child: isSelected
-                              ? const Icon(Icons.check_rounded,
-                              color: Colors.white, size: 22)
-                              : null,
+                          child: isSelected ? const Icon(Icons.check_rounded, color: Colors.white, size: 22) : null,
                         ),
                       );
                     }).toList(),
@@ -1775,11 +1479,7 @@ class SettingsScreen extends StatelessWidget {
                   child: Center(
                     child: Text(
                       AppSettingsProvider.themeName(settings.appTheme),
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: colorScheme.primary,
-                      ),
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: colorScheme.primary),
                     ),
                   ),
                 ),
@@ -1787,24 +1487,17 @@ class SettingsScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 20),
-
-          // ── About Section ────────────────────────────────────
           _SectionHeader(title: 'About'),
           Card(
             child: Column(
               children: [
                 ListTile(
-                  leading: Icon(Icons.info_outline_rounded,
-                      color: colorScheme.primary),
+                  leading: Icon(Icons.info_outline_rounded, color: colorScheme.primary),
                   title: const Text('Version'),
-                  trailing: Text(
-                    '1.0.0',
-                    style: TextStyle(color: colorScheme.onSurfaceVariant),
-                  ),
+                  trailing: Text('1.0.0', style: TextStyle(color: colorScheme.onSurfaceVariant)),
                 ),
                 ListTile(
-                  leading: Icon(Icons.storage_rounded,
-                      color: colorScheme.primary),
+                  leading: Icon(Icons.storage_rounded, color: colorScheme.primary),
                   title: const Text('Storage'),
                   subtitle: const Text('Offline-first with Google Drive sync'),
                 ),
@@ -1839,17 +1532,11 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-// ==================== NOTE EDITOR SCREEN ====================
-
 class NoteEditorScreen extends StatefulWidget {
   final Note? note;
   final NoteType noteType;
 
-  const NoteEditorScreen({
-    super.key,
-    this.note,
-    this.noteType = NoteType.normal,
-  });
+  const NoteEditorScreen({super.key, this.note, this.noteType = NoteType.normal});
 
   @override
   State<NoteEditorScreen> createState() => _NoteEditorScreenState();
@@ -1888,9 +1575,22 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
       content: '',
       updatedAt: DateTime.now(),
       noteType: widget.noteType,
+      colorTheme: _getDefaultNoteColor(),
     );
     _titleCtrl = TextEditingController(text: _editingNote.title);
     _contentCtrl = TextEditingController(text: _editingNote.content);
+  }
+
+  /// Get the default note color based on current app theme
+  ColorTheme _getDefaultNoteColor() {
+    final appTheme = Provider.of<AppSettingsProvider>(context, listen: false).appTheme;
+    return switch (appTheme) {
+      AppTheme.amber => ColorTheme.sunset,
+      AppTheme.teal => ColorTheme.default_,
+      AppTheme.indigo => ColorTheme.lavender,
+      AppTheme.rose => ColorTheme.rose,
+      AppTheme.slate => ColorTheme.forest,
+    };
   }
 
   @override
@@ -1910,10 +1610,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
         setState(() => _editingNote.imageIds.add(imageId));
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Error: $e')));
-      }
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -1924,13 +1621,11 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     _editingNote.content = _contentCtrl.text.trim();
 
     if (_editingNote.title.isEmpty && _editingNote.content.isEmpty) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Note cannot be empty')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Note cannot be empty')));
       return;
     }
 
-    Provider.of<NotesProvider>(context, listen: false)
-        .updateNote(_editingNote);
+    Provider.of<NotesProvider>(context, listen: false).updateNote(_editingNote);
     Navigator.pop(context);
   }
 
@@ -1941,74 +1636,42 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
         title: Text(widget.note == null ? 'New Note' : 'Edit Note'),
         backgroundColor: ThemeHelper.getThemeColor(_editingNote.colorTheme),
         actions: [
-          if (_isLoading)
-            const Padding(
-              padding: EdgeInsets.all(16.0),
-              child: SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-            ),
-          IconButton(
-            onPressed: _save,
-            icon: const Icon(Icons.check),
-            tooltip: 'Save',
+          if (_isLoading) const Padding(
+            padding: EdgeInsets.all(16.0),
+            child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
           ),
+          IconButton(onPressed: _save, icon: const Icon(Icons.check), tooltip: 'Save'),
           PopupMenuButton(
             onSelected: (v) {
               if (v == 'delete') _showDeleteConfirmation();
-              if (v == 'toggle_pin') {
-                setState(() => _editingNote.pinned = !_editingNote.pinned);
-              }
+              if (v == 'toggle_pin') setState(() => _editingNote.pinned = !_editingNote.pinned);
               if (v == 'add_image') _pickImage();
-              if (v is ColorTheme) {
-                setState(() => _editingNote.colorTheme = v);
-              }
+              if (v is ColorTheme) setState(() => _editingNote.colorTheme = v);
             },
             itemBuilder: (_) => [
               PopupMenuItem(
                 value: 'toggle_pin',
                 child: Row(
                   children: [
-                    Icon(_editingNote.pinned
-                        ? Icons.push_pin
-                        : Icons.push_pin_outlined),
+                    Icon(_editingNote.pinned ? Icons.push_pin : Icons.push_pin_outlined),
                     const SizedBox(width: 8),
                     Text(_editingNote.pinned ? 'Unpin' : 'Pin'),
                   ],
                 ),
               ),
-              const PopupMenuItem(
-                value: 'add_image',
-                child: Text('Add Image'),
-              ),
-              const PopupMenuItem(
-                enabled: false,
-                child: Text('Color Theme:'),
-              ),
-              ...ColorTheme.values
-                  .map((theme) => PopupMenuItem(
+              const PopupMenuItem(value: 'add_image', child: Text('Add Image')),
+              const PopupMenuItem(enabled: false, child: Text('Color Theme:')),
+              ...ColorTheme.values.map((theme) => PopupMenuItem(
                 value: theme,
                 child: Row(
                   children: [
-                    Container(
-                      width: 20,
-                      height: 20,
-                      color: ThemeHelper.getThemeColor(theme),
-                      margin: const EdgeInsets.only(right: 8),
-                    ),
+                    Container(width: 20, height: 20, color: ThemeHelper.getThemeColor(theme), margin: const EdgeInsets.only(right: 8)),
                     Text(ThemeHelper.getThemeName(theme)),
-                    if (theme == _editingNote.colorTheme)
-                      const Padding(
-                        padding: EdgeInsets.only(left: 8),
-                        child: Icon(Icons.check, size: 16),
-                      ),
+                    if (theme == _editingNote.colorTheme) const Padding(padding: EdgeInsets.only(left: 8), child: Icon(Icons.check, size: 16)),
                   ],
                 ),
               )),
-              if (widget.note != null)
-                const PopupMenuItem(value: 'delete', child: Text('Delete')),
+              if (widget.note != null) const PopupMenuItem(value: 'delete', child: Text('Delete')),
             ],
           ),
         ],
@@ -2021,14 +1684,8 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
             children: [
               TextField(
                 controller: _titleCtrl,
-                decoration: const InputDecoration(
-                  hintText: 'Title',
-                  border: InputBorder.none,
-                ),
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                ),
+                decoration: const InputDecoration(hintText: 'Title', border: InputBorder.none),
+                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
               ),
               Row(
                 children: [
@@ -2039,16 +1696,12 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                     items: ['General', 'Work', 'Personal', 'Ideas']
                         .map((c) => DropdownMenuItem(value: c, child: Text(c)))
                         .toList(),
-                    onChanged: (v) =>
-                        setState(() => _editingNote.category = v!),
+                    onChanged: (v) => setState(() => _editingNote.category = v!),
                   ),
                   const Spacer(),
                   IconButton(
-                    icon: Icon(_editingNote.pinned
-                        ? Icons.push_pin
-                        : Icons.push_pin_outlined),
-                    onPressed: () => setState(
-                            () => _editingNote.pinned = !_editingNote.pinned),
+                    icon: Icon(_editingNote.pinned ? Icons.push_pin : Icons.push_pin_outlined),
+                    onPressed: () => setState(() => _editingNote.pinned = !_editingNote.pinned),
                   ),
                 ],
               ),
@@ -2069,23 +1722,14 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                         children: [
                           Padding(
                             padding: const EdgeInsets.all(4.0),
-                            child: Image.memory(
-                              base64Decode(base64Image),
-                              width: 100,
-                              height: 100,
-                              fit: BoxFit.cover,
-                            ),
+                            child: Image.memory(base64Decode(base64Image), width: 100, height: 100, fit: BoxFit.cover),
                           ),
                           Positioned(
                             top: 0,
                             right: 0,
                             child: IconButton(
                               icon: const Icon(Icons.close, color: Colors.red),
-                              onPressed: () {
-                                setState(() {
-                                  _editingNote.imageIds.removeAt(index);
-                                });
-                              },
+                              onPressed: () => setState(() => _editingNote.imageIds.removeAt(index)),
                             ),
                           ),
                         ],
@@ -2109,14 +1753,10 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
         title: const Text('Delete Note'),
         content: const Text('Move to recycle bin?'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
           TextButton(
             onPressed: () {
-              Provider.of<NotesProvider>(context, listen: false)
-                  .softDelete(_editingNote.id);
+              Provider.of<NotesProvider>(context, listen: false).softDelete(_editingNote.id);
               Navigator.pop(context);
               Navigator.pop(context);
             },
@@ -2139,129 +1779,108 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     controller: _contentCtrl,
     maxLines: null,
     expands: true,
-    decoration: const InputDecoration(
-      border: InputBorder.none,
-      hintText: 'Start typing...',
+    decoration: const InputDecoration(border: InputBorder.none, hintText: 'Start typing...'),
+  );
+
+  Widget _buildChecklist() => SafeArea(
+    bottom: true,
+    child: Column(
+      children: [
+        Expanded(
+          child: ListView.builder(
+            itemCount: _editingNote.checklistItems.length,
+            itemBuilder: (context, index) {
+              final item = _editingNote.checklistItems[index];
+              return _ChecklistItemTile(
+                item: item,
+                onChanged: (checked) => setState(() => item.checked = checked),
+                onDelete: () => setState(() => _editingNote.checklistItems.removeAt(index)),
+                onTextChanged: (text) => setState(() => item.text = text),
+              );
+            },
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12.0, 12.0, 12.0, 24.0),
+          child: ElevatedButton.icon(
+            onPressed: () {
+              setState(() => _editingNote.checklistItems.add(ChecklistItem(id: const Uuid().v4(), text: '')));
+            },
+            icon: const Icon(Icons.add),
+            label: const Text('Add Item'),
+          ),
+        ),
+      ],
     ),
   );
 
-  Widget _buildChecklist() => Column(
-    children: [
-      Expanded(
-        child: ListView.builder(
-          itemCount: _editingNote.checklistItems.length,
-          itemBuilder: (context, index) {
-            final item = _editingNote.checklistItems[index];
-            return _ChecklistItemTile(
-              item: item,
-              onChanged: (checked) {
-                setState(() => item.checked = checked);
-              },
-              onDelete: () {
-                setState(() =>
-                    _editingNote.checklistItems.removeAt(index));
-              },
-              onTextChanged: (text) {
-                setState(() => item.text = text);
-              },
-            );
-          },
+  Widget _buildItinerary() => SafeArea(
+    bottom: true,
+    child: Column(
+      children: [
+        Expanded(
+          child: ListView.builder(
+            itemCount: _editingNote.itineraryItems.length,
+            itemBuilder: (context, index) {
+              final item = _editingNote.itineraryItems[index];
+              return _ItineraryItemCard(
+                item: item,
+                onDelete: () => setState(() => _editingNote.itineraryItems.removeAt(index)),
+                onChanged: () => setState(() {}),
+              );
+            },
+          ),
         ),
-      ),
-      Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: ElevatedButton.icon(
-          onPressed: () {
-            setState(() {
-              _editingNote.checklistItems
-                  .add(ChecklistItem(id: const Uuid().v4(), text: ''));
-            });
-          },
-          icon: const Icon(Icons.add),
-          label: const Text('Add Item'),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12.0, 12.0, 12.0, 24.0),
+          child: ElevatedButton.icon(
+            onPressed: () {
+              setState(() => _editingNote.itineraryItems.add(ItineraryItem(id: const Uuid().v4())));
+            },
+            icon: const Icon(Icons.add),
+            label: const Text('Add Destination'),
+          ),
         ),
-      ),
-    ],
+      ],
+    ),
   );
 
-  Widget _buildItinerary() => Column(
-    children: [
-      Expanded(
-        child: ListView.builder(
-          itemCount: _editingNote.itineraryItems.length,
-          itemBuilder: (context, index) {
-            final item = _editingNote.itineraryItems[index];
-            return _ItineraryItemCard(
-              item: item,
-              onDelete: () {
-                setState(() =>
-                    _editingNote.itineraryItems.removeAt(index));
-              },
-              onChanged: () => setState(() {}),
-            );
-          },
+  Widget _buildMealPlan() => SafeArea(
+    bottom: true,
+    child: Column(
+      children: [
+        Expanded(
+          child: ListView.builder(
+            itemCount: _editingNote.mealPlanItems.length,
+            itemBuilder: (context, index) {
+              final item = _editingNote.mealPlanItems[index];
+              return _MealPlanItemCard(
+                item: item,
+                onDelete: () => setState(() => _editingNote.mealPlanItems.removeAt(index)),
+                onChanged: () => setState(() {}),
+              );
+            },
+          ),
         ),
-      ),
-      Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: ElevatedButton.icon(
-          onPressed: () {
-            setState(() {
-              _editingNote.itineraryItems
-                  .add(ItineraryItem(id: const Uuid().v4()));
-            });
-          },
-          icon: const Icon(Icons.add),
-          label: const Text('Add Destination'),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12.0, 12.0, 12.0, 24.0),
+          child: ElevatedButton.icon(
+            onPressed: () {
+              setState(() => _editingNote.mealPlanItems.add(MealPlanItem(id: const Uuid().v4())));
+            },
+            icon: const Icon(Icons.add),
+            label: const Text('Add Day'),
+          ),
         ),
-      ),
-    ],
-  );
-
-  Widget _buildMealPlan() => Column(
-    children: [
-      Expanded(
-        child: ListView.builder(
-          itemCount: _editingNote.mealPlanItems.length,
-          itemBuilder: (context, index) {
-            final item = _editingNote.mealPlanItems[index];
-            return _MealPlanItemCard(
-              item: item,
-              onDelete: () {
-                setState(() =>
-                    _editingNote.mealPlanItems.removeAt(index));
-              },
-              onChanged: () => setState(() {}),
-            );
-          },
-        ),
-      ),
-      Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: ElevatedButton.icon(
-          onPressed: () {
-            setState(() {
-              _editingNote.mealPlanItems
-                  .add(MealPlanItem(id: const Uuid().v4()));
-            });
-          },
-          icon: const Icon(Icons.add),
-          label: const Text('Add Day'),
-        ),
-      ),
-    ],
+      ],
+    ),
   );
 
   Widget _buildRecipe() {
     _editingNote.recipeData ??= RecipeData();
-    return _RecipeCard(
-      data: _editingNote.recipeData!,
-      onChanged: () => setState(() {}),
-    );
+    return _RecipeCard(data: _editingNote.recipeData!, onChanged: () => setState(() {}));
   }
 }
-
-// ==================== ITEM WIDGETS ====================
 
 class _ChecklistItemTile extends StatefulWidget {
   final ChecklistItem item;
@@ -2299,31 +1918,19 @@ class _ChecklistItemTileState extends State<_ChecklistItemTile> {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Checkbox(
-          value: widget.item.checked,
-          onChanged: (v) => widget.onChanged(v ?? false),
-        ),
+        Checkbox(value: widget.item.checked, onChanged: (v) => widget.onChanged(v ?? false)),
         Expanded(
           child: TextField(
             controller: _controller,
-            decoration: InputDecoration(
-              border: InputBorder.none,
-              hintText: 'Enter item...',
-              hintStyle: TextStyle(color: Colors.grey.shade400),
-            ),
+            decoration: InputDecoration(border: InputBorder.none, hintText: 'Enter item...'),
             style: TextStyle(
-              decoration: widget.item.checked
-                  ? TextDecoration.lineThrough
-                  : TextDecoration.none,
+              decoration: widget.item.checked ? TextDecoration.lineThrough : TextDecoration.none,
               color: widget.item.checked ? Colors.grey : Colors.black,
             ),
             onChanged: widget.onTextChanged,
           ),
         ),
-        IconButton(
-          icon: const Icon(Icons.delete_outline),
-          onPressed: widget.onDelete,
-        ),
+        IconButton(icon: const Icon(Icons.delete_outline), onPressed: widget.onDelete),
       ],
     );
   }
@@ -2334,22 +1941,14 @@ class _ItineraryItemCard extends StatefulWidget {
   final VoidCallback onDelete;
   final VoidCallback onChanged;
 
-  const _ItineraryItemCard({
-    required this.item,
-    required this.onDelete,
-    required this.onChanged,
-  });
+  const _ItineraryItemCard({required this.item, required this.onDelete, required this.onChanged});
 
   @override
   State<_ItineraryItemCard> createState() => _ItineraryItemCardState();
 }
 
 class _ItineraryItemCardState extends State<_ItineraryItemCard> {
-  late TextEditingController _locationCtrl;
-  late TextEditingController _dateCtrl;
-  late TextEditingController _arrivalCtrl;
-  late TextEditingController _departureCtrl;
-  late TextEditingController _notesCtrl;
+  late TextEditingController _locationCtrl, _dateCtrl, _arrivalCtrl, _departureCtrl, _notesCtrl;
 
   @override
   void initState() {
@@ -2385,29 +1984,20 @@ class _ItineraryItemCardState extends State<_ItineraryItemCard> {
                 Expanded(
                   child: TextField(
                     controller: _locationCtrl,
-                    decoration: const InputDecoration(
-                      labelText: 'Location',
-                      border: OutlineInputBorder(),
-                    ),
+                    decoration: const InputDecoration(labelText: 'Location', border: OutlineInputBorder()),
                     onChanged: (v) {
                       widget.item.location = v;
                       widget.onChanged();
                     },
                   ),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.delete),
-                  onPressed: widget.onDelete,
-                ),
+                IconButton(icon: const Icon(Icons.delete), onPressed: widget.onDelete),
               ],
             ),
             const SizedBox(height: 8),
             TextField(
               controller: _dateCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Date',
-                border: OutlineInputBorder(),
-              ),
+              decoration: const InputDecoration(labelText: 'Date', border: OutlineInputBorder()),
               onChanged: (v) {
                 widget.item.date = v;
                 widget.onChanged();
@@ -2419,10 +2009,7 @@ class _ItineraryItemCardState extends State<_ItineraryItemCard> {
                 Expanded(
                   child: TextField(
                     controller: _arrivalCtrl,
-                    decoration: const InputDecoration(
-                      labelText: 'Arrival',
-                      border: OutlineInputBorder(),
-                    ),
+                    decoration: const InputDecoration(labelText: 'Arrival', border: OutlineInputBorder()),
                     onChanged: (v) {
                       widget.item.arrivalTime = v;
                       widget.onChanged();
@@ -2433,10 +2020,7 @@ class _ItineraryItemCardState extends State<_ItineraryItemCard> {
                 Expanded(
                   child: TextField(
                     controller: _departureCtrl,
-                    decoration: const InputDecoration(
-                      labelText: 'Departure',
-                      border: OutlineInputBorder(),
-                    ),
+                    decoration: const InputDecoration(labelText: 'Departure', border: OutlineInputBorder()),
                     onChanged: (v) {
                       widget.item.departureTime = v;
                       widget.onChanged();
@@ -2448,10 +2032,7 @@ class _ItineraryItemCardState extends State<_ItineraryItemCard> {
             const SizedBox(height: 8),
             TextField(
               controller: _notesCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Notes',
-                border: OutlineInputBorder(),
-              ),
+              decoration: const InputDecoration(labelText: 'Notes', border: OutlineInputBorder()),
               maxLines: 2,
               onChanged: (v) {
                 widget.item.notes = v;
@@ -2470,22 +2051,14 @@ class _MealPlanItemCard extends StatefulWidget {
   final VoidCallback onDelete;
   final VoidCallback onChanged;
 
-  const _MealPlanItemCard({
-    required this.item,
-    required this.onDelete,
-    required this.onChanged,
-  });
+  const _MealPlanItemCard({required this.item, required this.onDelete, required this.onChanged});
 
   @override
   State<_MealPlanItemCard> createState() => _MealPlanItemCardState();
 }
 
 class _MealPlanItemCardState extends State<_MealPlanItemCard> {
-  late TextEditingController _dayCtrl;
-  late TextEditingController _breakfastCtrl;
-  late TextEditingController _lunchCtrl;
-  late TextEditingController _dinnerCtrl;
-  late TextEditingController _snacksCtrl;
+  late TextEditingController _dayCtrl, _breakfastCtrl, _lunchCtrl, _dinnerCtrl, _snacksCtrl;
 
   @override
   void initState() {
@@ -2520,29 +2093,20 @@ class _MealPlanItemCardState extends State<_MealPlanItemCard> {
                 Expanded(
                   child: TextField(
                     controller: _dayCtrl,
-                    decoration: const InputDecoration(
-                      labelText: 'Day',
-                      border: OutlineInputBorder(),
-                    ),
+                    decoration: const InputDecoration(labelText: 'Day', border: OutlineInputBorder()),
                     onChanged: (v) {
                       widget.item.day = v;
                       widget.onChanged();
                     },
                   ),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.delete),
-                  onPressed: widget.onDelete,
-                ),
+                IconButton(icon: const Icon(Icons.delete), onPressed: widget.onDelete),
               ],
             ),
             const SizedBox(height: 8),
             TextField(
               controller: _breakfastCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Breakfast',
-                border: OutlineInputBorder(),
-              ),
+              decoration: const InputDecoration(labelText: 'Breakfast', border: OutlineInputBorder()),
               onChanged: (v) {
                 widget.item.breakfast = v;
                 widget.onChanged();
@@ -2551,10 +2115,7 @@ class _MealPlanItemCardState extends State<_MealPlanItemCard> {
             const SizedBox(height: 8),
             TextField(
               controller: _lunchCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Lunch',
-                border: OutlineInputBorder(),
-              ),
+              decoration: const InputDecoration(labelText: 'Lunch', border: OutlineInputBorder()),
               onChanged: (v) {
                 widget.item.lunch = v;
                 widget.onChanged();
@@ -2563,10 +2124,7 @@ class _MealPlanItemCardState extends State<_MealPlanItemCard> {
             const SizedBox(height: 8),
             TextField(
               controller: _dinnerCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Dinner',
-                border: OutlineInputBorder(),
-              ),
+              decoration: const InputDecoration(labelText: 'Dinner', border: OutlineInputBorder()),
               onChanged: (v) {
                 widget.item.dinner = v;
                 widget.onChanged();
@@ -2575,10 +2133,7 @@ class _MealPlanItemCardState extends State<_MealPlanItemCard> {
             const SizedBox(height: 8),
             TextField(
               controller: _snacksCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Snacks',
-                border: OutlineInputBorder(),
-              ),
+              decoration: const InputDecoration(labelText: 'Snacks', border: OutlineInputBorder()),
               onChanged: (v) {
                 widget.item.snacks = v;
                 widget.onChanged();
@@ -2595,21 +2150,14 @@ class _RecipeCard extends StatefulWidget {
   final RecipeData data;
   final VoidCallback onChanged;
 
-  const _RecipeCard({
-    required this.data,
-    required this.onChanged,
-  });
+  const _RecipeCard({required this.data, required this.onChanged});
 
   @override
   State<_RecipeCard> createState() => _RecipeCardState();
 }
 
 class _RecipeCardState extends State<_RecipeCard> {
-  late TextEditingController _prepTimeCtrl;
-  late TextEditingController _cookTimeCtrl;
-  late TextEditingController _servingsCtrl;
-  late TextEditingController _ingredientsCtrl;
-  late TextEditingController _instructionsCtrl;
+  late TextEditingController _prepTimeCtrl, _cookTimeCtrl, _servingsCtrl, _ingredientsCtrl, _instructionsCtrl;
 
   @override
   void initState() {
@@ -2633,92 +2181,77 @@ class _RecipeCardState extends State<_RecipeCard> {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _prepTimeCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Prep Time',
-                    border: OutlineInputBorder(),
+    return SafeArea(
+      bottom: true,
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _prepTimeCtrl,
+                    decoration: const InputDecoration(labelText: 'Prep Time', border: OutlineInputBorder()),
+                    onChanged: (v) {
+                      widget.data.prepTime = v;
+                      widget.onChanged();
+                    },
                   ),
-                  onChanged: (v) {
-                    widget.data.prepTime = v;
-                    widget.onChanged();
-                  },
                 ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: TextField(
-                  controller: _cookTimeCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Cook Time',
-                    border: OutlineInputBorder(),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextField(
+                    controller: _cookTimeCtrl,
+                    decoration: const InputDecoration(labelText: 'Cook Time', border: OutlineInputBorder()),
+                    onChanged: (v) {
+                      widget.data.cookTime = v;
+                      widget.onChanged();
+                    },
                   ),
-                  onChanged: (v) {
-                    widget.data.cookTime = v;
-                    widget.onChanged();
-                  },
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _servingsCtrl,
-            decoration: const InputDecoration(
-              labelText: 'Servings',
-              border: OutlineInputBorder(),
+              ],
             ),
-            onChanged: (v) {
-              widget.data.servings = v;
-              widget.onChanged();
-            },
-          ),
-          const SizedBox(height: 16),
-          const Text('Ingredients',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _ingredientsCtrl,
-            decoration: const InputDecoration(
-              border: OutlineInputBorder(),
-              hintText: 'List ingredients...',
+            const SizedBox(height: 8),
+            TextField(
+              controller: _servingsCtrl,
+              decoration: const InputDecoration(labelText: 'Servings', border: OutlineInputBorder()),
+              onChanged: (v) {
+                widget.data.servings = v;
+                widget.onChanged();
+              },
             ),
-            maxLines: 8,
-            onChanged: (v) {
-              widget.data.ingredients = v;
-              widget.onChanged();
-            },
-          ),
-          const SizedBox(height: 16),
-          const Text('Instructions',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _instructionsCtrl,
-            decoration: const InputDecoration(
-              border: OutlineInputBorder(),
-              hintText: 'Step-by-step instructions...',
+            const SizedBox(height: 16),
+            const Text('Ingredients', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _ingredientsCtrl,
+              decoration: const InputDecoration(border: OutlineInputBorder(), hintText: 'List ingredients...'),
+              maxLines: 6,
+              onChanged: (v) {
+                widget.data.ingredients = v;
+                widget.onChanged();
+              },
             ),
-            maxLines: 10,
-            onChanged: (v) {
-              widget.data.instructions = v;
-              widget.onChanged();
-            },
-          ),
-        ],
+            const SizedBox(height: 16),
+            const Text('Instructions', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _instructionsCtrl,
+              decoration: const InputDecoration(border: OutlineInputBorder(), hintText: 'Step-by-step instructions...'),
+              maxLines: 8,
+              onChanged: (v) {
+                widget.data.instructions = v;
+                widget.onChanged();
+              },
+            ),
+            const SizedBox(height: 24),
+          ],
+        ),
       ),
     );
   }
 }
-
-// ==================== RECYCLE BIN SCREEN ====================
 
 class RecycleBinScreen extends StatelessWidget {
   const RecycleBinScreen({super.key});
@@ -2739,17 +2272,10 @@ class RecycleBinScreen extends StatelessWidget {
                   context: context,
                   builder: (context) => AlertDialog(
                     title: const Text('Empty Recycle Bin'),
-                    content: const Text(
-                        'Permanently delete all notes? This cannot be undone.'),
+                    content: const Text('Permanently delete all notes? This cannot be undone.'),
                     actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context, false),
-                        child: const Text('Cancel'),
-                      ),
-                      TextButton(
-                        onPressed: () => Navigator.pop(context, true),
-                        child: const Text('Delete All'),
-                      ),
+                      TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+                      TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Delete All')),
                     ],
                   ),
                 );
@@ -2771,17 +2297,10 @@ class RecycleBinScreen extends StatelessWidget {
         itemBuilder: (c, i) {
           final n = items[i];
           return Card(
-            margin: const EdgeInsets.symmetric(
-              horizontal: 10,
-              vertical: 6,
-            ),
+            margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             child: ListTile(
               title: Text(n.title.isNotEmpty ? n.title : '(Untitled)'),
-              subtitle: Text(
-                n.content,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
+              subtitle: Text(n.content, maxLines: 2, overflow: TextOverflow.ellipsis),
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -2791,32 +2310,20 @@ class RecycleBinScreen extends StatelessWidget {
                     tooltip: 'Restore',
                   ),
                   IconButton(
-                    icon: const Icon(Icons.delete_forever,
-                        color: Colors.red),
+                    icon: const Icon(Icons.delete_forever, color: Colors.red),
                     onPressed: () async {
                       final confirmed = await showDialog<bool>(
                         context: context,
                         builder: (context) => AlertDialog(
                           title: const Text('Permanently Delete'),
-                          content: const Text(
-                              'Are you sure? This cannot be undone.'),
+                          content: const Text('Are you sure? This cannot be undone.'),
                           actions: [
-                            TextButton(
-                              onPressed: () =>
-                                  Navigator.pop(context, false),
-                              child: const Text('Cancel'),
-                            ),
-                            TextButton(
-                              onPressed: () =>
-                                  Navigator.pop(context, true),
-                              child: const Text('Delete'),
-                            ),
+                            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+                            TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Delete')),
                           ],
                         ),
                       );
-                      if (confirmed == true) {
-                        prov.hardDelete(n.id);
-                      }
+                      if (confirmed == true) prov.hardDelete(n.id);
                     },
                     tooltip: 'Delete Permanently',
                   ),

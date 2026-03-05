@@ -1,276 +1,738 @@
-# Privacy Policy for noteliha
-
-**Last Updated:** March 2026
-**Version:** 1.0
-
-Developer: **Nikhil Lande**
-Organization: **Navkon Labs**
-Location: **Kharghar, Maharashtra, India**
-
----
-
-# 1. Introduction
-
-noteliha ("we", "our", or "the app") is a note-taking application developed and operated by **Nikhil Lande under Navkon Labs**.
-
-This Privacy Policy explains how information is handled when you use the noteliha mobile application.
-
-noteliha is designed with a **privacy-first architecture**. Most information remains stored **locally on your device**, and optional backups are stored only on **your personal Google Drive account**.
-
-By using the application, you agree to the practices described in this Privacy Policy.
-
----
-
-# 2. Information We Collect
-
-noteliha collects **minimal information necessary for the app to function**.
-
-## 2.1 Google Account Information
-
-If you choose to enable Google Drive backup, the app may access limited information from your Google account through Google Sign-In.
-
-This may include:
-
-• Google account email address
-• Google display name
-• Google account identifier
-
-This information is used **only to authenticate your Google account and enable backup to your Google Drive**.
-
-The application does **not store or share your Google credentials**.
-
----
-
-## 2.2 Notes and User Content
-
-The app stores the content that you create inside the application, including:
-
-• Note titles
-• Note text content
-• Checklists
-• Recipes
-• Meal plans
-• Itineraries
-• Categories
-• Pin status
-• Creation and modification timestamps
-
-This data is stored **locally on your device**.
-
----
-
-## 2.3 Images
-
-If you attach images to notes:
-
-• Images are stored locally on your device
-• Images are not analyzed by the developer
-• Images are not uploaded to external servers
-• Images are not included in Google Drive backups unless you manually include them
-
----
-
-# 3. Where Your Data Is Stored
-
-## 3.1 Local Device Storage
-
-Most data is stored locally on your device using a local database.
-
-Examples:
-
-• Notes
-• Categories
-• Preferences
-• Images attached to notes
-
-Data remains on your device until you delete it.
-
----
-
-## 3.2 Google Drive Backup (Optional)
-
-If you enable synchronization, the app stores backup files in **your personal Google Drive account**.
-
-Key details:
-
-• Each note is stored as an individual JSON file
-• Files are stored in a folder named `.noteliha`
-• Only your Google account can access these files
-• The app uses the **Google Drive `drive.file` permission**
-
-This permission allows the app to:
-
-• Create files it manages
-• Read files created by the app
-• Update files created by the app
-• Delete files created by the app
-
-This permission **does not allow the app to access other files in your Google Drive**.
-
----
-
-# 4. How Your Data Is Used
-
-Data within the app is used only to provide application functionality.
-
-This includes:
-
-• Creating and storing notes
-• Organizing notes and categories
-• Searching notes
-• Synchronizing notes with Google Drive when enabled
-• Restoring notes from backups
-
-The developer does **not sell, rent, or share user data**.
-
----
-
-# 5. Data Retention
-
-## Local Storage
-
-Your data remains on your device until you delete it.
-
-Deleting notes moves them to a recycle bin where they can be restored or permanently removed.
-
-Permanent deletion removes the data from the device.
-
----
-
-## Google Drive Backup
-
-Backup files remain in your Google Drive until you delete them.
-
-To remove backups:
-
-1. Open Google Drive
-2. Locate the `.noteliha` folder
-3. Delete the folder
-
-Signing out of the app does **not automatically delete backups**.
-
----
-
-# 6. Security
-
-Reasonable security practices are used to protect user data.
-
-Security measures include:
-
-• Local device storage protection
-• Secure communication with Google APIs using HTTPS
-• Google authentication for cloud backup access
-
-However, no method of electronic storage or internet transmission is completely secure.
-
----
-
-# 7. Third-Party Services
-
-The app relies on the following third-party services:
-
-### Google
-
-Google services are used for:
-
-• Google Sign-In authentication
-• Google Drive storage for backups
-
-Google processes data according to its own policies.
-
-Google Privacy Policy:
-https://policies.google.com/privacy
-
----
-
-# 8. Children's Privacy
-
-noteliha is not specifically directed toward children under the age of 13.
-
-The developer does not knowingly collect personal data from children under 13.
-
-If you believe a child has provided personal information, please contact:
-
-[navkon9@gmail.com](mailto:navkon9@gmail.com)
-
----
-
-# 9. Your Data Rights
-
-Depending on your location, you may have certain rights regarding your data.
-
-These may include:
-
-• Accessing your personal data
-• Requesting correction of data
-• Requesting deletion of data
-• Requesting a copy of stored data
-
-Since most data is stored locally on your device or your Google Drive account, you can directly delete your data using the app or through Google Drive.
-
----
-
-# 10. Data Deletion Instructions
-
-## Delete Notes
-
-1. Open the app
-2. Delete a note
-3. Empty the recycle bin to permanently remove it
-
----
-
-## Delete Google Drive Backup
-
-1. Open Google Drive
-2. Locate the `.noteliha` folder
-3. Delete the folder
-4. Empty Google Drive trash
-
----
-
-## Delete All Data
-
-To completely remove all data:
-
-1. Delete all notes inside the app
-2. Delete the `.noteliha` folder from Google Drive
-3. Uninstall the application
-
----
-
-# 11. Changes to This Policy
-
-This Privacy Policy may be updated from time to time.
-
-Any changes will be posted in the updated Privacy Policy with a revised **Last Updated** date.
-
----
-
-# 12. Contact
-
-For questions about this Privacy Policy, contact:
-
-Email
-[navkon9@gmail.com](mailto:navkon9@gmail.com)
-
-Developer
-Nikhil Lande
-
-Organization
-Navkon Labs
-
-Location
-Kharghar, Maharashtra, India
-
----
-
-# 13. Summary
-
-Key points:
-
-• Notes are stored locally on your device
-• Google Drive backup is optional
-• The app does not sell or share your data
-• No advertising or tracking systems are used
-• You can delete your data at any time
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --ink:        #0f0e0d;
+    --ink-soft:   #6b6560;
+    --ink-muted:  #b0aaa4;
+    --paper:      #faf8f5;
+    --rule:       #e4ddd5;
+    --teal:       #2a7a6f;
+    --teal-light: #e0f0ed;
+    --teal-mid:   #4aada0;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 999;
+    opacity: 0.4;
+  }
+
+  /* ── Layout ── */
+  .page {
+    max-width: 740px;
+    margin: 0 auto;
+    padding: 0 28px 100px;
+  }
+
+  /* ── Back link ── */
+  .back {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin: 36px 0 0;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--teal);
+    text-decoration: none;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    transition: opacity 0.15s;
+  }
+  .back:hover { opacity: 0.7; }
+  .back::before { content: '←'; font-size: 13px; }
+
+  /* ── Header ── */
+  header {
+    padding: 40px 0 48px;
+  }
+
+  .header-rule {
+    width: 40px;
+    height: 3px;
+    background: var(--teal);
+    margin-bottom: 24px;
+    animation: slideIn 0.6s cubic-bezier(.22,1,.36,1) both;
+  }
+
+  .header-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: clamp(32px, 6vw, 48px);
+    color: var(--ink);
+    letter-spacing: -1.5px;
+    line-height: 1.1;
+    animation: fadeUp 0.7s cubic-bezier(.22,1,.36,1) 0.1s both;
+  }
+
+  .header-title span { color: var(--teal); }
+
+  .header-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-top: 20px;
+    animation: fadeUp 0.7s cubic-bezier(.22,1,.36,1) 0.2s both;
+  }
+
+  .meta-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 11px;
+    background: var(--teal-light);
+    border: 1px solid rgba(42,122,111,0.2);
+    border-radius: 4px;
+    font-family: 'DM Mono', monospace;
+    font-size: 10.5px;
+    font-weight: 500;
+    color: var(--teal);
+    letter-spacing: 0.06em;
+  }
+
+  .divider {
+    height: 1px;
+    background: var(--rule);
+    margin: 0 0 52px;
+    animation: fadeUp 0.5s ease 0.3s both;
+  }
+
+  /* ── Table of Contents ── */
+  .toc {
+    background: #fff;
+    border: 1px solid var(--rule);
+    border-radius: 10px;
+    padding: 24px 28px;
+    margin-bottom: 52px;
+    animation: fadeUp 0.6s cubic-bezier(.22,1,.36,1) 0.35s both;
+  }
+
+  .toc-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--ink-muted);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+
+  .toc-list {
+    list-style: none;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px 24px;
+  }
+
+  @media (max-width: 500px) { .toc-list { grid-template-columns: 1fr; } }
+
+  .toc-list a {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--ink-soft);
+    text-decoration: none;
+    transition: color 0.15s;
+  }
+
+  .toc-list a:hover { color: var(--teal); }
+
+  .toc-num {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--teal);
+    font-weight: 500;
+    min-width: 18px;
+  }
+
+  /* ── Sections ── */
+  .section {
+    margin-bottom: 56px;
+    animation: fadeUp 0.6s cubic-bezier(.22,1,.36,1) both;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .section-num {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--teal);
+    background: var(--teal-light);
+    padding: 3px 8px;
+    border-radius: 4px;
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .section-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 22px;
+    color: var(--ink);
+    letter-spacing: -0.5px;
+  }
+
+  /* ── Sub-sections ── */
+  .subsection {
+    margin-bottom: 28px;
+  }
+
+  .subsection-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+    letter-spacing: 0.02em;
+    margin-bottom: 10px;
+    font-family: 'DM Mono', monospace;
+    text-transform: uppercase;
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    color: var(--ink-soft);
+  }
+
+  /* ── Prose ── */
+  p {
+    font-size: 14.5px;
+    color: var(--ink-soft);
+    line-height: 1.75;
+    margin-bottom: 12px;
+    font-weight: 300;
+  }
+
+  p strong {
+    color: var(--ink);
+    font-weight: 500;
+  }
+
+  /* ── Lists ── */
+  .item-list {
+    list-style: none;
+    margin: 8px 0 16px;
+  }
+
+  .item-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 14px;
+    color: var(--ink-soft);
+    line-height: 1.6;
+    padding: 5px 0;
+    font-weight: 300;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .item-list li:last-child { border-bottom: none; }
+
+  .item-list li::before {
+    content: '';
+    width: 5px;
+    height: 5px;
+    background: var(--teal-mid);
+    border-radius: 50%;
+    margin-top: 8px;
+    flex-shrink: 0;
+  }
+
+  /* ── Ordered steps ── */
+  .step-list {
+    list-style: none;
+    counter-reset: steps;
+    margin: 8px 0 16px;
+  }
+
+  .step-list li {
+    counter-increment: steps;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    font-size: 14px;
+    color: var(--ink-soft);
+    line-height: 1.6;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--rule);
+    font-weight: 300;
+  }
+
+  .step-list li:last-child { border-bottom: none; }
+
+  .step-list li::before {
+    content: counter(steps);
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--teal);
+    background: var(--teal-light);
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  /* ── Info card ── */
+  .info-card {
+    background: #fff;
+    border: 1px solid var(--rule);
+    border-left: 3px solid var(--teal);
+    border-radius: 0 8px 8px 0;
+    padding: 16px 20px;
+    margin: 12px 0 20px;
+  }
+
+  .info-card p { margin: 0; }
+
+  /* ── Code / folder name ── */
+  code {
+    font-family: 'DM Mono', monospace;
+    font-size: 12.5px;
+    background: var(--teal-light);
+    color: var(--teal);
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+
+  /* ── Link ── */
+  a.external {
+    color: var(--teal);
+    text-decoration: none;
+    border-bottom: 1px solid rgba(42,122,111,0.3);
+    transition: border-color 0.15s;
+  }
+  a.external:hover { border-color: var(--teal); }
+
+  /* ── Summary card ── */
+  .summary-card {
+    background: var(--ink);
+    border-radius: 10px;
+    padding: 28px 32px;
+    margin-bottom: 56px;
+    animation: fadeUp 0.6s ease 0.4s both;
+  }
+
+  .summary-card .toc-label { color: rgba(255,255,255,0.4); }
+
+  .summary-list {
+    list-style: none;
+    margin-top: 14px;
+  }
+
+  .summary-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    font-size: 14px;
+    color: rgba(255,255,255,0.75);
+    line-height: 1.6;
+    padding: 7px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    font-weight: 300;
+  }
+
+  .summary-list li:last-child { border-bottom: none; }
+
+  .summary-list li::before {
+    content: '✓';
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--teal-mid);
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  /* ── Contact card ── */
+  .contact-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 12px;
+  }
+
+  @media (max-width: 500px) { .contact-grid { grid-template-columns: 1fr; } }
+
+  .contact-item {
+    background: #fff;
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    padding: 14px 16px;
+  }
+
+  .contact-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 9.5px;
+    font-weight: 500;
+    color: var(--ink-muted);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .contact-value {
+    font-size: 13.5px;
+    color: var(--ink);
+    font-weight: 400;
+  }
+
+  .contact-value a {
+    color: var(--teal);
+    text-decoration: none;
+  }
+
+  /* ── Footer ── */
+  footer {
+    padding-top: 28px;
+    border-top: 1px solid var(--rule);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .footer-left { font-size: 12px; color: var(--ink-muted); }
+  .footer-left strong { color: var(--ink-soft); font-weight: 500; }
+  .footer-right {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--ink-muted);
+    letter-spacing: 0.1em;
+  }
+
+  /* ── Animations ── */
+  @keyframes slideIn {
+    from { width: 0; opacity: 0; }
+    to   { width: 40px; opacity: 1; }
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+</style>
+
+<div class="page">
+
+  <a href="index.html" class="back">Documentation</a>
+
+  <!-- Header -->
+  <header>
+    <div class="header-rule"></div>
+    <h1 class="header-title">Privacy <span>Policy</span></h1>
+    <div class="header-meta">
+      <span class="meta-chip">Last Updated: March 2026</span>
+      <span class="meta-chip">Version 1.0</span>
+      <span class="meta-chip">noteliha</span>
+    </div>
+  </header>
+
+  <div class="divider"></div>
+
+  <!-- Table of Contents -->
+  <div class="toc">
+    <div class="toc-label">Contents</div>
+    <ol class="toc-list">
+      <li><a href="#s1"><span class="toc-num">01</span>Introduction</a></li>
+      <li><a href="#s2"><span class="toc-num">02</span>Information We Collect</a></li>
+      <li><a href="#s3"><span class="toc-num">03</span>Where Your Data Is Stored</a></li>
+      <li><a href="#s4"><span class="toc-num">04</span>How Your Data Is Used</a></li>
+      <li><a href="#s5"><span class="toc-num">05</span>Data Retention</a></li>
+      <li><a href="#s6"><span class="toc-num">06</span>Security</a></li>
+      <li><a href="#s7"><span class="toc-num">07</span>Third-Party Services</a></li>
+      <li><a href="#s8"><span class="toc-num">08</span>Children's Privacy</a></li>
+      <li><a href="#s9"><span class="toc-num">09</span>Your Data Rights</a></li>
+      <li><a href="#s10"><span class="toc-num">10</span>Data Deletion</a></li>
+      <li><a href="#s11"><span class="toc-num">11</span>Policy Changes</a></li>
+      <li><a href="#s12"><span class="toc-num">12</span>Contact</a></li>
+    </ol>
+  </div>
+
+  <!-- 1. Introduction -->
+  <div class="section" id="s1">
+    <div class="section-header">
+      <span class="section-num">01</span>
+      <h2 class="section-title">Introduction</h2>
+    </div>
+    <p>noteliha ("we", "our", or "the app") is a note-taking application developed and operated by <strong>Nikhil Lande under Navkon Labs</strong>.</p>
+    <p>This Privacy Policy explains how information is handled when you use the noteliha mobile application.</p>
+    <div class="info-card">
+      <p>noteliha is designed with a <strong>privacy-first architecture</strong>. All note content is stored <strong>locally on your device</strong>. Google Drive backup is entirely optional and stores data only in <strong>your personal Google Drive account</strong>.</p>
+    </div>
+    <p>By using the application, you agree to the practices described in this Privacy Policy.</p>
+  </div>
+
+  <!-- 2. Information We Collect -->
+  <div class="section" id="s2">
+    <div class="section-header">
+      <span class="section-num">02</span>
+      <h2 class="section-title">Information We Collect</h2>
+    </div>
+    <p>noteliha collects <strong>minimal information necessary for the app to function</strong>.</p>
+
+    <div class="subsection">
+      <div class="subsection-title">2.1 — Google Account Information</div>
+      <p>If you choose to enable Google Drive backup, the app accesses limited information from your Google account through Google Sign-In. This may include:</p>
+      <ul class="item-list">
+        <li>Google account email address</li>
+        <li>Google display name</li>
+        <li>Google account identifier</li>
+      </ul>
+      <p>This information is used <strong>only to authenticate your account and enable backup to your Google Drive</strong>. The app does <strong>not</strong> store or share your Google credentials.</p>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-title">2.2 — Notes and User Content</div>
+      <p>The app stores content you create, including:</p>
+      <ul class="item-list">
+        <li>Note titles and text content</li>
+        <li>Checklists, recipes, meal plans, and itineraries</li>
+        <li>Categories and pin status</li>
+        <li>Modification timestamps</li>
+      </ul>
+      <p>This data is stored <strong>locally on your device</strong>. If you enable Google Drive backup, this content is also stored in your Drive account.</p>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-title">2.3 — Images</div>
+      <p>If you attach images to notes:</p>
+      <ul class="item-list">
+        <li>Images are stored locally on your device</li>
+        <li>Images are <strong>uploaded to your Google Drive</strong> when you use the backup feature</li>
+        <li>Images are not analyzed by the developer</li>
+        <li>Images are not sent to any server other than your own Google Drive account</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 3. Where Your Data Is Stored -->
+  <div class="section" id="s3">
+    <div class="section-header">
+      <span class="section-num">03</span>
+      <h2 class="section-title">Where Your Data Is Stored</h2>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-title">3.1 — Local Device Storage</div>
+      <p>All data is stored locally on your device using a local database. This includes notes, categories, preferences, and attached images. Data remains on your device until you delete it.</p>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-title">3.2 — Google Drive Backup (Optional)</div>
+      <p>If you enable synchronization, the app stores backup files in your personal Google Drive account. Key details:</p>
+      <ul class="item-list">
+        <li>Each note is stored as an individual JSON file</li>
+        <li>Images are stored as binary files</li>
+        <li>Files are stored in a folder named <code>.liha_notes_app</code></li>
+        <li>Only your Google account can access these files</li>
+        <li>The app uses the <strong>Google Drive <code>drive.file</code> permission</strong></li>
+      </ul>
+      <div class="info-card">
+        <p>The <code>drive.file</code> permission allows the app to create, read, update, and delete only the files it creates. It <strong>cannot access any other files in your Google Drive</strong>.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. How Your Data Is Used -->
+  <div class="section" id="s4">
+    <div class="section-header">
+      <span class="section-num">04</span>
+      <h2 class="section-title">How Your Data Is Used</h2>
+    </div>
+    <p>Data is used only to provide app functionality:</p>
+    <ul class="item-list">
+      <li>Creating and storing notes</li>
+      <li>Organizing notes and categories</li>
+      <li>Searching notes</li>
+      <li>Synchronizing notes and images with Google Drive when enabled</li>
+      <li>Restoring notes from backups</li>
+    </ul>
+    <p>The developer does <strong>not sell, rent, or share user data</strong> with any third party.</p>
+  </div>
+
+  <!-- 5. Data Retention -->
+  <div class="section" id="s5">
+    <div class="section-header">
+      <span class="section-num">05</span>
+      <h2 class="section-title">Data Retention</h2>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-title">Local Storage</div>
+      <p>Your data remains on your device until you delete it. Deleting a note moves it to a recycle bin where it can be restored or permanently removed. Permanent deletion removes the data from the device.</p>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-title">Google Drive Backup</div>
+      <p>Backup files remain in your Google Drive until you delete them. Signing out of the app does <strong>not</strong> automatically delete Drive backups. To remove backups:</p>
+      <ol class="step-list">
+        <li>Open Google Drive</li>
+        <li>Locate the <code>.liha_notes_app</code> folder</li>
+        <li>Delete the folder</li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- 6. Security -->
+  <div class="section" id="s6">
+    <div class="section-header">
+      <span class="section-num">06</span>
+      <h2 class="section-title">Security</h2>
+    </div>
+    <p>The following security practices are in place:</p>
+    <ul class="item-list">
+      <li>Note data is stored in local device storage</li>
+      <li>All communication with Google APIs uses HTTPS</li>
+      <li>Google OAuth is used for Drive authentication</li>
+    </ul>
+    <p>No method of electronic storage or internet transmission is completely secure. The developer cannot guarantee absolute security.</p>
+  </div>
+
+  <!-- 7. Third-Party Services -->
+  <div class="section" id="s7">
+    <div class="section-header">
+      <span class="section-num">07</span>
+      <h2 class="section-title">Third-Party Services</h2>
+    </div>
+    <p>The app uses the following third-party services when Drive backup is enabled:</p>
+    <ul class="item-list">
+      <li>Google Sign-In — for account authentication</li>
+      <li>Google Drive API — for storing and retrieving backup files</li>
+    </ul>
+    <p>Google processes data according to its own privacy policy: <a href="https://policies.google.com/privacy" class="external" target="_blank">policies.google.com/privacy</a></p>
+  </div>
+
+  <!-- 8. Children's Privacy -->
+  <div class="section" id="s8">
+    <div class="section-header">
+      <span class="section-num">08</span>
+      <h2 class="section-title">Children's Privacy</h2>
+    </div>
+    <p>noteliha is not directed toward children under the age of 13. The developer does not knowingly collect personal data from children under 13. If you believe a child has provided personal information through the app, please contact <a href="mailto:navkon9@gmail.com" class="external">navkon9@gmail.com</a>.</p>
+  </div>
+
+  <!-- 9. Your Data Rights -->
+  <div class="section" id="s9">
+    <div class="section-header">
+      <span class="section-num">09</span>
+      <h2 class="section-title">Your Data Rights</h2>
+    </div>
+    <p>Depending on your location, you may have rights regarding your personal data, which may include accessing, correcting, deleting, or obtaining a copy of your data.</p>
+    <p>Since all data is stored locally on your device or in your own Google Drive account, you can exercise these rights directly — by deleting notes in the app, or by removing the <code>.liha_notes_app</code> folder from your Drive. For any other requests, contact <a href="mailto:navkon9@gmail.com" class="external">navkon9@gmail.com</a>.</p>
+  </div>
+
+  <!-- 10. Data Deletion -->
+  <div class="section" id="s10">
+    <div class="section-header">
+      <span class="section-num">10</span>
+      <h2 class="section-title">Data Deletion Instructions</h2>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-title">Delete a Note</div>
+      <ol class="step-list">
+        <li>Open the app and delete the note</li>
+        <li>Empty the recycle bin to permanently remove it</li>
+      </ol>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-title">Delete Google Drive Backup</div>
+      <ol class="step-list">
+        <li>Open Google Drive</li>
+        <li>Locate the <code>.liha_notes_app</code> folder</li>
+        <li>Delete the folder</li>
+        <li>Empty the Google Drive trash</li>
+      </ol>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-title">Delete All Data</div>
+      <ol class="step-list">
+        <li>Delete all notes inside the app and empty the recycle bin</li>
+        <li>Delete the <code>.liha_notes_app</code> folder from Google Drive</li>
+        <li>Uninstall the application</li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- 11. Policy Changes -->
+  <div class="section" id="s11">
+    <div class="section-header">
+      <span class="section-num">11</span>
+      <h2 class="section-title">Changes to This Policy</h2>
+    </div>
+    <p>This Privacy Policy may be updated from time to time. Any changes will be reflected in the updated policy with a revised <strong>Last Updated</strong> date.</p>
+  </div>
+
+  <!-- 12. Contact -->
+  <div class="section" id="s12">
+    <div class="section-header">
+      <span class="section-num">12</span>
+      <h2 class="section-title">Contact</h2>
+    </div>
+    <p>For questions about this Privacy Policy, contact:</p>
+    <div class="contact-grid">
+      <div class="contact-item">
+        <div class="contact-label">Email</div>
+        <div class="contact-value"><a href="mailto:navkon9@gmail.com">navkon9@gmail.com</a></div>
+      </div>
+      <div class="contact-item">
+        <div class="contact-label">Developer</div>
+        <div class="contact-value">Nikhil Lande</div>
+      </div>
+      <div class="contact-item">
+        <div class="contact-label">Organization</div>
+        <div class="contact-value">Navkon Labs</div>
+      </div>
+      <div class="contact-item">
+        <div class="contact-label">Location</div>
+        <div class="contact-value">Kharghar, Maharashtra, India</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Summary -->
+  <div class="summary-card">
+    <div class="toc-label">Summary</div>
+    <ul class="summary-list">
+      <li>Notes are stored locally on your device</li>
+      <li>Google Drive backup is optional — you choose when to sync</li>
+      <li>Images are backed up to your Drive when you use the backup feature</li>
+      <li>The app does not sell, rent, or share your data</li>
+      <li>No advertising or tracking systems are used</li>
+      <li>You can delete your data at any time</li>
+    </ul>
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    <div class="footer-left"><strong>noteliha</strong> · Navkon Labs</div>
+    <div class="footer-right">PRIVACY POLICY v1.0</div>
+  </footer>
+
+</div>

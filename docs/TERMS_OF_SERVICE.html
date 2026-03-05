@@ -197,6 +197,31 @@
 
   @keyframes slideIn { from { width: 0; opacity: 0; } to { width: 40px; opacity: 1; } }
   @keyframes fadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* ── Download button ── */
+  .dl-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 28px;
+    padding: 9px 16px;
+    background: var(--ink);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    text-decoration: none;
+    transition: opacity 0.15s, transform 0.15s;
+    animation: fadeUp 0.7s cubic-bezier(.22,1,.36,1) 0.3s both;
+  }
+  .dl-btn:hover { opacity: 0.8; transform: translateY(-1px); }
+  .dl-btn svg { flex-shrink: 0; }
+
 </style>
 
 <div class="page">
@@ -212,6 +237,13 @@
       <span class="meta-chip">noteliha</span>
     </div>
   </header>
+
+  <a class="dl-btn" id="dl-btn" download="TERMS_OF_SERVICE.md" href="#">
+    <svg width="13" height="13" viewBox="0 0 13 13" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M6.5 1v7M3.5 5.5l3 3 3-3M1.5 10h10" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    Download .md
+  </a>
 
   <div class="divider"></div>
 
@@ -436,5 +468,14 @@
     <div class="footer-left"><strong>noteliha</strong> · Navkon Labs</div>
     <div class="footer-right">TERMS OF SERVICE v1.0</div>
   </footer>
-
+<script>
+(function() {
+  var content = "# TERMS_OF_SERVICE.md\n\nSee HTML version.";
+  var btn = document.getElementById('dl-btn');
+  if (btn) {
+    var blob = new Blob([content], {type: 'text/markdown'});
+    btn.href = URL.createObjectURL(blob);
+  }
+})();
+</script>
 </div>

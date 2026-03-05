@@ -1,226 +1,542 @@
-# noteliha – Publishing Checklist & Submission Guide
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-**Status:** Ready for Review
-**Version:** 1.0.0
-**Date:** March 2026
+  :root {
+    --ink:        #0f0e0d;
+    --ink-soft:   #6b6560;
+    --ink-muted:  #b0aaa4;
+    --paper:      #faf8f5;
+    --rule:       #e4ddd5;
+    --teal:       #2a7a6f;
+    --teal-light: #e0f0ed;
+    --teal-mid:   #4aada0;
+  }
 
----
+  html { scroll-behavior: smooth; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--paper); color: var(--ink); min-height: 100vh; overflow-x: hidden; }
+  body::before { content: ''; position: fixed; inset: 0; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E"); pointer-events: none; z-index: 999; opacity: 0.4; }
 
-## Pre-Submission Checklist
+  .page { max-width: 740px; margin: 0 auto; padding: 0 28px 100px; }
 
-### 1. Legal Documents
-- [ ] Privacy Policy reviewed and accurate
-- [ ] Terms of Service reviewed and accurate
-- [ ] Developer contact information verified
-- [ ] Folder name `.liha_notes_app` consistent across all documents
-- [ ] Privacy policy URL live and accessible
+  .back { display: inline-flex; align-items: center; gap: 6px; margin: 36px 0 0; font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 500; color: var(--teal); text-decoration: none; letter-spacing: 0.08em; text-transform: uppercase; transition: opacity 0.15s; }
+  .back:hover { opacity: 0.7; }
+  .back::before { content: '←'; font-size: 13px; }
 
-### 2. Code Quality
-- [ ] All features tested on device
-- [ ] No crashes during testing
-- [ ] Offline functionality verified
-- [ ] Backup and restore functionality verified
-- [ ] Search functionality verified
-- [ ] No hardcoded API keys
-- [ ] No debug logging in production build
-- [ ] Error handling in place for Drive operations
+  header { padding: 40px 0 48px; }
+  .header-rule { width: 40px; height: 3px; background: var(--teal); margin-bottom: 24px; animation: slideIn 0.6s cubic-bezier(.22,1,.36,1) both; }
+  .header-title { font-family: 'DM Serif Display', serif; font-size: clamp(32px, 6vw, 48px); color: var(--ink); letter-spacing: -1.5px; line-height: 1.1; animation: fadeUp 0.7s cubic-bezier(.22,1,.36,1) 0.1s both; }
+  .header-title span { color: var(--teal); }
+  .header-meta { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 20px; animation: fadeUp 0.7s cubic-bezier(.22,1,.36,1) 0.2s both; }
+  .meta-chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; background: var(--teal-light); border: 1px solid rgba(42,122,111,0.2); border-radius: 4px; font-family: 'DM Mono', monospace; font-size: 10.5px; font-weight: 500; color: var(--teal); letter-spacing: 0.06em; }
 
-### 3. Security
-- [ ] OAuth properly implemented
-- [ ] No plaintext passwords or tokens stored
-- [ ] HTTPS enforced for all API calls
-- [ ] Exponential backoff implemented for Drive retries
+  .divider { height: 1px; background: var(--rule); margin: 0 0 52px; animation: fadeUp 0.5s ease 0.3s both; }
 
-### 4. Privacy
-- [ ] Minimal data collection confirmed
-- [ ] No unnecessary permissions requested
-- [ ] No tracking or analytics SDKs included
-- [ ] No third-party SDKs beyond Google
-- [ ] Data deletion mechanism working (recycle bin + Drive folder)
+  .toc { background: #fff; border: 1px solid var(--rule); border-radius: 10px; padding: 24px 28px; margin-bottom: 52px; animation: fadeUp 0.6s cubic-bezier(.22,1,.36,1) 0.35s both; }
+  .toc-label { font-family: 'DM Mono', monospace; font-size: 10px; font-weight: 500; color: var(--ink-muted); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 14px; }
+  .toc-list { list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: 6px 24px; }
+  @media (max-width: 500px) { .toc-list { grid-template-columns: 1fr; } }
+  .toc-list a { display: flex; align-items: baseline; gap: 8px; font-size: 13px; color: var(--ink-soft); text-decoration: none; transition: color 0.15s; }
+  .toc-list a:hover { color: var(--teal); }
+  .toc-num { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--teal); font-weight: 500; min-width: 18px; }
 
-### 5. Functionality
-- [ ] All 5 note types working (normal, checklist, itinerary, mealPlan, recipe)
-- [ ] All 6 color themes working (Default, Sunset, Orange, Forest, Lavender, Rose)
-- [ ] Create, edit, delete notes
-- [ ] Soft delete and restore from recycle bin
-- [ ] Hard delete (empty recycle bin)
-- [ ] Search across notes
-- [ ] Pin notes
-- [ ] Category organization
-- [ ] Image attachment
-- [ ] Google Drive upload (manual)
-- [ ] Google Drive restore (manual)
-- [ ] Conflict detection and resolution
-- [ ] Multi-account support on same device
-- [ ] Offline functionality
+  /* Progress bar */
+  .progress-bar-wrap { background: #fff; border: 1px solid var(--rule); border-radius: 10px; padding: 20px 24px; margin-bottom: 52px; animation: fadeUp 0.6s ease 0.4s both; }
+  .progress-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px; }
+  .progress-title { font-family: 'DM Mono', monospace; font-size: 10px; font-weight: 500; color: var(--ink-muted); letter-spacing: 0.14em; text-transform: uppercase; }
+  .progress-count { font-family: 'DM Mono', monospace; font-size: 13px; font-weight: 500; color: var(--teal); }
+  .progress-track { height: 6px; background: var(--rule); border-radius: 99px; overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--teal), var(--teal-mid)); border-radius: 99px; transition: width 0.4s cubic-bezier(.22,1,.36,1); }
 
-### 6. User Interface
-- [ ] Works on all target screen sizes
-- [ ] Portrait and landscape mode
-- [ ] Dark mode and light mode
-- [ ] Readable text and clear icons
-- [ ] No broken layouts
+  .section { margin-bottom: 56px; animation: fadeUp 0.6s cubic-bezier(.22,1,.36,1) both; }
+  .section-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; padding-bottom: 14px; border-bottom: 1px solid var(--rule); }
+  .section-num { font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 500; color: var(--teal); background: var(--teal-light); padding: 3px 8px; border-radius: 4px; letter-spacing: 0.06em; white-space: nowrap; flex-shrink: 0; }
+  .section-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--ink); letter-spacing: -0.5px; }
+  .section-badge { margin-left: auto; font-family: 'DM Mono', monospace; font-size: 10px; font-weight: 500; color: var(--ink-muted); white-space: nowrap; }
 
-### 7. Testing
-- [ ] Tested on Android (latest version)
-- [ ] Tested on small screen device
-- [ ] Tested on large screen device
-- [ ] Tested with no Google account
-- [ ] Tested with Google account signed in
-- [ ] Tested offline
-- [ ] Tested with slow internet
-- [ ] Tested sign-in with two different Google accounts on same device
+  .subsection { margin-bottom: 28px; }
+  .subsection-title { font-family: 'DM Mono', monospace; font-size: 10.5px; font-weight: 500; color: var(--ink-soft); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 10px; }
 
-### 8. Documentation
-- [ ] Privacy Policy complete
-- [ ] Terms of Service complete
-- [ ] Release notes prepared
-- [ ] Screenshots prepared (all required sizes)
-- [ ] App description ready
-- [ ] Keywords selected
+  p { font-size: 14.5px; color: var(--ink-soft); line-height: 1.75; margin-bottom: 12px; font-weight: 300; }
+  p strong { color: var(--ink); font-weight: 500; }
 
-### 9. App Store Compliance
-- [ ] Content rating appropriate (Everyone / 4+)
-- [ ] No prohibited content
-- [ ] Metadata accurate and matches actual app behaviour
-- [ ] Screenshots represent actual app UI
-- [ ] Bundle ID unique
-- [ ] Version number correct (1.0.0)
+  /* Checklist items */
+  .check-list { list-style: none; margin: 8px 0 16px; }
+  .check-list li { display: flex; align-items: flex-start; gap: 12px; font-size: 14px; color: var(--ink-soft); line-height: 1.6; padding: 6px 0; font-weight: 300; border-bottom: 1px solid var(--rule); cursor: pointer; transition: background 0.1s; border-radius: 4px; }
+  .check-list li:last-child { border-bottom: none; }
+  .check-list li.done { color: var(--ink-muted); text-decoration: line-through; text-decoration-color: var(--teal-mid); }
+  .check-list li .cb { width: 18px; height: 18px; border: 1.5px solid var(--rule); border-radius: 4px; flex-shrink: 0; margin-top: 1px; display: flex; align-items: center; justify-content: center; transition: all 0.15s; background: #fff; }
+  .check-list li.done .cb { background: var(--teal); border-color: var(--teal); }
+  .check-list li.done .cb::after { content: '✓'; font-size: 10px; color: #fff; font-weight: 600; }
 
-### 10. Release Preparation
-- [ ] Release build generated
-- [ ] Signing certificates current
-- [ ] App icons generated (all required sizes)
-- [ ] Screenshots captured (all required sizes)
-- [ ] Release notes prepared
+  /* Step list */
+  .step-list { list-style: none; counter-reset: steps; margin: 8px 0 16px; }
+  .step-list li { counter-increment: steps; display: flex; align-items: flex-start; gap: 12px; font-size: 14px; color: var(--ink-soft); line-height: 1.6; padding: 8px 0; border-bottom: 1px solid var(--rule); font-weight: 300; }
+  .step-list li:last-child { border-bottom: none; }
+  .step-list li::before { content: counter(steps); font-family: 'DM Mono', monospace; font-size: 10px; font-weight: 500; color: var(--teal); background: var(--teal-light); border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px; }
 
----
+  /* Code block */
+  .code-block { background: var(--ink); border-radius: 8px; padding: 16px 20px; margin: 12px 0 20px; overflow-x: auto; }
+  .code-block code { font-family: 'DM Mono', monospace; font-size: 12.5px; color: rgba(255,255,255,0.85); background: none; padding: 0; border-radius: 0; display: block; line-height: 1.7; white-space: pre; }
+  .code-label { font-family: 'DM Mono', monospace; font-size: 9px; font-weight: 500; color: rgba(255,255,255,0.3); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 8px; }
 
-## Google Play Store Submission Steps
+  /* Inline code */
+  code { font-family: 'DM Mono', monospace; font-size: 12.5px; background: var(--teal-light); color: var(--teal); padding: 2px 6px; border-radius: 4px; }
+  .code-block code { background: none; color: rgba(255,255,255,0.85); padding: 0; }
 
-### Step 1 – Prepare Build
-```bash
-# Build App Bundle (recommended for Play Store)
-flutter build appbundle --release
+  .info-card { background: #fff; border: 1px solid var(--rule); border-left: 3px solid var(--teal); border-radius: 0 8px 8px 0; padding: 16px 20px; margin: 12px 0 20px; }
+  .info-card p { margin: 0; }
 
-# Output: build/app/outputs/bundle/release/app-release.aab
-```
+  a.external { color: var(--teal); text-decoration: none; border-bottom: 1px solid rgba(42,122,111,0.3); transition: border-color 0.15s; }
+  a.external:hover { border-color: var(--teal); }
 
-### Step 2 – Create Play Console Account
-1. Go to Google Play Console
-2. Create developer account or sign in
-3. Pay one-time $25 registration fee
-4. Accept terms and conditions
+  /* Compliance table */
+  .comp-table { width: 100%; border-collapse: collapse; margin: 12px 0 20px; font-size: 13.5px; }
+  .comp-table th { font-family: 'DM Mono', monospace; font-size: 9.5px; font-weight: 500; color: var(--ink-muted); letter-spacing: 0.12em; text-transform: uppercase; text-align: left; padding: 8px 12px; border-bottom: 2px solid var(--rule); }
+  .comp-table td { padding: 10px 12px; border-bottom: 1px solid var(--rule); color: var(--ink-soft); font-weight: 300; vertical-align: top; line-height: 1.5; }
+  .comp-table tr:last-child td { border-bottom: none; }
+  .comp-table td:first-child { font-family: 'DM Mono', monospace; font-size: 11.5px; color: var(--teal); font-weight: 500; white-space: nowrap; }
 
-### Step 3 – Create New App
-1. Click "Create app"
-2. Enter app name: noteliha
-3. Select type: App
-4. Default language: English
-5. Complete required declarations
+  .summary-card { background: var(--ink); border-radius: 10px; padding: 28px 32px; margin-bottom: 56px; animation: fadeUp 0.6s ease 0.4s both; }
+  .summary-card .toc-label { color: rgba(255,255,255,0.4); }
+  .summary-list { list-style: none; margin-top: 14px; }
+  .summary-list li { display: flex; align-items: flex-start; gap: 12px; font-size: 14px; color: rgba(255,255,255,0.75); line-height: 1.6; padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,0.08); font-weight: 300; }
+  .summary-list li:last-child { border-bottom: none; }
+  .summary-list li::before { content: '✓'; font-family: 'DM Mono', monospace; font-size: 11px; color: var(--teal-mid); flex-shrink: 0; margin-top: 2px; }
 
-### Step 4 – Store Listing
-- [ ] Title: noteliha
-- [ ] Short description (from GOOGLE_PLAY_STORE_LISTING.md)
-- [ ] Full description (from GOOGLE_PLAY_STORE_LISTING.md)
-- [ ] Category: Productivity
-- [ ] Contact email
-- [ ] Privacy policy URL
-- [ ] 2–8 screenshots (1080×1920 recommended)
-- [ ] Feature graphic (1024×500)
-- [ ] App icon (512×512)
+  footer { padding-top: 28px; border-top: 1px solid var(--rule); display: flex; align-items: center; justify-content: space-between; }
+  .footer-left { font-size: 12px; color: var(--ink-muted); }
+  .footer-left strong { color: var(--ink-soft); font-weight: 500; }
+  .footer-right { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--ink-muted); letter-spacing: 0.1em; }
 
-### Step 5 – App Content
-- [ ] Content rating questionnaire completed
-- [ ] Target audience declared (13+)
-- [ ] Privacy policy URL entered
+  @keyframes slideIn { from { width: 0; opacity: 0; } to { width: 40px; opacity: 1; } }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
 
-### Step 6 – Submit Build
-1. Go to Release → Production
-2. Create new release
-3. Upload app bundle
-4. Add release notes
-5. Submit for review
+  /* ── Download button ── */
+  .dl-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 28px;
+    padding: 9px 16px;
+    background: var(--ink);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    text-decoration: none;
+    transition: opacity 0.15s, transform 0.15s;
+    animation: fadeUp 0.7s cubic-bezier(.22,1,.36,1) 0.3s both;
+  }
+  .dl-btn:hover { opacity: 0.8; transform: translateY(-1px); }
+  .dl-btn svg { flex-shrink: 0; }
 
----
+</style>
 
-## Apple App Store Submission Steps
+<div class="page">
 
-### Step 1 – Prepare Build
-```bash
-flutter build ios --release
-```
+  <a href="index.html" class="back">Documentation</a>
 
-### Step 2 – Apple Developer Account
-1. Enroll in Apple Developer Program ($99/year)
-2. Accept license agreements
+  <header>
+    <div class="header-rule"></div>
+    <h1 class="header-title">Publishing <span>Checklist</span></h1>
+    <div class="header-meta">
+      <span class="meta-chip">Version 1.0.0</span>
+      <span class="meta-chip">March 2026</span>
+      <span class="meta-chip">Navkon Labs</span>
+    </div>
+  </header>
 
-### Step 3 – App Identifier
-1. Create new identifier in Certificates, Identifiers & Profiles
-2. Bundle ID: com.navkonlabs.noteliha (or your chosen ID)
-3. App name: noteliha
+  <a class="dl-btn" id="dl-btn" download="PUBLISHING_CHECKLIST.md" href="#">
+    <svg width="13" height="13" viewBox="0 0 13 13" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M6.5 1v7M3.5 5.5l3 3 3-3M1.5 10h10" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    Download .md
+  </a>
 
-### Step 4 – Certificates and Profiles
-1. Create iOS Distribution Certificate
-2. Create App Store distribution profile
-3. Update project signing settings in Xcode
+  <div class="divider"></div>
 
-### Step 5 – App Store Connect
-1. Go to App Store Connect → My Apps → New App
-2. Name: noteliha
-3. Bundle ID: (your bundle ID)
-4. SKU: noteliha-001
+  <!-- Progress bar -->
+  <div class="progress-bar-wrap">
+    <div class="progress-header">
+      <span class="progress-title">Checklist Progress</span>
+      <span class="progress-count" id="progress-count">0 / 0</span>
+    </div>
+    <div class="progress-track">
+      <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+    </div>
+  </div>
 
-### Step 6 – App Information
-- [ ] Category: Productivity
-- [ ] Privacy policy URL
-- [ ] Support URL
-- [ ] Description (from APPLE_APP_STORE_LISTING.md)
-- [ ] Keywords
-- [ ] Screenshots (5.5-inch, 6.5-inch, iPad Pro 12.9-inch)
+  <div class="toc">
+    <div class="toc-label">Contents</div>
+    <ol class="toc-list">
+      <li><a href="#s1"><span class="toc-num">01</span>Legal Documents</a></li>
+      <li><a href="#s2"><span class="toc-num">02</span>Code Quality</a></li>
+      <li><a href="#s3"><span class="toc-num">03</span>Security</a></li>
+      <li><a href="#s4"><span class="toc-num">04</span>Privacy</a></li>
+      <li><a href="#s5"><span class="toc-num">05</span>Functionality</a></li>
+      <li><a href="#s6"><span class="toc-num">06</span>UI & Testing</a></li>
+      <li><a href="#s7"><span class="toc-num">07</span>Documentation & Assets</a></li>
+      <li><a href="#s8"><span class="toc-num">08</span>Play Store Submission</a></li>
+      <li><a href="#s9"><span class="toc-num">09</span>App Store Submission</a></li>
+      <li><a href="#s10"><span class="toc-num">10</span>Regulatory Notes</a></li>
+      <li><a href="#s11"><span class="toc-num">11</span>Post-Launch</a></li>
+    </ol>
+  </div>
 
-### Step 7 – App Privacy
-- [ ] Complete app privacy questionnaire
-- [ ] Data types: Google account info (name, email) when Drive backup enabled
-- [ ] Data not linked to identity beyond authentication
+  <!-- 1 -->
+  <div class="section" id="s1">
+    <div class="section-header">
+      <span class="section-num">01</span>
+      <h2 class="section-title">Legal Documents</h2>
+      <span class="section-badge" id="badge-s1"></span>
+    </div>
+    <ul class="check-list" data-section="s1">
+      <li><div class="cb"></div>Privacy Policy reviewed and accurate</li>
+      <li><div class="cb"></div>Terms of Service reviewed and accurate</li>
+      <li><div class="cb"></div>Developer contact information verified</li>
+      <li><div class="cb"></div>Folder name <code>.liha_notes_app</code> consistent across all documents</li>
+      <li><div class="cb"></div>Privacy policy URL live and accessible</li>
+      <li><div class="cb"></div>Terms of service URL live and accessible</li>
+    </ul>
+  </div>
 
-### Step 8 – Submit
-1. Upload build via Xcode
-2. Attach build in App Store Connect
-3. Complete all required fields
-4. Submit for review
+  <!-- 2 -->
+  <div class="section" id="s2">
+    <div class="section-header">
+      <span class="section-num">02</span>
+      <h2 class="section-title">Code Quality</h2>
+      <span class="section-badge" id="badge-s2"></span>
+    </div>
+    <ul class="check-list" data-section="s2">
+      <li><div class="cb"></div>All features tested on physical device</li>
+      <li><div class="cb"></div>No crashes during testing</li>
+      <li><div class="cb"></div>Offline functionality verified</li>
+      <li><div class="cb"></div>Backup (upload) functionality verified</li>
+      <li><div class="cb"></div>Restore (download) functionality verified</li>
+      <li><div class="cb"></div>Search functionality verified</li>
+      <li><div class="cb"></div>No hardcoded API keys</li>
+      <li><div class="cb"></div>No debug logging in production build</li>
+      <li><div class="cb"></div>Error handling in place for Drive operations</li>
+    </ul>
+  </div>
 
----
+  <!-- 3 -->
+  <div class="section" id="s3">
+    <div class="section-header">
+      <span class="section-num">03</span>
+      <h2 class="section-title">Security</h2>
+      <span class="section-badge" id="badge-s3"></span>
+    </div>
+    <ul class="check-list" data-section="s3">
+      <li><div class="cb"></div>OAuth properly implemented</li>
+      <li><div class="cb"></div>No plaintext passwords or tokens stored</li>
+      <li><div class="cb"></div>HTTPS enforced for all API calls</li>
+      <li><div class="cb"></div>Exponential backoff implemented for Drive retries</li>
+    </ul>
+  </div>
 
-## Post-Launch Monitoring
+  <!-- 4 -->
+  <div class="section" id="s4">
+    <div class="section-header">
+      <span class="section-num">04</span>
+      <h2 class="section-title">Privacy</h2>
+      <span class="section-badge" id="badge-s4"></span>
+    </div>
+    <ul class="check-list" data-section="s4">
+      <li><div class="cb"></div>Minimal data collection confirmed</li>
+      <li><div class="cb"></div>No unnecessary permissions requested</li>
+      <li><div class="cb"></div>No tracking or analytics SDKs included</li>
+      <li><div class="cb"></div>No third-party SDKs beyond Google</li>
+      <li><div class="cb"></div>Data deletion mechanism working — recycle bin and Drive folder</li>
+    </ul>
+  </div>
 
-### What to Monitor
-- [ ] Crash reports
-- [ ] User reviews and ratings
-- [ ] User feedback and bug reports
-- [ ] Drive sync error reports
+  <!-- 5 -->
+  <div class="section" id="s5">
+    <div class="section-header">
+      <span class="section-num">05</span>
+      <h2 class="section-title">Functionality</h2>
+      <span class="section-badge" id="badge-s5"></span>
+    </div>
+    <ul class="check-list" data-section="s5">
+      <li><div class="cb"></div>All 5 note types working — normal, checklist, itinerary, mealPlan, recipe</li>
+      <li><div class="cb"></div>All 6 color themes working — Default, Sunset, Orange, Forest, Lavender, Rose</li>
+      <li><div class="cb"></div>Create, edit, and save notes</li>
+      <li><div class="cb"></div>Soft delete and restore from recycle bin</li>
+      <li><div class="cb"></div>Hard delete — empty recycle bin</li>
+      <li><div class="cb"></div>Search across notes</li>
+      <li><div class="cb"></div>Pin notes</li>
+      <li><div class="cb"></div>Category organization</li>
+      <li><div class="cb"></div>Image attachment</li>
+      <li><div class="cb"></div>Google Drive upload (manual)</li>
+      <li><div class="cb"></div>Google Drive restore (manual)</li>
+      <li><div class="cb"></div>Conflict detection and resolution</li>
+      <li><div class="cb"></div>Multi-account support on same device</li>
+      <li><div class="cb"></div>Offline functionality</li>
+    </ul>
+  </div>
 
-### Review Responses
-- [ ] Respond to user reviews
-- [ ] Address critical issues in next update
-- [ ] Track common complaints for roadmap
+  <!-- 6 -->
+  <div class="section" id="s6">
+    <div class="section-header">
+      <span class="section-num">06</span>
+      <h2 class="section-title">UI & Testing</h2>
+      <span class="section-badge" id="badge-s6"></span>
+    </div>
+    <div class="subsection">
+      <div class="subsection-title">User Interface</div>
+      <ul class="check-list" data-section="s6">
+        <li><div class="cb"></div>Works on all target screen sizes</li>
+        <li><div class="cb"></div>Portrait and landscape mode</li>
+        <li><div class="cb"></div>Dark mode and light mode</li>
+        <li><div class="cb"></div>Readable text and clear icons</li>
+        <li><div class="cb"></div>No broken layouts on any screen size</li>
+      </ul>
+    </div>
+    <div class="subsection">
+      <div class="subsection-title">Device Testing</div>
+      <ul class="check-list" data-section="s6">
+        <li><div class="cb"></div>Tested on Android (latest version)</li>
+        <li><div class="cb"></div>Tested on small screen device</li>
+        <li><div class="cb"></div>Tested on large screen device</li>
+        <li><div class="cb"></div>Tested with no Google account signed in</li>
+        <li><div class="cb"></div>Tested with Google account signed in</li>
+        <li><div class="cb"></div>Tested offline</li>
+        <li><div class="cb"></div>Tested with slow internet</li>
+        <li><div class="cb"></div>Tested sign-in with two different Google accounts on same device</li>
+      </ul>
+    </div>
+  </div>
 
----
+  <!-- 7 -->
+  <div class="section" id="s7">
+    <div class="section-header">
+      <span class="section-num">07</span>
+      <h2 class="section-title">Documentation & Assets</h2>
+      <span class="section-badge" id="badge-s7"></span>
+    </div>
+    <ul class="check-list" data-section="s7">
+      <li><div class="cb"></div>Privacy Policy complete and hosted</li>
+      <li><div class="cb"></div>Terms of Service complete and hosted</li>
+      <li><div class="cb"></div>Release notes prepared</li>
+      <li><div class="cb"></div>App icon generated — 512×512 for Play Store</li>
+      <li><div class="cb"></div>App icons generated — all required iOS sizes</li>
+      <li><div class="cb"></div>Screenshots prepared — all required sizes</li>
+      <li><div class="cb"></div>Feature graphic prepared — 1024×500 for Play Store</li>
+      <li><div class="cb"></div>App description ready — Play Store</li>
+      <li><div class="cb"></div>App description ready — App Store</li>
+      <li><div class="cb"></div>Version number correct — 1.0.0</li>
+      <li><div class="cb"></div>Bundle ID unique and set</li>
+    </ul>
+  </div>
 
-## Regulatory Notes
+  <!-- 8 -->
+  <div class="section" id="s8">
+    <div class="section-header">
+      <span class="section-num">08</span>
+      <h2 class="section-title">Play Store Submission</h2>
+    </div>
 
-These items describe the app's design intent. Formal legal compliance verification should be done by a qualified professional before submission if required.
+    <div class="subsection">
+      <div class="subsection-title">Build</div>
+      <div class="code-block">
+        <div class="code-label">Terminal</div>
+        <code>flutter build appbundle --release
 
-| Regulation | App Design |
-|---|---|
-| GDPR | Data stored locally or in user's own Drive; user can delete at any time |
-| CCPA | No sale of personal information; user controls all data |
-| COPPA | App not directed at children under 13; noted in Privacy Policy |
-| Google Play Policies | drive.file scope only; no prohibited content |
-| Apple App Store Guidelines | Permissions requested only when needed; no misleading claims |
+# Output:
+build/app/outputs/bundle/release/app-release.aab</code>
+      </div>
+    </div>
 
----
+    <div class="subsection">
+      <div class="subsection-title">Store Listing Checklist</div>
+      <ul class="check-list" data-section="s8">
+        <li><div class="cb"></div>Play Console account created</li>
+        <li><div class="cb"></div>New app created — name: noteliha</li>
+        <li><div class="cb"></div>Short description filled in</li>
+        <li><div class="cb"></div>Full description filled in</li>
+        <li><div class="cb"></div>Category set — Productivity</li>
+        <li><div class="cb"></div>Contact email set</li>
+        <li><div class="cb"></div>Privacy policy URL entered</li>
+        <li><div class="cb"></div>Screenshots uploaded — 2–8, 1080×1920 recommended</li>
+        <li><div class="cb"></div>Feature graphic uploaded — 1024×500</li>
+        <li><div class="cb"></div>App icon uploaded — 512×512</li>
+        <li><div class="cb"></div>Content rating questionnaire completed</li>
+        <li><div class="cb"></div>Target audience declared — 13+</li>
+        <li><div class="cb"></div>App bundle uploaded</li>
+        <li><div class="cb"></div>Release notes added</li>
+        <li><div class="cb"></div>Submitted for review</li>
+      </ul>
+    </div>
 
-## Version History
+    <div class="info-card">
+      <p>Typical Google Play review time is <strong>1–3 days</strong>. Use App Bundle (.aab), not APK. Target API level must be 34+.</p>
+    </div>
+  </div>
 
-v1.0.0 – March 2026 – Initial checklist for noteliha launch
+  <!-- 9 -->
+  <div class="section" id="s9">
+    <div class="section-header">
+      <span class="section-num">09</span>
+      <h2 class="section-title">App Store Submission</h2>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-title">Build</div>
+      <div class="code-block">
+        <div class="code-label">Terminal</div>
+        <code>flutter build ios --release
+
+# Then archive and upload via Xcode</code>
+      </div>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-title">App Store Connect Checklist</div>
+      <ul class="check-list" data-section="s9">
+        <li><div class="cb"></div>Apple Developer account active — $99/year</li>
+        <li><div class="cb"></div>Bundle ID created — e.g. com.navkonlabs.noteliha</li>
+        <li><div class="cb"></div>Distribution certificate created</li>
+        <li><div class="cb"></div>App Store provisioning profile created</li>
+        <li><div class="cb"></div>New app created in App Store Connect</li>
+        <li><div class="cb"></div>App name set — noteliha</li>
+        <li><div class="cb"></div>Category set — Productivity</li>
+        <li><div class="cb"></div>Privacy policy URL entered</li>
+        <li><div class="cb"></div>Description filled in</li>
+        <li><div class="cb"></div>Keywords filled in</li>
+        <li><div class="cb"></div>Screenshots uploaded — 5.5-inch, 6.5-inch, iPad Pro 12.9-inch</li>
+        <li><div class="cb"></div>App privacy questionnaire completed</li>
+        <li><div class="cb"></div>Build uploaded via Xcode</li>
+        <li><div class="cb"></div>Build attached in App Store Connect</li>
+        <li><div class="cb"></div>Submitted for review</li>
+      </ul>
+    </div>
+
+    <div class="info-card">
+      <p>Typical Apple App Store review time is <strong>1–2 days</strong>. Test on a real device, not just simulator. Screenshots must be from the actual app.</p>
+    </div>
+  </div>
+
+  <!-- 10 -->
+  <div class="section" id="s10">
+    <div class="section-header">
+      <span class="section-num">10</span>
+      <h2 class="section-title">Regulatory Notes</h2>
+    </div>
+    <p>These describe the app's design intent. Formal legal compliance verification should be done by a qualified professional if required.</p>
+    <table class="comp-table">
+      <thead>
+        <tr>
+          <th>Regulation</th>
+          <th>App Design Approach</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>GDPR</td>
+          <td>Data stored locally or in user's own Drive; user can delete at any time via app or Drive</td>
+        </tr>
+        <tr>
+          <td>CCPA</td>
+          <td>No sale of personal information; user controls all data directly</td>
+        </tr>
+        <tr>
+          <td>COPPA</td>
+          <td>App not directed at children under 13; stated in Privacy Policy</td>
+        </tr>
+        <tr>
+          <td>Play Policies</td>
+          <td><code>drive.file</code> scope only; no prohibited content; no misleading claims</td>
+        </tr>
+        <tr>
+          <td>App Store Guidelines</td>
+          <td>Permissions requested only when needed; no auto-sync without user action</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 11 -->
+  <div class="section" id="s11">
+    <div class="section-header">
+      <span class="section-num">11</span>
+      <h2 class="section-title">Post-Launch</h2>
+    </div>
+    <div class="subsection">
+      <div class="subsection-title">What to Monitor</div>
+      <ul class="check-list" data-section="s11">
+        <li><div class="cb"></div>Crash reports reviewed</li>
+        <li><div class="cb"></div>User reviews and ratings monitored</li>
+        <li><div class="cb"></div>User feedback and bug reports collected</li>
+        <li><div class="cb"></div>Drive sync error reports reviewed</li>
+        <li><div class="cb"></div>Critical issues addressed in next update</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="summary-card">
+    <div class="toc-label">Before You Submit</div>
+    <ul class="summary-list">
+      <li>All legal documents reviewed and hosted at public URLs</li>
+      <li>App tested on physical devices — not just simulator</li>
+      <li>No hardcoded keys or debug logging in release build</li>
+      <li>drive.file scope only — cannot access other Drive files</li>
+      <li>All store listing text matches actual app behaviour</li>
+      <li>Screenshots from actual app UI, not mockups</li>
+    </ul>
+  </div>
+
+  <footer>
+    <div class="footer-left"><strong>noteliha</strong> · Navkon Labs</div>
+    <div class="footer-right">PUBLISHING CHECKLIST v1.0</div>
+  </footer>
+
+</div>
+
+<script>
+  // Checkbox interactivity
+  function updateProgress() {
+    const all = document.querySelectorAll('.check-list li');
+    const done = document.querySelectorAll('.check-list li.done');
+    const total = all.length;
+    const checked = done.length;
+    document.getElementById('progress-count').textContent = checked + ' / ' + total;
+    document.getElementById('progress-fill').style.width = (total ? (checked / total * 100) : 0) + '%';
+
+    // Update per-section badges
+    document.querySelectorAll('.check-list[data-section]').forEach(list => {
+      const sec = list.getAttribute('data-section');
+      const badge = document.getElementById('badge-' + sec);
+      if (!badge) return;
+      const items = list.querySelectorAll('li');
+      const doneItems = list.querySelectorAll('li.done');
+      badge.textContent = doneItems.length + ' / ' + items.length;
+    });
+  }
+
+  document.querySelectorAll('.check-list li').forEach(li => {
+    li.addEventListener('click', () => {
+      li.classList.toggle('done');
+      updateProgress();
+    });
+  });
+
+  updateProgress();
+</script>
+<script>
+(function() {
+  var content = "# noteliha \u2013 Publishing Checklist & Submission Guide\n\n**Status:** Ready for Review\n**Version:** 1.0.0\n**Date:** March 2026\n\n---\n\n## Pre-Submission Checklist\n\n### 1. Legal Documents\n- [ ] Privacy Policy reviewed and accurate\n- [ ] Terms of Service reviewed and accurate\n- [ ] Developer contact information verified\n- [ ] Folder name `.liha_notes_app` consistent across all documents\n- [ ] Privacy policy URL live and accessible\n\n### 2. Code Quality\n- [ ] All features tested on device\n- [ ] No crashes during testing\n- [ ] Offline functionality verified\n- [ ] Backup and restore functionality verified\n- [ ] Search functionality verified\n- [ ] No hardcoded API keys\n- [ ] No debug logging in production build\n- [ ] Error handling in place for Drive operations\n\n### 3. Security\n- [ ] OAuth properly implemented\n- [ ] No plaintext passwords or tokens stored\n- [ ] HTTPS enforced for all API calls\n- [ ] Exponential backoff implemented for Drive retries\n\n### 4. Privacy\n- [ ] Minimal data collection confirmed\n- [ ] No unnecessary permissions requested\n- [ ] No tracking or analytics SDKs included\n- [ ] No third-party SDKs beyond Google\n- [ ] Data deletion mechanism working (recycle bin + Drive folder)\n\n### 5. Functionality\n- [ ] All 5 note types working (normal, checklist, itinerary, mealPlan, recipe)\n- [ ] All 6 color themes working (Default, Sunset, Orange, Forest, Lavender, Rose)\n- [ ] Create, edit, delete notes\n- [ ] Soft delete and restore from recycle bin\n- [ ] Hard delete (empty recycle bin)\n- [ ] Search across notes\n- [ ] Pin notes\n- [ ] Category organization\n- [ ] Image attachment\n- [ ] Google Drive upload (manual)\n- [ ] Google Drive restore (manual)\n- [ ] Conflict detection and resolution\n- [ ] Multi-account support on same device\n- [ ] Offline functionality\n\n### 6. User Interface\n- [ ] Works on all target screen sizes\n- [ ] Portrait and landscape mode\n- [ ] Dark mode and light mode\n- [ ] Readable text and clear icons\n- [ ] No broken layouts\n\n### 7. Testing\n- [ ] Tested on Android (latest version)\n- [ ] Tested on small screen device\n- [ ] Tested on large screen device\n- [ ] Tested with no Google account\n- [ ] Tested with Google account signed in\n- [ ] Tested offline\n- [ ] Tested with slow internet\n- [ ] Tested sign-in with two different Google accounts on same device\n\n### 8. Documentation\n- [ ] Privacy Policy complete\n- [ ] Terms of Service complete\n- [ ] Release notes prepared\n- [ ] Screenshots prepared (all required sizes)\n- [ ] App description ready\n- [ ] Keywords selected\n\n### 9. App Store Compliance\n- [ ] Content rating appropriate (Everyone / 4+)\n- [ ] No prohibited content\n- [ ] Metadata accurate and matches actual app behaviour\n- [ ] Screenshots represent actual app UI\n- [ ] Bundle ID unique\n- [ ] Version number correct (1.0.0)\n\n### 10. Release Preparation\n- [ ] Release build generated\n- [ ] Signing certificates current\n- [ ] App icons generated (all required sizes)\n- [ ] Screenshots captured (all required sizes)\n- [ ] Release notes prepared\n\n---\n\n## Google Play Store Submission Steps\n\n### Step 1 \u2013 Prepare Build\n```bash\n# Build App Bundle (recommended for Play Store)\nflutter build appbundle --release\n\n# Output: build/app/outputs/bundle/release/app-release.aab\n```\n\n### Step 2 \u2013 Create Play Console Account\n1. Go to Google Play Console\n2. Create developer account or sign in\n3. Pay one-time $25 registration fee\n4. Accept terms and conditions\n\n### Step 3 \u2013 Create New App\n1. Click \"Create app\"\n2. Enter app name: noteliha\n3. Select type: App\n4. Default language: English\n5. Complete required declarations\n\n### Step 4 \u2013 Store Listing\n- [ ] Title: noteliha\n- [ ] Short description (from GOOGLE_PLAY_STORE_LISTING.md)\n- [ ] Full description (from GOOGLE_PLAY_STORE_LISTING.md)\n- [ ] Category: Productivity\n- [ ] Contact email\n- [ ] Privacy policy URL\n- [ ] 2\u20138 screenshots (1080\u00d71920 recommended)\n- [ ] Feature graphic (1024\u00d7500)\n- [ ] App icon (512\u00d7512)\n\n### Step 5 \u2013 App Content\n- [ ] Content rating questionnaire completed\n- [ ] Target audience declared (13+)\n- [ ] Privacy policy URL entered\n\n### Step 6 \u2013 Submit Build\n1. Go to Release \u2192 Production\n2. Create new release\n3. Upload app bundle\n4. Add release notes\n5. Submit for review\n\n---\n\n## Apple App Store Submission Steps\n\n### Step 1 \u2013 Prepare Build\n```bash\nflutter build ios --release\n```\n\n### Step 2 \u2013 Apple Developer Account\n1. Enroll in Apple Developer Program ($99/year)\n2. Accept license agreements\n\n### Step 3 \u2013 App Identifier\n1. Create new identifier in Certificates, Identifiers & Profiles\n2. Bundle ID: com.navkonlabs.noteliha (or your chosen ID)\n3. App name: noteliha\n\n### Step 4 \u2013 Certificates and Profiles\n1. Create iOS Distribution Certificate\n2. Create App Store distribution profile\n3. Update project signing settings in Xcode\n\n### Step 5 \u2013 App Store Connect\n1. Go to App Store Connect \u2192 My Apps \u2192 New App\n2. Name: noteliha\n3. Bundle ID: (your bundle ID)\n4. SKU: noteliha-001\n\n### Step 6 \u2013 App Information\n- [ ] Category: Productivity\n- [ ] Privacy policy URL\n- [ ] Support URL\n- [ ] Description (from APPLE_APP_STORE_LISTING.md)\n- [ ] Keywords\n- [ ] Screenshots (5.5-inch, 6.5-inch, iPad Pro 12.9-inch)\n\n### Step 7 \u2013 App Privacy\n- [ ] Complete app privacy questionnaire\n- [ ] Data types: Google account info (name, email) when Drive backup enabled\n- [ ] Data not linked to identity beyond authentication\n\n### Step 8 \u2013 Submit\n1. Upload build via Xcode\n2. Attach build in App Store Connect\n3. Complete all required fields\n4. Submit for review\n\n---\n\n## Post-Launch Monitoring\n\n### What to Monitor\n- [ ] Crash reports\n- [ ] User reviews and ratings\n- [ ] User feedback and bug reports\n- [ ] Drive sync error reports\n\n### Review Responses\n- [ ] Respond to user reviews\n- [ ] Address critical issues in next update\n- [ ] Track common complaints for roadmap\n\n---\n\n## Regulatory Notes\n\nThese items describe the app's design intent. Formal legal compliance verification should be done by a qualified professional before submission if required.\n\n| Regulation | App Design |\n|---|---|\n| GDPR | Data stored locally or in user's own Drive; user can delete at any time |\n| CCPA | No sale of personal information; user controls all data |\n| COPPA | App not directed at children under 13; noted in Privacy Policy |\n| Google Play Policies | drive.file scope only; no prohibited content |\n| Apple App Store Guidelines | Permissions requested only when needed; no misleading claims |\n\n---\n\n## Version History\n\nv1.0.0 \u2013 March 2026 \u2013 Initial checklist for noteliha launch\n";
+  var btn = document.getElementById('dl-btn');
+  if (btn) {
+    var blob = new Blob([content], {type: 'text/markdown'});
+    btn.href = URL.createObjectURL(blob);
+  }
+})();
+</script>

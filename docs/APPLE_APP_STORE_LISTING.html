@@ -110,6 +110,31 @@
 
   @keyframes slideIn { from { width: 0; opacity: 0; } to { width: 40px; opacity: 1; } }
   @keyframes fadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* ── Download button ── */
+  .dl-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 28px;
+    padding: 9px 16px;
+    background: var(--ink);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    text-decoration: none;
+    transition: opacity 0.15s, transform 0.15s;
+    animation: fadeUp 0.7s cubic-bezier(.22,1,.36,1) 0.3s both;
+  }
+  .dl-btn:hover { opacity: 0.8; transform: translateY(-1px); }
+  .dl-btn svg { flex-shrink: 0; }
+
 </style>
 
 <div class="page">
@@ -125,6 +150,13 @@
       <span class="meta-chip">Navkon Labs</span>
     </div>
   </header>
+
+  <a class="dl-btn" id="dl-btn" download="APPLE_APP_STORE_LISTING.md" href="#">
+    <svg width="13" height="13" viewBox="0 0 13 13" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M6.5 1v7M3.5 5.5l3 3 3-3M1.5 10h10" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    Download .md
+  </a>
 
   <div class="divider"></div>
 
@@ -398,5 +430,14 @@ The app focuses on simplicity, speed, and giving you full control over your data
     <div class="footer-left"><strong>noteliha</strong> · Navkon Labs</div>
     <div class="footer-right">APP STORE LISTING v1.0</div>
   </footer>
-
+<script>
+(function() {
+  var content = "# Apple App Store Listing \u2013 noteliha\n\n**Application Version:** 1.0.0\n**Developer:** Nikhil Lande\n**Organization:** Navkon Labs\n**Location:** Kharghar, Maharashtra, India\n**Last Updated:** March 2026\n\n---\n\n## App Name\n\nnoteliha\n\n---\n\n## Subtitle (30 characters)\n\nFast notes with secure backup\n\n---\n\n## Promotional Text (170 characters)\n\nCreate notes instantly, organize them your way, and optionally back them up to Google Drive. No ads, no tracking, and designed with privacy in mind.\n\n---\n\n## App Description\n\nnoteliha is a lightweight and privacy-focused note-taking app designed to help you quickly create, organize, and manage notes.\n\nNotes are stored locally on your device and can optionally be backed up to your personal Google Drive account when you choose to.\n\nThe app focuses on simplicity, speed, and giving you full control over your data.\n\n---\n\n## Key Features\n\n### Multiple Note Types\n\nCreate notes in different formats:\n\n\u2022 Regular notes\n\u2022 Checklists\n\u2022 Recipes\n\u2022 Meal plans\n\u2022 Travel itineraries\n\n---\n\n### Fast Search\n\nQuickly find notes by searching title, content, or category. Results appear instantly while typing.\n\n---\n\n### Smart Organization\n\n\u2022 Pin important notes\n\u2022 Organize with categories (General, Work, Personal, Ideas)\n\u2022 Attach images to notes\n\u2022 Soft delete with recycle bin\n\u2022 Restore deleted notes anytime\n\n---\n\n### Custom Themes\n\nChoose from six built-in color themes:\n\n\u2022 Default\n\u2022 Sunset\n\u2022 Orange\n\u2022 Forest\n\u2022 Lavender\n\u2022 Rose\n\n---\n\n### Optional Google Drive Backup\n\nBack up notes to your personal Google Drive account.\n\n\u2022 Backup enabled only when you sign in and trigger it manually\n\u2022 Files stored in a dedicated `.liha_notes_app` folder in your Drive\n\u2022 Only files created by the app are accessible\n\u2022 Manual backup and restore \u2014 you stay in control\n\n---\n\n### Offline First\n\nnoteliha works without internet access.\n\n\u2022 Create and edit notes offline\n\u2022 Sync to Drive manually when you choose to\n\u2022 Minimal battery and background usage\n\n---\n\n## Privacy\n\nThe application is designed to minimize data collection.\n\n\u2022 Notes stored locally on your device\n\u2022 Optional Google Drive backup under your full control\n\u2022 No advertising\n\u2022 No behavioral tracking\n\u2022 No analytics SDKs\n\nFor full details see the Privacy Policy included with the app.\n\n---\n\n## Permissions Explanation\n\n**Google Sign-In**\nUsed to enable optional Google Drive backup.\n\n**Google Drive Access**\nAllows the app to create and manage its own backup files only.\n\n**Photos**\nRequired only when attaching images to notes.\n\n**Local Storage**\nUsed to store notes and attachments on the device.\n\n---\n\n## Pricing\n\nnoteliha is free to download.\n\n\u2022 No advertisements\n\u2022 No in-app purchases\n\u2022 No subscription features\n\n---\n\n## Support\n\nEmail: navkon9@gmail.com\nDeveloper: Nikhil Lande, Navkon Labs, Kharghar, Maharashtra, India\n\n---\n\n## Keywords (\u2264100 characters)\n\nnotes, checklist, productivity, offline notes, private notes, note organizer\n\n---\n\n## Category\n\nPrimary: Productivity\n\n---\n\n## Age Rating\n\n4+\n\nNo objectionable content.\n\n---\n\n## Screenshots\n\n### Screenshot 1 \u2013 Notes Overview\nTitle: Browse Your Notes\nDescription: View all notes in one place. Search instantly and pin important notes to the top.\n\n### Screenshot 2 \u2013 Create Notes\nTitle: Create Notes Quickly\nDescription: Choose between multiple note types including regular notes, checklists, recipes, meal plans, and itineraries.\n\n### Screenshot 3 \u2013 Checklists\nTitle: Track Tasks\nDescription: Create checklists and mark items as completed.\n\n### Screenshot 4 \u2013 Search\nTitle: Instant Search\nDescription: Find notes quickly by searching titles, text, or categories.\n\n### Screenshot 5 \u2013 Themes\nTitle: Personalize Appearance\nDescription: Choose from six color themes to customize the app.\n\n### Screenshot 6 \u2013 Backup\nTitle: Optional Backup\nDescription: Manually back up and restore notes to your personal Google Drive account.\n\n---\n\n## Version Information\n\n### Version 1.0.0\n\nInitial release of noteliha including:\n\n\u2022 Multiple note formats\n\u2022 Image attachments\n\u2022 Recycle bin support\n\u2022 Fast search\n\u2022 Optional manual Google Drive backup and restore\n\u2022 Offline functionality\n\u2022 Six color themes\n\n---\n\n## Technical Requirements\n\nMinimum iOS Version: iOS 14.0\nDevice Compatibility: iPhone and iPad\n\n---\n\n## Notes for App Store Review\n\nTo test the app:\n\n1. Create a note with title and content.\n2. Edit the note.\n3. Use search to find the note.\n4. Delete the note and restore it from the recycle bin.\n5. Sign in with Google, tap Upload Backup, then verify the `.liha_notes_app` folder is created in Google Drive.\n6. Tap Restore from Drive and verify notes are restored correctly.\n\n---\n\n## Version History\n\nVersion 1.0.0 \u2013 March 2026 \u2013 Initial App Store release.\n";
+  var btn = document.getElementById('dl-btn');
+  if (btn) {
+    var blob = new Blob([content], {type: 'text/markdown'});
+    btn.href = URL.createObjectURL(blob);
+  }
+})();
+</script>
 </div>

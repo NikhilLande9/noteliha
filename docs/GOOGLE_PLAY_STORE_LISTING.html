@@ -1,0 +1,381 @@
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --ink:        #0f0e0d;
+    --ink-soft:   #6b6560;
+    --ink-muted:  #b0aaa4;
+    --paper:      #faf8f5;
+    --rule:       #e4ddd5;
+    --teal:       #2a7a6f;
+    --teal-light: #e0f0ed;
+    --teal-mid:   #4aada0;
+  }
+
+  html { scroll-behavior: smooth; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--paper); color: var(--ink); min-height: 100vh; overflow-x: hidden; }
+  body::before { content: ''; position: fixed; inset: 0; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E"); pointer-events: none; z-index: 999; opacity: 0.4; }
+
+  .page { max-width: 740px; margin: 0 auto; padding: 0 28px 100px; }
+
+  .back { display: inline-flex; align-items: center; gap: 6px; margin: 36px 0 0; font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 500; color: var(--teal); text-decoration: none; letter-spacing: 0.08em; text-transform: uppercase; transition: opacity 0.15s; }
+  .back:hover { opacity: 0.7; }
+  .back::before { content: '←'; font-size: 13px; }
+
+  header { padding: 40px 0 48px; }
+  .header-rule { width: 40px; height: 3px; background: var(--teal); margin-bottom: 24px; animation: slideIn 0.6s cubic-bezier(.22,1,.36,1) both; }
+  .header-title { font-family: 'DM Serif Display', serif; font-size: clamp(32px, 6vw, 48px); color: var(--ink); letter-spacing: -1.5px; line-height: 1.1; animation: fadeUp 0.7s cubic-bezier(.22,1,.36,1) 0.1s both; }
+  .header-title span { color: var(--teal); }
+  .header-meta { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 20px; animation: fadeUp 0.7s cubic-bezier(.22,1,.36,1) 0.2s both; }
+  .meta-chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; background: var(--teal-light); border: 1px solid rgba(42,122,111,0.2); border-radius: 4px; font-family: 'DM Mono', monospace; font-size: 10.5px; font-weight: 500; color: var(--teal); letter-spacing: 0.06em; }
+
+  .divider { height: 1px; background: var(--rule); margin: 0 0 52px; animation: fadeUp 0.5s ease 0.3s both; }
+
+  .toc { background: #fff; border: 1px solid var(--rule); border-radius: 10px; padding: 24px 28px; margin-bottom: 52px; animation: fadeUp 0.6s cubic-bezier(.22,1,.36,1) 0.35s both; }
+  .toc-label { font-family: 'DM Mono', monospace; font-size: 10px; font-weight: 500; color: var(--ink-muted); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 14px; }
+  .toc-list { list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: 6px 24px; }
+  @media (max-width: 500px) { .toc-list { grid-template-columns: 1fr; } }
+  .toc-list a { display: flex; align-items: baseline; gap: 8px; font-size: 13px; color: var(--ink-soft); text-decoration: none; transition: color 0.15s; }
+  .toc-list a:hover { color: var(--teal); }
+  .toc-num { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--teal); font-weight: 500; min-width: 18px; }
+
+  .section { margin-bottom: 56px; animation: fadeUp 0.6s cubic-bezier(.22,1,.36,1) both; }
+  .section-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; padding-bottom: 14px; border-bottom: 1px solid var(--rule); }
+  .section-num { font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 500; color: var(--teal); background: var(--teal-light); padding: 3px 8px; border-radius: 4px; letter-spacing: 0.06em; white-space: nowrap; flex-shrink: 0; }
+  .section-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--ink); letter-spacing: -0.5px; }
+
+  .subsection { margin-bottom: 28px; }
+  .subsection-title { font-family: 'DM Mono', monospace; font-size: 10.5px; font-weight: 500; color: var(--ink-soft); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 10px; }
+
+  p { font-size: 14.5px; color: var(--ink-soft); line-height: 1.75; margin-bottom: 12px; font-weight: 300; }
+  p strong { color: var(--ink); font-weight: 500; }
+
+  .item-list { list-style: none; margin: 8px 0 16px; }
+  .item-list li { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; color: var(--ink-soft); line-height: 1.6; padding: 5px 0; font-weight: 300; border-bottom: 1px solid var(--rule); }
+  .item-list li:last-child { border-bottom: none; }
+  .item-list li::before { content: ''; width: 5px; height: 5px; background: var(--teal-mid); border-radius: 50%; margin-top: 8px; flex-shrink: 0; }
+
+  .step-list { list-style: none; counter-reset: steps; margin: 8px 0 16px; }
+  .step-list li { counter-increment: steps; display: flex; align-items: flex-start; gap: 12px; font-size: 14px; color: var(--ink-soft); line-height: 1.6; padding: 8px 0; border-bottom: 1px solid var(--rule); font-weight: 300; }
+  .step-list li:last-child { border-bottom: none; }
+  .step-list li::before { content: counter(steps); font-family: 'DM Mono', monospace; font-size: 10px; font-weight: 500; color: var(--teal); background: var(--teal-light); border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px; }
+
+  .info-card { background: #fff; border: 1px solid var(--rule); border-left: 3px solid var(--teal); border-radius: 0 8px 8px 0; padding: 16px 20px; margin: 12px 0 20px; }
+  .info-card p { margin: 0; }
+
+  /* Copy block */
+  .copy-block { background: #fff; border: 1px solid var(--rule); border-radius: 8px; padding: 20px 24px; margin: 12px 0 20px; position: relative; }
+  .copy-label { font-family: 'DM Mono', monospace; font-size: 9.5px; font-weight: 500; color: var(--ink-muted); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 10px; }
+  .copy-text { font-size: 14px; color: var(--ink-soft); line-height: 1.7; font-weight: 300; white-space: pre-wrap; }
+  .copy-limit { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--teal); margin-top: 10px; }
+
+  /* Theme swatches */
+  .theme-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 12px 0 16px; }
+  @media (max-width: 480px) { .theme-grid { grid-template-columns: 1fr 1fr; } }
+  .theme-swatch { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: #fff; border: 1px solid var(--rule); border-radius: 8px; font-size: 13px; color: var(--ink-soft); font-weight: 300; }
+  .swatch-dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; }
+
+  code { font-family: 'DM Mono', monospace; font-size: 12.5px; background: var(--teal-light); color: var(--teal); padding: 2px 6px; border-radius: 4px; }
+  a.external { color: var(--teal); text-decoration: none; border-bottom: 1px solid rgba(42,122,111,0.3); transition: border-color 0.15s; }
+  a.external:hover { border-color: var(--teal); }
+
+  .summary-card { background: var(--ink); border-radius: 10px; padding: 28px 32px; margin-bottom: 56px; animation: fadeUp 0.6s ease 0.4s both; }
+  .summary-card .toc-label { color: rgba(255,255,255,0.4); }
+  .summary-list { list-style: none; margin-top: 14px; }
+  .summary-list li { display: flex; align-items: flex-start; gap: 12px; font-size: 14px; color: rgba(255,255,255,0.75); line-height: 1.6; padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,0.08); font-weight: 300; }
+  .summary-list li:last-child { border-bottom: none; }
+  .summary-list li::before { content: '✓'; font-family: 'DM Mono', monospace; font-size: 11px; color: var(--teal-mid); flex-shrink: 0; margin-top: 2px; }
+
+  footer { padding-top: 28px; border-top: 1px solid var(--rule); display: flex; align-items: center; justify-content: space-between; }
+  .footer-left { font-size: 12px; color: var(--ink-muted); }
+  .footer-left strong { color: var(--ink-soft); font-weight: 500; }
+  .footer-right { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--ink-muted); letter-spacing: 0.1em; }
+
+  @keyframes slideIn { from { width: 0; opacity: 0; } to { width: 40px; opacity: 1; } }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* ── Download button ── */
+  .dl-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 28px;
+    padding: 9px 16px;
+    background: var(--ink);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    text-decoration: none;
+    transition: opacity 0.15s, transform 0.15s;
+    animation: fadeUp 0.7s cubic-bezier(.22,1,.36,1) 0.3s both;
+  }
+  .dl-btn:hover { opacity: 0.8; transform: translateY(-1px); }
+  .dl-btn svg { flex-shrink: 0; }
+
+</style>
+
+<div class="page">
+
+  <a href="index.html" class="back">Documentation</a>
+
+  <header>
+    <div class="header-rule"></div>
+    <h1 class="header-title">Google Play <span>Store Listing</span></h1>
+    <div class="header-meta">
+      <span class="meta-chip">Version 1.0.0</span>
+      <span class="meta-chip">March 2026</span>
+      <span class="meta-chip">Navkon Labs</span>
+    </div>
+  </header>
+
+  <a class="dl-btn" id="dl-btn" download="GOOGLE_PLAY_STORE_LISTING.md" href="#">
+    <svg width="13" height="13" viewBox="0 0 13 13" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M6.5 1v7M3.5 5.5l3 3 3-3M1.5 10h10" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    Download .md
+  </a>
+
+  <div class="divider"></div>
+
+  <div class="toc">
+    <div class="toc-label">Contents</div>
+    <ol class="toc-list">
+      <li><a href="#s1"><span class="toc-num">01</span>App Title & Description</a></li>
+      <li><a href="#s2"><span class="toc-num">02</span>Key Features</a></li>
+      <li><a href="#s3"><span class="toc-num">03</span>Themes</a></li>
+      <li><a href="#s4"><span class="toc-num">04</span>Privacy & Permissions</a></li>
+      <li><a href="#s5"><span class="toc-num">05</span>Category & Rating</a></li>
+      <li><a href="#s6"><span class="toc-num">06</span>Keywords</a></li>
+      <li><a href="#s7"><span class="toc-num">07</span>Release Notes</a></li>
+      <li><a href="#s8"><span class="toc-num">08</span>Reviewer Instructions</a></li>
+      <li><a href="#s9"><span class="toc-num">09</span>Developer Information</a></li>
+    </ol>
+  </div>
+
+  <!-- 1 -->
+  <div class="section" id="s1">
+    <div class="section-header"><span class="section-num">01</span><h2 class="section-title">App Title & Description</h2></div>
+
+    <div class="subsection">
+      <div class="subsection-title">App Title</div>
+      <div class="copy-block">
+        <div class="copy-text">noteliha</div>
+      </div>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-title">Short Description <span style="font-size:11px;color:var(--ink-muted);font-weight:300;text-transform:none;letter-spacing:0">(80 characters max)</span></div>
+      <div class="copy-block">
+        <div class="copy-text">Fast, private note-taking with optional Google Drive backup.</div>
+        <div class="copy-limit">58 / 80 characters</div>
+      </div>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-title">Full Description</div>
+      <div class="copy-block">
+        <div class="copy-label">Tagline</div>
+        <div class="copy-text">Your notes. Your privacy. Your control.</div>
+      </div>
+      <div class="copy-block">
+        <div class="copy-label">Overview</div>
+        <div class="copy-text">noteliha is a fast, lightweight, and privacy-focused note-taking app designed to keep your notes simple, organized, and secure.
+
+Create notes instantly, organize them your way, and optionally back them up to your personal Google Drive.
+
+Your notes remain under your control. No tracking. No ads. No unnecessary permissions.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2 -->
+  <div class="section" id="s2">
+    <div class="section-header"><span class="section-num">02</span><h2 class="section-title">Key Features</h2></div>
+
+    <div class="subsection">
+      <div class="subsection-title">5 Note Types</div>
+      <ul class="item-list">
+        <li>Regular notes</li>
+        <li>Checklists</li>
+        <li>Recipes</li>
+        <li>Meal plans</li>
+        <li>Travel itineraries</li>
+      </ul>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-title">Smart Organization</div>
+      <ul class="item-list">
+        <li>Pin important notes to the top</li>
+        <li>Categorize notes — General, Work, Personal, Ideas</li>
+        <li>Soft-delete with recycle bin</li>
+        <li>Restore deleted notes anytime</li>
+        <li>Attach images to notes</li>
+      </ul>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-title">Fast Search</div>
+      <ul class="item-list">
+        <li>Search by title, content, or category</li>
+        <li>Instant results while typing</li>
+        <li>Results organized by pinned and recent notes</li>
+      </ul>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-title">Secure Cloud Backup</div>
+      <ul class="item-list">
+        <li>Uses Google Drive <code>drive.file</code> permission only</li>
+        <li>Only accesses files created by noteliha</li>
+        <li>Individual note and image files stored in a dedicated folder</li>
+        <li>Manual backup and restore — you decide when to sync</li>
+        <li>Your existing Drive files remain completely inaccessible to the app</li>
+      </ul>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-title">Offline First</div>
+      <ul class="item-list">
+        <li>All notes stored locally on your device</li>
+        <li>Create and edit notes without internet access</li>
+        <li>Sync to Drive manually when you choose to</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 3 -->
+  <div class="section" id="s3">
+    <div class="section-header"><span class="section-num">03</span><h2 class="section-title">Themes</h2></div>
+    <p>Choose from six built-in color themes:</p>
+    <div class="theme-grid">
+      <div class="theme-swatch"><div class="swatch-dot" style="background:#80cbc4"></div>Default</div>
+      <div class="theme-swatch"><div class="swatch-dot" style="background:#ffcc80"></div>Sunset</div>
+      <div class="theme-swatch"><div class="swatch-dot" style="background:#ffb74d"></div>Orange</div>
+      <div class="theme-swatch"><div class="swatch-dot" style="background:#a5d6a7"></div>Forest</div>
+      <div class="theme-swatch"><div class="swatch-dot" style="background:#ce93d8"></div>Lavender</div>
+      <div class="theme-swatch"><div class="swatch-dot" style="background:#f48fb1"></div>Rose</div>
+    </div>
+  </div>
+
+  <!-- 4 -->
+  <div class="section" id="s4">
+    <div class="section-header"><span class="section-num">04</span><h2 class="section-title">Privacy & Permissions</h2></div>
+
+    <div class="subsection">
+      <div class="subsection-title">Privacy First</div>
+      <ul class="item-list">
+        <li>Notes stored locally on your device</li>
+        <li>Optional backup to your personal Google Drive only</li>
+        <li>No ads, no analytics, no third-party data sharing</li>
+      </ul>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-title">Permissions Explained</div>
+      <ul class="item-list">
+        <li><strong>Google Sign-In</strong> — used only when enabling Google Drive backup</li>
+        <li><strong>Google Drive Access</strong> — allows the app to create and manage its own backup files only</li>
+        <li><strong>Photos</strong> — required only when attaching images to notes</li>
+        <li><strong>Storage Access</strong> — used to store notes and attachments locally</li>
+      </ul>
+    </div>
+
+    <div class="info-card">
+      <p>Backup files are transmitted via HTTPS and stored only inside the app's dedicated <code>.liha_notes_app</code> folder. No personal data is sold or shared.</p>
+    </div>
+  </div>
+
+  <!-- 5 -->
+  <div class="section" id="s5">
+    <div class="section-header"><span class="section-num">05</span><h2 class="section-title">Category & Rating</h2></div>
+    <ul class="item-list">
+      <li><strong>Category</strong> — Productivity</li>
+      <li><strong>Content Rating</strong> — Everyone</li>
+      <li><strong>Target Audience</strong> — All users aged 13 and above</li>
+    </ul>
+  </div>
+
+  <!-- 6 -->
+  <div class="section" id="s6">
+    <div class="section-header"><span class="section-num">06</span><h2 class="section-title">Keywords</h2></div>
+    <div class="copy-block">
+      <div class="copy-text">notes, productivity, offline notes, note organizer, private notes</div>
+    </div>
+  </div>
+
+  <!-- 7 -->
+  <div class="section" id="s7">
+    <div class="section-header"><span class="section-num">07</span><h2 class="section-title">Release Notes</h2></div>
+    <div class="copy-block">
+      <div class="copy-label">Version 1.0.0 — Initial Release</div>
+      <div class="copy-text">• Full note-taking functionality
+• Five note formats (notes, checklists, recipes, meal plans, itineraries)
+• Image attachments
+• Recycle bin and restore
+• Optional manual Google Drive backup and restore
+• Fast search across notes
+• Six built-in color themes
+• Offline-first functionality</div>
+    </div>
+  </div>
+
+  <!-- 8 -->
+  <div class="section" id="s8">
+    <div class="section-header"><span class="section-num">08</span><h2 class="section-title">Reviewer Instructions</h2></div>
+    <ol class="step-list">
+      <li>Open the app and create a note with a title and content</li>
+      <li>Use search to find the note</li>
+      <li>Pin the note to the top</li>
+      <li>Delete the note and restore it from the recycle bin</li>
+      <li>Sign in with Google, tap <strong>Upload Backup</strong>, and verify the <code>.liha_notes_app</code> folder appears in Google Drive</li>
+      <li>Tap <strong>Restore from Drive</strong> and verify notes are restored correctly</li>
+    </ol>
+  </div>
+
+  <!-- 9 -->
+  <div class="section" id="s9">
+    <div class="section-header"><span class="section-num">09</span><h2 class="section-title">Developer Information</h2></div>
+    <ul class="item-list">
+      <li><strong>Developer Name</strong> — Navkon Labs</li>
+      <li><strong>Developer</strong> — Nikhil Lande</li>
+      <li><strong>Location</strong> — Kharghar, Maharashtra, India</li>
+      <li><strong>Contact Email</strong> — <a href="mailto:navkon9@gmail.com" class="external">navkon9@gmail.com</a></li>
+      <li><strong>Publishing Email</strong> — <a href="mailto:nikhillande9@gmail.com" class="external">nikhillande9@gmail.com</a></li>
+    </ul>
+  </div>
+
+  <div class="summary-card">
+    <div class="toc-label">Key Points</div>
+    <ul class="summary-list">
+      <li>Local-first — notes stay on your device</li>
+      <li>Optional manual backup to your own Google Drive</li>
+      <li>No automatic sync — you control when data moves</li>
+      <li>No ads, no analytics, no third-party tracking</li>
+      <li>drive.file scope only — cannot access other Drive files</li>
+    </ul>
+  </div>
+
+  <footer>
+    <div class="footer-left"><strong>noteliha</strong> · Navkon Labs</div>
+    <div class="footer-right">PLAY STORE LISTING v1.0</div>
+  </footer>
+<script>
+(function() {
+  var content = "# Google Play Store Listing \u2013 noteliha\n\n**App Version:** 1.0.0\n**Prepared by:** Nikhil Lande\n**Organization:** Navkon Labs\n**Location:** Kharghar, Maharashtra, India\n**Date:** March 2026\n\n---\n\n# App Title\n\nnoteliha\n\n---\n\n# Short Description (80 characters max)\n\nFast, private note-taking with optional Google Drive backup.\n\n---\n\n# Full Description\n\n## Tagline\n\nYour notes. Your privacy. Your control.\n\n---\n\n## Overview\n\nnoteliha is a fast, lightweight, and privacy-focused note-taking app designed to keep your notes simple, organized, and secure.\n\nCreate notes instantly, organize them your way, and optionally back them up to your personal Google Drive.\n\nYour notes remain under your control. No tracking. No ads. No unnecessary permissions.\n\n---\n\n## Key Features\n\n### 5 Note Types\n\nCreate notes for different purposes:\n\n\u2022 Regular notes\n\u2022 Checklists\n\u2022 Recipes\n\u2022 Meal plans\n\u2022 Travel itineraries\n\nEach format is designed to help organize information clearly.\n\n---\n\n### Smart Organization\n\nKeep notes structured and easy to manage.\n\n\u2022 Pin important notes to the top\n\u2022 Categorize notes (General, Work, Personal, Ideas)\n\u2022 Soft-delete with recycle bin\n\u2022 Restore deleted notes anytime\n\u2022 Attach images to notes\n\n---\n\n### Fast Search\n\nFind information instantly.\n\n\u2022 Search by title, content, or category\n\u2022 Instant search results\n\u2022 Organized results by pinned and recent notes\n\n---\n\n### Beautiful Color Themes\n\nChoose from six built-in themes:\n\n\u2022 Default\n\u2022 Sunset\n\u2022 Orange\n\u2022 Forest\n\u2022 Lavender\n\u2022 Rose\n\nCustomize the app to match your style.\n\n---\n\n### Secure Cloud Backup\n\nOptional backup to your personal Google Drive.\n\n\u2022 Uses Google Drive `drive.file` permission only\n\u2022 Only accesses files created by noteliha\n\u2022 Individual note files stored in a dedicated folder\n\u2022 Manual backup and restore \u2014 you decide when to sync\n\u2022 Your existing Drive files remain inaccessible to the app\n\n---\n\n### Offline First\n\nnoteliha works without internet access.\n\n\u2022 Notes stored locally on your device\n\u2022 Create and edit notes offline\n\u2022 Sync manually when you choose to\n\n---\n\n### Privacy First\n\nPrivacy is a core principle of noteliha.\n\n\u2022 Notes stored locally on your device\n\u2022 Optional backup to your personal Google Drive\n\u2022 No ads\n\u2022 No analytics tracking\n\u2022 No third-party data sharing\n\n---\n\n## Why Choose noteliha\n\n**Local-First Design**\nYour notes remain on your device unless you choose to enable backup.\n\n**Optional Sync**\nBackup safely to your own Google Drive \u2014 on your terms.\n\n**Fast Performance**\nOptimized search and instant note creation.\n\n**No Tracking**\nNo analytics, advertising SDKs, or behavioral tracking.\n\n**Simple Interface**\nClean design focused on productivity.\n\n---\n\n## Permissions Explained\n\n**Google Sign-In**\nUsed only when enabling Google Drive backup.\n\n**Google Drive Access**\nAllows the app to create and manage its own backup files only.\n\n**Photos**\nRequired only when attaching images to notes.\n\n**Storage Access**\nUsed to store notes and attachments locally on device.\n\n---\n\n## Data Security\n\n\u2022 Notes stored locally on device storage\n\u2022 Google Drive backups transmitted via HTTPS\n\u2022 Backup files stored only inside the app's dedicated folder\n\u2022 No personal data sold or shared\n\n---\n\n## Category\n\nProductivity\n\n---\n\n## Content Rating\n\nEveryone\n\nNo objectionable content.\n\n---\n\n## Target Audience\n\nAll users aged 13 and above.\n\n---\n\n## Keywords\n\nnotes, productivity, offline notes, note organizer, private notes\n\n---\n\n## Developer Information\n\nDeveloper Name: Navkon Labs\nDeveloper: Nikhil Lande\nLocation: Kharghar, Maharashtra, India\nContact Email: navkon9@gmail.com\nPublishing Email: nikhillande9@gmail.com\n\n---\n\n## Release Notes\n\n### Version 1.0.0 \u2013 Initial Release\n\n\u2022 Full note-taking functionality\n\u2022 Five note formats\n\u2022 Image attachments\n\u2022 Recycle bin and restore\n\u2022 Optional manual Google Drive backup and restore\n\u2022 Fast search across notes\n\u2022 Six built-in color themes\n\u2022 Offline-first functionality\n\n---\n\n## Reviewer Testing Instructions\n\n1. Open the app and create a note.\n2. Add title and content.\n3. Use search to find the note.\n4. Pin the note to the top.\n5. Delete the note and restore it from the recycle bin.\n6. Sign in with Google, tap Upload Backup, and verify the `.liha_notes_app` folder appears in Google Drive.\n7. Tap Restore from Drive and verify notes are restored.\n\n---\n\n## Compliance Notes\n\n\u2022 Privacy Policy included with the application\n\u2022 Terms of Service included with the application\n\u2022 Uses minimal permissions\n\u2022 No analytics or advertising SDKs\n\u2022 No third-party tracking\n\n---\n\n## Support\n\nEmail: navkon9@gmail.com\n\n---\n\n## Version History\n\nv1.0.0 \u2013 March 2026 \u2013 Initial Play Store release\n";
+  var btn = document.getElementById('dl-btn');
+  if (btn) {
+    var blob = new Blob([content], {type: 'text/markdown'});
+    btn.href = URL.createObjectURL(blob);
+  }
+})();
+</script>
+</div>

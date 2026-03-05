@@ -381,7 +381,7 @@ to   { opacity: 1; transform: translateY(0); }
       <div class="section-label-line"></div>
     </div>
     <div class="card-grid two-col">
-      <a href="PRIVACY_POLICY.md" class="doc-card">
+      <a href="PRIVACY_POLICY.html" class="doc-card">
         <div class="card-icon icon-teal">🔒</div>
         <div class="card-body">
           <div class="card-title">Privacy Policy</div>

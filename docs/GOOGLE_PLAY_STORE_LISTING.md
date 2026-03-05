@@ -38,9 +38,9 @@ Your notes remain under your control. No tracking. No ads. No unnecessary permis
 
 ---
 
-# Key Features
+## Key Features
 
-## 5 Note Types
+### 5 Note Types
 
 Create notes for different purposes:
 
@@ -54,7 +54,7 @@ Each format is designed to help organize information clearly.
 
 ---
 
-## Smart Organization
+### Smart Organization
 
 Keep notes structured and easy to manage.
 
@@ -66,58 +66,54 @@ Keep notes structured and easy to manage.
 
 ---
 
-## Fast Search
+### Fast Search
 
 Find information instantly.
 
 • Search by title, content, or category
 • Instant search results
-• Case-insensitive matching
 • Organized results by pinned and recent notes
 
 ---
 
-## Beautiful Color Themes
+### Beautiful Color Themes
 
 Choose from six built-in themes:
 
-• Default (Amber)
-• Sunset (Orange)
-• Ocean (Blue)
-• Forest (Green)
-• Lavender (Purple)
-• Rose (Pink)
+• Default
+• Sunset
+• Orange
+• Forest
+• Lavender
+• Rose
 
 Customize the app to match your style.
 
 ---
 
-## Secure Cloud Backup
+### Secure Cloud Backup
 
-Optional backup to Google Drive.
+Optional backup to your personal Google Drive.
 
-• Uses Google Drive `drive.file` permission
+• Uses Google Drive `drive.file` permission only
 • Only accesses files created by noteliha
 • Individual note files stored in a dedicated folder
-• Automatic sync (configurable interval)
-• Manual sync available anytime
-
-Your existing Drive files remain inaccessible to the app.
+• Manual backup and restore — you decide when to sync
+• Your existing Drive files remain inaccessible to the app
 
 ---
 
-## Offline First
+### Offline First
 
-noteliha works even without internet access.
+noteliha works without internet access.
 
 • Notes stored locally on your device
 • Create and edit notes offline
-• Sync automatically when internet returns
-• Minimal battery usage
+• Sync manually when you choose to
 
 ---
 
-## Privacy First
+### Privacy First
 
 Privacy is a core principle of noteliha.
 
@@ -129,13 +125,13 @@ Privacy is a core principle of noteliha.
 
 ---
 
-# Why Choose noteliha
+## Why Choose noteliha
 
 **Local-First Design**
 Your notes remain on your device unless you choose to enable backup.
 
 **Optional Sync**
-Backup safely to your own Google Drive.
+Backup safely to your own Google Drive — on your terms.
 
 **Fast Performance**
 Optimized search and instant note creation.
@@ -148,38 +144,38 @@ Clean design focused on productivity.
 
 ---
 
-# Permissions Explained
+## Permissions Explained
 
 **Google Sign-In**
 Used only when enabling Google Drive backup.
 
 **Google Drive Access**
-Allows the app to create and manage its own backup files.
+Allows the app to create and manage its own backup files only.
 
-**Camera / Photos**
+**Photos**
 Required only when attaching images to notes.
 
 **Storage Access**
-Used to store notes and attachments locally.
+Used to store notes and attachments locally on device.
 
 ---
 
-# Data Security
+## Data Security
 
 • Notes stored locally on device storage
-• Google Drive backups encrypted in transit via HTTPS
+• Google Drive backups transmitted via HTTPS
 • Backup files stored only inside the app's dedicated folder
 • No personal data sold or shared
 
 ---
 
-# Category
+## Category
 
 Productivity
 
 ---
 
-# Content Rating
+## Content Rating
 
 Everyone
 
@@ -187,69 +183,56 @@ No objectionable content.
 
 ---
 
-# Target Audience
+## Target Audience
 
-All users.
-
----
-
-# Keywords
-
-notes
-productivity
-offline notes
-note organizer
-private notes
+All users aged 13 and above.
 
 ---
 
-# Developer Information
+## Keywords
 
-Developer Name
-Navkon Labs
-
-Developer
-Nikhil Lande
-
-Location
-Kharghar, Maharashtra, India
-
-Contact Email
-[navkon9@gmail.com](mailto:navkon9@gmail.com)
-
-Publishing Email
-[nikhillande9@gmail.com](mailto:nikhillande9@gmail.com)
+notes, productivity, offline notes, note organizer, private notes
 
 ---
 
-# Release Notes
+## Developer Information
 
-## Version 1.0.0 – Initial Release
+Developer Name: Navkon Labs
+Developer: Nikhil Lande
+Location: Kharghar, Maharashtra, India
+Contact Email: navkon9@gmail.com
+Publishing Email: nikhillande9@gmail.com
+
+---
+
+## Release Notes
+
+### Version 1.0.0 – Initial Release
 
 • Full note-taking functionality
 • Five note formats
 • Image attachments
 • Recycle bin and restore
-• Optional Google Drive backup
+• Optional manual Google Drive backup and restore
 • Fast search across notes
 • Six built-in color themes
 • Offline-first functionality
 
 ---
 
-# Reviewer Testing Instructions
+## Reviewer Testing Instructions
 
 1. Open the app and create a note.
 2. Add title and content.
 3. Use search to find the note.
 4. Pin the note to the top.
 5. Delete the note and restore it from the recycle bin.
-6. Enable Google Drive backup and trigger manual sync.
-7. Verify backup folder in Google Drive.
+6. Sign in with Google, tap Upload Backup, and verify the `.liha_notes_app` folder appears in Google Drive.
+7. Tap Restore from Drive and verify notes are restored.
 
 ---
 
-# Compliance Notes
+## Compliance Notes
 
 • Privacy Policy included with the application
 • Terms of Service included with the application
@@ -259,26 +242,12 @@ Publishing Email
 
 ---
 
-# Support
+## Support
 
-For support, bug reports, or feedback:
-
-Email
-[navkon9@gmail.com](mailto:navkon9@gmail.com)
+Email: navkon9@gmail.com
 
 ---
 
-# Future Updates
-
-Planned improvements may include:
-
-• Widget support
-• Additional themes
-• Enhanced search filters
-• iOS version of the application
-
----
-
-# Version History
+## Version History
 
 v1.0.0 – March 2026 – Initial Play Store release

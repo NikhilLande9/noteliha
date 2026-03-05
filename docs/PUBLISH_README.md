@@ -1,4 +1,4 @@
-# noteliha – Publish Documentation Package
+# noteliha – Documentation Package
 
 **Application Version:** 1.0.0
 **Developer:** Nikhil Lande
@@ -8,193 +8,96 @@
 
 ---
 
-# Overview
+## Overview
 
 This repository contains the documentation and resources required to publish **noteliha**, a privacy-focused Flutter note-taking application.
 
-The documentation package provides:
+The documentation package includes:
 
 • Legal documents required for app stores
 • App store listing descriptions
-• Submission guides
-• Technical documentation for the application
-• Publishing checklists
+• Publishing checklist and submission guide
 
-These documents help streamline the process of publishing the application on **Google Play Store** and **Apple App Store**.
+These documents support publishing the application on **Google Play Store** and **Apple App Store**.
 
 ---
 
-# Package Contents
+## Package Contents
 
-## Core Application Files
+### Core Application Files
 
-**main_refactored_complete.dart**
-
-Main Flutter application file containing:
-
-• note models
-• UI implementation
-• local storage logic
-• Google Drive backup integration
-• search functionality
+**main.dart**
+Main Flutter application file containing note models, UI implementation, local storage logic, Google Drive backup integration, and search functionality.
 
 **pubspec.yaml**
-
-Flutter dependency configuration including:
-
-• app metadata
-• package dependencies
-• version information
+Flutter dependency configuration including app metadata, package dependencies, and version information.
 
 ---
 
-# Legal Documentation
+### Legal Documentation
 
-## PRIVACY_POLICY.md
+**PRIVACY_POLICY.html**
+Privacy policy describing what information the app accesses, where user data is stored, how optional Google Drive backup works, how users can delete their data, and contact information for privacy requests.
 
-Privacy policy describing:
-
-• what information the app accesses
-• where user data is stored
-• how optional Google Drive backup works
-• how users can delete their data
-• contact information for privacy requests
+**TERMS_OF_SERVICE.html**
+Terms governing use of the application including usage license, intellectual property rights, limitations of liability, acceptable use, and dispute resolution.
 
 ---
 
-## TERMS_OF_SERVICE.md
+### App Store Listing Documents
 
-Terms governing the use of the application including:
+**GOOGLE_PLAY_STORE_LISTING.md**
+All text required for Google Play Store submission including app description, feature highlights, permissions explanation, keywords, reviewer testing instructions, and release notes.
 
-• usage license
-• intellectual property rights
-• limitations of liability
-• acceptable use conditions
-• dispute resolution terms
+**APPLE_APP_STORE_LISTING.md**
+Listing text formatted for Apple App Store including description, keyword fields, screenshot descriptions, and reviewer instructions.
 
 ---
 
-# App Store Listing Documents
+### Publishing Guide
 
-## GOOGLE_PLAY_STORE_LISTING.md
-
-Contains all text required for Google Play Store submission:
-
-• app description
-• feature highlights
-• permissions explanation
-• keywords
-• reviewer testing instructions
-• release notes
+**PUBLISHING_CHECKLIST.md**
+Step-by-step checklist covering pre-submission verification, asset preparation, Play Store submission steps, App Store submission steps, and post-launch monitoring.
 
 ---
 
-## APPLE_APP_STORE_LISTING.md
+## Quick Start Guide
 
-Contains listing text formatted for Apple App Store:
-
-• description optimized for iOS listing format
-• keyword fields
-• screenshot descriptions
-• reviewer instructions
-
----
-
-# Implementation Documentation
-
-## MAIN_IMPLEMENTATION_GUIDE.md
-
-Technical documentation describing:
-
-• application architecture
-• data storage structure
-• Google Drive backup logic
-• search implementation
-• performance considerations
-
----
-
-## PUBLISHING_CHECKLIST.md
-
-Step-by-step checklist covering:
-
-• pre-submission verification
-• asset preparation
-• Play Store submission steps
-• App Store submission steps
-• post-launch monitoring
-
----
-
-# Reference Documents
-
-## FINAL_SUMMARY.txt
-
-High-level overview of the application including:
-
-• features
-• architecture summary
-• technology stack
-• development notes
-
----
-
-## APP_NAME_UPDATE.txt
-
-Documentation of locations where the application name **noteliha** is referenced in:
-
-• code
-• metadata
-• build configuration
-
----
-
-# Quick Start Guide
-
-## Step 1 – Review Legal Documents
+### Step 1 – Review Legal Documents
 
 Before publishing:
 
-• Review **PRIVACY_POLICY.md**
-• Review **TERMS_OF_SERVICE.md**
-• Verify that developer contact information is correct
+• Review **PRIVACY_POLICY.html**
+• Review **TERMS_OF_SERVICE.html**
+• Verify developer contact information is correct
 
 ---
 
-## Step 2 – Prepare App Store Metadata
+### Step 2 – Prepare App Store Metadata
 
-Use:
-
-• GOOGLE_PLAY_STORE_LISTING.md
-• APPLE_APP_STORE_LISTING.md
-
-to fill out store listing fields.
+Use **GOOGLE_PLAY_STORE_LISTING.md** and **APPLE_APP_STORE_LISTING.md** to fill out store listing fields.
 
 You will also need to prepare:
 
-• app icon (512×512)
-• screenshots
-• feature graphic (Google Play)
+• App icon (512×512 for Play Store)
+• Screenshots for all required screen sizes
+• Feature graphic (Google Play, 1024×500)
 
 ---
 
-## Step 3 – Build the Application
+### Step 3 – Build the Application
 
-### Android
+#### Android
 
 ```
 flutter build appbundle --release
 ```
 
-Output location:
-
-```
-build/app/outputs/bundle/release/app-release.aab
-```
+Output: `build/app/outputs/bundle/release/app-release.aab`
 
 ---
 
-### iOS
+#### iOS
 
 ```
 flutter build ios --release
@@ -204,129 +107,53 @@ Requires an Apple Developer account and a macOS build environment.
 
 ---
 
-## Step 4 – Submit to App Stores
+### Step 4 – Submit to App Stores
 
-### Google Play
+#### Google Play
 
 1. Create Play Console account
 2. Create new application
 3. Upload App Bundle
 4. Complete store listing
-5. Submit for review
+5. Submit for review (typical review time: 1–3 days)
 
-Typical review time: **1–3 days**
-
----
-
-### Apple App Store
+#### Apple App Store
 
 1. Create Apple Developer account
 2. Configure App Store Connect entry
 3. Upload build through Xcode
 4. Complete listing details
-5. Submit for review
-
-Typical review time: **1–2 days**
+5. Submit for review (typical review time: 1–2 days)
 
 ---
 
-# Recommended Submission Workflow
+## Technology Stack
 
-1. Finalize code
-2. Verify legal documents
-3. Prepare store listing metadata
-4. Generate release build
-5. Submit to Google Play
-6. Submit to Apple App Store
-7. Monitor review feedback
-8. Address issues if necessary
-
----
-
-# Technology Stack
-
-The application uses:
-
-• Flutter
-• Dart
-• Hive local database
+• Flutter / Dart
+• Hive (local database)
 • Google Sign-In
-• Google Drive API (optional backup)
+• Google Drive API (optional backup only)
 
 ---
 
-# Data Storage Model
-
-User data is stored in two locations:
+## Data Storage Model
 
 **Local Device Storage**
-
-• notes
-• images
-• categories
-• user preferences
+All notes, images, categories, and preferences are stored locally on the device.
 
 **Optional Google Drive Backup**
-
-• individual JSON files stored in a `.noteliha` folder
-• accessible only through the user's Google account
+When the user manually triggers backup, individual JSON files and image files are stored in a `.liha_notes_app` folder in the user's personal Google Drive account, accessible only through their Google account.
 
 ---
 
-# Post-Launch Monitoring
+## Support
 
-After release it is recommended to monitor:
-
-• crash reports
-• user feedback
-• ratings and reviews
-• feature requests
-
-Bug fixes and improvements should be released through version updates.
+Email: navkon9@gmail.com
+Developer: Nikhil Lande, Navkon Labs, Kharghar, Maharashtra, India
 
 ---
 
-# Support
-
-For support or bug reports:
-
-Email
-[navkon9@gmail.com](mailto:navkon9@gmail.com)
-
-Developer
-Nikhil Lande
-
-Organization
-Navkon Labs
-
-Location
-Kharghar, Maharashtra, India
-
----
-
-# Document Checklist
-
-Repository documentation includes:
-
-• Source code
-• Privacy policy
-• Terms of service
-• Google Play listing document
-• Apple App Store listing document
-• Publishing checklist
-• Technical documentation
-• Summary files
-
----
-
-# Version History
-
-Version 1.0.0
-Initial release documentation package.
-
----
-
-# License
+## License
 
 All code and documentation in this repository are provided for the development and distribution of the **noteliha** application.
 

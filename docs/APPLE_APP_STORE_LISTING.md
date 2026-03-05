@@ -8,39 +8,39 @@
 
 ---
 
-# App Name
+## App Name
 
 noteliha
 
 ---
 
-# Subtitle (30 characters)
+## Subtitle (30 characters)
 
 Fast notes with secure backup
 
 ---
 
-# Promotional Text (170 characters)
+## Promotional Text (170 characters)
 
 Create notes instantly, organize them your way, and optionally back them up to Google Drive. No ads, no tracking, and designed with privacy in mind.
 
 ---
 
-# App Description
+## App Description
 
 noteliha is a lightweight and privacy-focused note-taking app designed to help you quickly create, organize, and manage notes.
 
-Notes are stored locally on your device and can optionally be backed up to your personal Google Drive account.
+Notes are stored locally on your device and can optionally be backed up to your personal Google Drive account when you choose to.
 
-The app focuses on simplicity, speed, and giving you control over your data.
+The app focuses on simplicity, speed, and giving you full control over your data.
 
 ---
 
-# Key Features
+## Key Features
 
-## Multiple Note Types
+### Multiple Note Types
 
-Create notes in different formats depending on your needs:
+Create notes in different formats:
 
 • Regular notes
 • Checklists
@@ -48,76 +48,64 @@ Create notes in different formats depending on your needs:
 • Meal plans
 • Travel itineraries
 
-Each format helps structure information clearly.
+---
+
+### Fast Search
+
+Quickly find notes by searching title, content, or category. Results appear instantly while typing.
 
 ---
 
-## Fast Search
-
-Quickly find notes by searching:
-
-• title
-• content
-• category
-
-Search results appear instantly while typing.
-
----
-
-## Smart Organization
-
-Keep notes structured and easy to manage.
+### Smart Organization
 
 • Pin important notes
-• Organize with categories
-• Attach images
+• Organize with categories (General, Work, Personal, Ideas)
+• Attach images to notes
 • Soft delete with recycle bin
 • Restore deleted notes anytime
 
 ---
 
-## Custom Themes
+### Custom Themes
 
-Choose from six built-in themes:
+Choose from six built-in color themes:
 
-• Amber
+• Default
 • Sunset
-• Ocean
+• Orange
 • Forest
 • Lavender
 • Rose
 
-Themes allow you to personalize the look of the application.
-
 ---
 
-## Optional Google Drive Backup
+### Optional Google Drive Backup
 
-Backup notes to your personal Google Drive account.
+Back up notes to your personal Google Drive account.
 
-• Sync enabled only if you sign in
-• Files stored in a dedicated `.noteliha` folder
+• Backup enabled only when you sign in and trigger it manually
+• Files stored in a dedicated `.liha_notes_app` folder in your Drive
 • Only files created by the app are accessible
-• Manual or automatic synchronization available
+• Manual backup and restore — you stay in control
 
 ---
 
-## Offline First
+### Offline First
 
 noteliha works without internet access.
 
 • Create and edit notes offline
-• Changes synchronize when internet becomes available
+• Sync to Drive manually when you choose to
 • Minimal battery and background usage
 
 ---
 
-# Privacy
+## Privacy
 
 The application is designed to minimize data collection.
 
 • Notes stored locally on your device
-• Optional Google Drive backup under your control
+• Optional Google Drive backup under your full control
 • No advertising
 • No behavioral tracking
 • No analytics SDKs
@@ -126,17 +114,15 @@ For full details see the Privacy Policy included with the app.
 
 ---
 
-# Permissions Explanation
-
-The app requests permissions only when required.
+## Permissions Explanation
 
 **Google Sign-In**
 Used to enable optional Google Drive backup.
 
 **Google Drive Access**
-Allows the app to create and manage its own backup files.
+Allows the app to create and manage its own backup files only.
 
-**Photos / Camera**
+**Photos**
 Required only when attaching images to notes.
 
 **Local Storage**
@@ -144,45 +130,36 @@ Used to store notes and attachments on the device.
 
 ---
 
-# Pricing
+## Pricing
 
 noteliha is free to download.
 
-There are currently:
-
-• no advertisements
-• no in-app purchases
-• no subscription features
+• No advertisements
+• No in-app purchases
+• No subscription features
 
 ---
 
-# Support
+## Support
 
-For support, bug reports, or feature suggestions:
-
-Email
-[navkon9@gmail.com](mailto:navkon9@gmail.com)
-
-Developer
-Nikhil Lande
-Navkon Labs
-Kharghar, Maharashtra, India
+Email: navkon9@gmail.com
+Developer: Nikhil Lande, Navkon Labs, Kharghar, Maharashtra, India
 
 ---
 
-# Keywords (≤100 characters)
+## Keywords (≤100 characters)
 
 notes, checklist, productivity, offline notes, private notes, note organizer
 
 ---
 
-# Category
+## Category
 
 Primary: Productivity
 
 ---
 
-# Age Rating
+## Age Rating
 
 4+
 
@@ -190,96 +167,70 @@ No objectionable content.
 
 ---
 
-# Screenshots
+## Screenshots
 
-## Screenshot 1 – Notes Overview
-
+### Screenshot 1 – Notes Overview
 Title: Browse Your Notes
-Description: View all notes in one place. Search instantly and pin important notes.
+Description: View all notes in one place. Search instantly and pin important notes to the top.
 
----
-
-## Screenshot 2 – Create Notes
-
+### Screenshot 2 – Create Notes
 Title: Create Notes Quickly
-Description: Choose between multiple note types including regular notes, checklists, and recipes.
+Description: Choose between multiple note types including regular notes, checklists, recipes, meal plans, and itineraries.
 
----
-
-## Screenshot 3 – Checklists
-
+### Screenshot 3 – Checklists
 Title: Track Tasks
 Description: Create checklists and mark items as completed.
 
----
-
-## Screenshot 4 – Search
-
+### Screenshot 4 – Search
 Title: Instant Search
 Description: Find notes quickly by searching titles, text, or categories.
 
----
-
-## Screenshot 5 – Themes
-
+### Screenshot 5 – Themes
 Title: Personalize Appearance
-Description: Choose from six color themes to customize the app interface.
+Description: Choose from six color themes to customize the app.
 
----
-
-## Screenshot 6 – Backup
-
+### Screenshot 6 – Backup
 Title: Optional Backup
-Description: Sync notes to your personal Google Drive account when enabled.
+Description: Manually back up and restore notes to your personal Google Drive account.
 
 ---
 
-# Version Information
+## Version Information
 
-## Version 1.0.0
+### Version 1.0.0
 
 Initial release of noteliha including:
 
-• multiple note formats
-• image attachments
-• recycle bin support
-• fast search
-• optional Google Drive backup
-• offline functionality
+• Multiple note formats
+• Image attachments
+• Recycle bin support
+• Fast search
+• Optional manual Google Drive backup and restore
+• Offline functionality
+• Six color themes
 
 ---
 
-# Technical Requirements
+## Technical Requirements
 
 Minimum iOS Version: iOS 14.0
 Device Compatibility: iPhone and iPad
 
 ---
 
-# Contact Information
-
-Developer
-Nikhil Lande
-Navkon Labs
-
-Email
-[navkon9@gmail.com](mailto:navkon9@gmail.com)
-
----
-
-# Notes for App Store Review
+## Notes for App Store Review
 
 To test the app:
 
-1. Create a note.
-2. Edit the note and add content.
+1. Create a note with title and content.
+2. Edit the note.
 3. Use search to find the note.
-4. Delete and restore the note from the recycle bin.
-5. Enable Google Drive backup and trigger manual sync.
+4. Delete the note and restore it from the recycle bin.
+5. Sign in with Google, tap Upload Backup, then verify the `.liha_notes_app` folder is created in Google Drive.
+6. Tap Restore from Drive and verify notes are restored correctly.
 
 ---
 
-# Version History
+## Version History
 
-Version 1.0.0
-Initial App Store release.
+Version 1.0.0 – March 2026 – Initial App Store release.

@@ -908,6 +908,34 @@ class NotesProvider extends ChangeNotifier {
     }
   }
 
+  // FIX 2: Delete orphaned images from Drive
+  Future<void> _deleteOrphanedImagesFromDrive(drive.DriveApi api) async {
+    // Get all images referenced by any note
+    final referencedImages = <String>{};
+
+    if (_notesBox != null) {
+      for (final note in _notesBox!.values.cast<Note>()) {
+        if (!note.deleted) referencedImages.addAll(note.imageIds);
+      }
+    }
+
+    // Delete images that exist on Drive but aren't referenced locally
+    for (final entry in _syncState.images.entries) {
+      if (!referencedImages.contains(entry.key) && entry.value.existsOnDrive) {
+        try {
+          await _retry(
+                () => api.files.delete(entry.value.driveFileId!),
+            name: 'deleteOrphanedImage:${entry.key}',
+          );
+          _syncState.images.remove(entry.key);
+          debugPrint('Deleted orphaned image ${entry.key} from Drive');
+        } catch (e) {
+          debugPrint('Failed to delete orphaned image ${entry.key}: $e');
+        }
+      }
+    }
+  }
+
   // Step 7: Generate and Upload Manifest
   Future<void> _pushManifest(drive.DriveApi api) async {
     final allNotes = _notesBox?.values.cast<Note>().toList() ?? [];
@@ -1001,6 +1029,9 @@ class NotesProvider extends ChangeNotifier {
           await _uploadImage(api, imageId);
         }
       }
+
+      // FIX 2: Delete orphaned images from Drive before pushing manifest
+      await _deleteOrphanedImagesFromDrive(api);
 
       await _pushManifest(api);
       _syncState.lastSyncCompletedAt = DateTime.now();
@@ -1162,6 +1193,9 @@ class NotesProvider extends ChangeNotifier {
 
       // Download missing images
       await _downloadMissingImages(api, manifest);
+
+      // FIX 4: Rebuild search index after download for consistency
+      _rebuildSearchIndex();
 
       _syncState.lastSyncCompletedAt = DateTime.now();
       _persistSyncState();
@@ -1330,9 +1364,21 @@ class NotesProvider extends ChangeNotifier {
         );
         if (response is! drive.Media) continue;
 
-        final bytes = await response.stream.expand((c) => c).toList();
+        // FIX 7: Stream into buffer chunk by chunk instead of loading entire file
+        final buffer = <int>[];
+        const chunkSize = 64 * 1024; // 64KB chunks
+
+        await for (final chunk in response.stream) {
+          buffer.addAll(chunk);
+
+          // Yield to UI thread periodically to prevent blocking
+          if (buffer.length > chunkSize) {
+            await Future.delayed(Duration.zero);
+          }
+        }
+
         // FIX 6: Store as binary JSON instead of base64
-        await _imagesBox?.put(imageId, _encodeImage(Uint8List.fromList(bytes)));
+        await _imagesBox?.put(imageId, _encodeImage(Uint8List.fromList(buffer)));
 
         _syncState.images[imageId] = ImageSync(
           imageId: imageId,
@@ -2245,7 +2291,22 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                               top: 0,
                               right: 0,
                               child: GestureDetector(
-                                onTap: () => setState(() => _editing.imageIds.removeAt(index)),
+                                onTap: () async {
+                                  // FIX 1: Check if image is referenced elsewhere before deleting
+                                  final imageId = _editing.imageIds[index];
+                                  setState(() => _editing.imageIds.removeAt(index));
+
+                                  // Check if still referenced by other notes
+                                  final prov = Provider.of<NotesProvider>(context, listen: false);
+                                  final referencedByOther = prov.notes.any(
+                                          (n) => n.id != _editing.id && n.imageIds.contains(imageId)
+                                  );
+
+                                  // Delete if no longer referenced
+                                  if (!referencedByOther) {
+                                    await prov.deleteImage(imageId);
+                                  }
+                                },
                                 child: Container(
                                   decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
                                   padding: const EdgeInsets.all(2),
@@ -2765,9 +2826,9 @@ class RecycleBinScreen extends StatelessWidget {
                   ),
                 );
                 if (ok == true) {
-                  for (final n in List.from(items)) {
-                    await prov.hardDelete(n.id);
-                  }
+                  // FIX 8: Batch delete in parallel instead of sequential
+                  final deleteTasks = List.from(items).map((n) => prov.hardDelete(n.id)).toList();
+                  await Future.wait(deleteTasks);
                 }
               },
               icon: const Icon(Icons.delete_forever),

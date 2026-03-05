@@ -1005,15 +1005,6 @@ class NotesProvider extends ChangeNotifier {
         if (note == null) continue;
         await _uploadImagesForNote(api, note);
         await _uploadNote(api, note);
-        if (note.deleted) {
-          final ns = _syncState.notes[noteId];
-          if (ns?.driveFileId != null) {
-            await _retry(
-                  () => api.files.delete(ns!.driveFileId!),
-              name: 'deleteNoteFile:$noteId',
-            );
-          }
-        }
       }
 
       // Upload pending images not tied to notes
@@ -1298,8 +1289,8 @@ class NotesProvider extends ChangeNotifier {
     }
 
     // If note doesn't exist locally but is deleted on Drive, skip it
-    if (localNote == null && (metadata?['deleted'] ?? false)) {
-      return;
+    if (metadata?['deleted'] == true) {
+      remoteNote.deleted = true;
     }
 
     await _notesBox!.put(noteId, remoteNote);

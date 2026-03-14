@@ -21,6 +21,7 @@ dependencies:
   path_provider: ^2.1.0
   image_picker: ^1.0.0
   share_plus: ^7.2.0
+  flutter_svg: ^2.0.10
 
 dev_dependencies:
   flutter_test:
@@ -28,6 +29,25 @@ dev_dependencies:
   flutter_lints: ^3.0.0
   hive_generator: ^2.0.0
   build_runner: ^2.4.0
+  flutter_launcher_icons: ^0.13.1
+  flutter_native_splash: ^2.4.0
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/icons/noteliha.svg
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/icons/noteliha.png"
+  adaptive_icon_foreground: "assets/icons/noteliha.png"
+  adaptive_icon_background: "#faf8f5"
+
+flutter_native_splash:
+  color: "#faf8f5"
+  image: assets/icons/noteliha.png
+  android: true
+  ios: false
+  android_gravity: center
+  fullscreen: true

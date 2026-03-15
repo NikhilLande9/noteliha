@@ -116,7 +116,7 @@ class NotesProvider extends ChangeNotifier {
       final api = drive.DriveApi(client);
 
       final rootList = await _retry(
-        () => api.files.list(
+            () => api.files.list(
           q: "name = '$kDriveRootName' and mimeType = 'application/vnd.google-apps.folder' and trashed = false",
           $fields: 'files(id)',
           pageSize: 1,
@@ -134,7 +134,7 @@ class NotesProvider extends ChangeNotifier {
       final rootId = rootList.files!.first.id!;
 
       final manifestList = await _retry(
-        () => api.files.list(
+            () => api.files.list(
           q: "name = '$kManifestName' and '$rootId' in parents and trashed = false",
           $fields: 'files(id)',
           pageSize: 1,
@@ -180,20 +180,76 @@ class NotesProvider extends ChangeNotifier {
     }
   }
 
+  // ── Search index ────────────────────────────────────────────────────────────
+
   void _updateSearchIndex(Note note) {
     if (_searchIndexBox == null) return;
     if (note.deleted) {
       _searchIndexBox!.delete(note.id);
-    } else {
-      _searchIndexBox!.put(note.id,
-          '${note.title} ${note.content} ${note.category}'.toLowerCase());
+      return;
     }
+
+    final buffer = StringBuffer();
+
+    // Core fields
+    buffer
+      ..write(note.title)
+      ..write(' ')
+      ..write(note.content)
+      ..write(' ')
+      ..write(note.category)
+      ..write(' ');
+
+    // Checklist items
+    for (final item in note.checklistItems) {
+      buffer
+        ..write(item.text)
+        ..write(' ');
+    }
+
+    // Itinerary items
+    for (final item in note.itineraryItems) {
+      buffer
+        ..write(item.location)
+        ..write(' ')
+        ..write(item.date)
+        ..write(' ')
+        ..write(item.notes)
+        ..write(' ');
+    }
+
+    // Meal plan items
+    for (final item in note.mealPlanItems) {
+      buffer
+        ..write(item.day)
+        ..write(' ');
+      for (final meal in item.meals) {
+        buffer
+          ..write(meal['value'] ?? '')
+          ..write(' ');
+      }
+    }
+
+    // Recipe
+    if (note.recipeData != null) {
+      buffer
+        ..write(note.recipeData!.ingredients)
+        ..write(' ')
+        ..write(note.recipeData!.instructions)
+        ..write(' ')
+        ..write(note.recipeData!.prepTime)
+        ..write(' ')
+        ..write(note.recipeData!.cookTime)
+        ..write(' ');
+    }
+
+    _searchIndexBox!.put(note.id, buffer.toString().toLowerCase());
   }
 
   List<Note> search(String query) {
     if (_searchIndexBox == null || _notesBox == null) return notes;
-    if (query.trim().isEmpty) return notes;
-    final q = query.toLowerCase();
+    final q = query.toLowerCase().trim();
+    if (q.isEmpty) return notes;
     return _searchIndexBox!.keys
         .where((k) => (_searchIndexBox!.get(k) ?? '').contains(q))
         .map((k) => _notesBox!.get(k))
@@ -205,13 +261,15 @@ class NotesProvider extends ChangeNotifier {
           : b.updatedAt.compareTo(a.updatedAt));
   }
 
+  // ── CRUD ────────────────────────────────────────────────────────────────────
+
   Future<void> addNote(
-    String title,
-    String content, {
-    String category = 'General',
-    NoteType noteType = NoteType.normal,
-    ColorTheme colorTheme = ColorTheme.default_,
-  }) async {
+      String title,
+      String content, {
+        String category = 'General',
+        NoteType noteType = NoteType.normal,
+        ColorTheme colorTheme = ColorTheme.default_,
+      }) async {
     if (_notesBox == null) return;
     if (title.isEmpty && content.isEmpty) return;
 
@@ -298,6 +356,8 @@ class NotesProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ── Images ──────────────────────────────────────────────────────────────────
+
   Future<String> saveImage(File imageFile) async {
     final bytes = await imageFile.readAsBytes();
     final imageId = const Uuid().v4();
@@ -319,6 +379,8 @@ class NotesProvider extends ChangeNotifier {
     _persistSyncState();
   }
 
+  // ── Auth ────────────────────────────────────────────────────────────────────
+
   Future<void> signIn() async {
     try {
       _currentUser = await _googleSignIn.signIn();
@@ -338,6 +400,8 @@ class NotesProvider extends ChangeNotifier {
       debugPrint('Sign out error: $e');
     }
   }
+
+  // ── Conflict resolution ─────────────────────────────────────────────────────
 
   Future<void> resolveConflictKeepLocal(String noteId) async {
     final ns = _syncState.notes[noteId];
@@ -380,6 +444,8 @@ class NotesProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ── Status helpers ──────────────────────────────────────────────────────────
+
   void _setStatus(String? msg,
       {bool isError = false, bool isSyncing = false, bool persistent = false}) {
     _syncStatusTimer?.cancel();
@@ -387,8 +453,8 @@ class NotesProvider extends ChangeNotifier {
     _syncStatus = msg == null
         ? SyncStatus.idle
         : (isError
-            ? SyncStatus.error
-            : (isSyncing ? SyncStatus.syncing : SyncStatus.idle));
+        ? SyncStatus.error
+        : (isSyncing ? SyncStatus.syncing : SyncStatus.idle));
     notifyListeners();
 
     if (msg != null && !isSyncing && !persistent) {
@@ -399,6 +465,8 @@ class NotesProvider extends ChangeNotifier {
       });
     }
   }
+
+  // ── Retry logic ─────────────────────────────────────────────────────────────
 
   Future<T> _retry<T>(Future<T> Function() op,
       {String? name, int maxRetries = kMaxRetries}) async {
@@ -420,6 +488,8 @@ class NotesProvider extends ChangeNotifier {
     }
   }
 
+  // ── Sync state persistence ──────────────────────────────────────────────────
+
   void _loadSyncState() {
     final raw = _syncStateBox?.get('state');
     if (raw != null) {
@@ -435,6 +505,8 @@ class NotesProvider extends ChangeNotifier {
 
   void _persistSyncState() => _syncStateBox?.put('state', _syncState.toJson());
 
+  // ── Image encoding ──────────────────────────────────────────────────────────
+
   String _encodeImage(Uint8List bytes) => jsonEncode(bytes);
 
   Uint8List _decodeImage(String encoded) {
@@ -442,9 +514,11 @@ class NotesProvider extends ChangeNotifier {
     return Uint8List.fromList(list.cast<int>());
   }
 
+  // ── Drive folder management ─────────────────────────────────────────────────
+
   Future<void> _ensureFolders(drive.DriveApi api) async {
     _syncState.rootFolderId ??=
-        await _findOrCreateFolder(api, kDriveRootName, parentId: null);
+    await _findOrCreateFolder(api, kDriveRootName, parentId: null);
     _syncState.notesFolderId ??= await _findOrCreateFolder(api, kDriveNotesDir,
         parentId: _syncState.rootFolderId!);
     _syncState.imagesFolderId ??= await _findOrCreateFolder(
@@ -457,7 +531,7 @@ class NotesProvider extends ChangeNotifier {
       {required String? parentId}) async {
     final parentClause = parentId != null ? " and '$parentId' in parents" : '';
     final list = await _retry(
-      () => api.files.list(
+          () => api.files.list(
         q: "name = '$name' and mimeType = 'application/vnd.google-apps.folder' and trashed = false$parentClause",
         $fields: 'files(id)',
         pageSize: 1,
@@ -471,14 +545,16 @@ class NotesProvider extends ChangeNotifier {
       ..mimeType = 'application/vnd.google-apps.folder'
       ..parents = parentId != null ? [parentId] : null;
     final created =
-        await _retry(() => api.files.create(meta), name: 'createFolder:$name');
+    await _retry(() => api.files.create(meta), name: 'createFolder:$name');
     return created.id!;
   }
+
+  // ── Manifest ────────────────────────────────────────────────────────────────
 
   Future<DriveManifest> _fetchManifest(drive.DriveApi api) async {
     if (_syncState.manifestFileId == null) {
       final list = await _retry(
-        () => api.files.list(
+            () => api.files.list(
           q: "name = '$kManifestName' and '${_syncState.rootFolderId}' in parents and trashed = false",
           $fields: 'files(id)',
           pageSize: 1,
@@ -494,7 +570,7 @@ class NotesProvider extends ChangeNotifier {
 
     try {
       final response = await _retry(
-        () => api.files.get(_syncState.manifestFileId!,
+            () => api.files.get(_syncState.manifestFileId!,
             downloadOptions: drive.DownloadOptions.fullMedia),
         name: 'fetchManifest',
       );
@@ -520,7 +596,7 @@ class NotesProvider extends ChangeNotifier {
       if (!referencedImages.contains(entry.key) && entry.value.existsOnDrive) {
         try {
           await _retry(
-            () => api.files.delete(entry.value.driveFileId!),
+                () => api.files.delete(entry.value.driveFileId!),
             name: 'deleteOrphanedImage:${entry.key}',
           );
           _syncState.images.remove(entry.key);
@@ -558,7 +634,7 @@ class NotesProvider extends ChangeNotifier {
 
     if (_syncState.manifestFileId != null) {
       await _retry(
-        () => api.files.update(drive.File(), _syncState.manifestFileId!,
+            () => api.files.update(drive.File(), _syncState.manifestFileId!,
             uploadMedia: media),
         name: 'updateManifest',
       );
@@ -567,12 +643,14 @@ class NotesProvider extends ChangeNotifier {
         ..name = kManifestName
         ..parents = [_syncState.rootFolderId!];
       final created = await _retry(
-          () => api.files.create(file, uploadMedia: media),
+              () => api.files.create(file, uploadMedia: media),
           name: 'createManifest');
       _syncState.manifestFileId = created.id;
       _persistSyncState();
     }
   }
+
+  // ── Upload ──────────────────────────────────────────────────────────────────
 
   Future<void> uploadNotes() async {
     if (_currentUser == null || _notesBox == null) {
@@ -659,7 +737,7 @@ class NotesProvider extends ChangeNotifier {
     String? fileId = imgSync?.driveFileId;
     if (fileId != null) {
       await _retry(
-        () => api.files.update(drive.File(), fileId!, uploadMedia: media),
+            () => api.files.update(drive.File(), fileId!, uploadMedia: media),
         name: 'updateImage:$imageId',
       );
     } else {
@@ -667,7 +745,7 @@ class NotesProvider extends ChangeNotifier {
         ..name = '$imageId.bin'
         ..parents = [_syncState.imagesFolderId!];
       final created = await _retry(
-          () => api.files.create(file, uploadMedia: media),
+              () => api.files.create(file, uploadMedia: media),
           name: 'createImage:$imageId');
       fileId = created.id;
     }
@@ -691,7 +769,7 @@ class NotesProvider extends ChangeNotifier {
 
     if (fileId != null) {
       await _retry(
-        () => api.files.update(drive.File(), fileId!, uploadMedia: media),
+            () => api.files.update(drive.File(), fileId!, uploadMedia: media),
         name: 'updateNote:${note.id}',
       );
     } else if (!note.deleted) {
@@ -699,7 +777,7 @@ class NotesProvider extends ChangeNotifier {
         ..name = '${note.id}.json'
         ..parents = [_syncState.notesFolderId!];
       final created = await _retry(
-          () => api.files.create(file, uploadMedia: media),
+              () => api.files.create(file, uploadMedia: media),
           name: 'createNote:${note.id}');
       fileId = created.id;
     }
@@ -720,7 +798,7 @@ class NotesProvider extends ChangeNotifier {
 
     for (int i = 0; i < imageIds.length; i += maxConcurrent) {
       final batch =
-          imageIds.sublist(i, min(i + maxConcurrent, imageIds.length));
+      imageIds.sublist(i, min(i + maxConcurrent, imageIds.length));
       await Future.wait(
         batch.map((imgId) async {
           final imgSync = _syncState.images[imgId];
@@ -742,7 +820,7 @@ class NotesProvider extends ChangeNotifier {
           String? fileId = imgSync?.driveFileId;
           if (fileId != null) {
             await _retry(
-              () => api.files.update(drive.File(), fileId!, uploadMedia: media),
+                  () => api.files.update(drive.File(), fileId!, uploadMedia: media),
               name: 'updateImage:$imgId',
             );
           } else {
@@ -750,7 +828,7 @@ class NotesProvider extends ChangeNotifier {
               ..name = '$imgId.bin'
               ..parents = [_syncState.imagesFolderId!];
             final created = await _retry(
-                () => api.files.create(file, uploadMedia: media),
+                    () => api.files.create(file, uploadMedia: media),
                 name: 'createImage:$imgId');
             fileId = created.id;
           }
@@ -766,6 +844,8 @@ class NotesProvider extends ChangeNotifier {
     }
     _persistSyncState();
   }
+
+  // ── Download ────────────────────────────────────────────────────────────────
 
   Future<void> downloadNotes() async {
     if (_currentUser == null || _notesBox == null) {
@@ -845,7 +925,7 @@ class NotesProvider extends ChangeNotifier {
     String? fileId = _syncState.notes[noteId]?.driveFileId;
     if (fileId == null) {
       final list = await _retry(
-        () => api.files.list(
+            () => api.files.list(
           q: "name = '$noteId.json' and '${_syncState.notesFolderId}' in parents and trashed = false",
           $fields: 'files(id)',
           pageSize: 1,
@@ -860,7 +940,7 @@ class NotesProvider extends ChangeNotifier {
     }
 
     final response = await _retry(
-      () => api.files
+          () => api.files
           .get(fileId!, downloadOptions: drive.DownloadOptions.fullMedia),
       name: 'downloadNote:$noteId',
     );
@@ -868,7 +948,7 @@ class NotesProvider extends ChangeNotifier {
 
     final bytes = await response.stream.expand((c) => c).toList();
     final remoteNote =
-        Note.fromJson(jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>);
+    Note.fromJson(jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>);
 
     final localNote = _notesBox!.get(noteId) as Note?;
     final ns = _syncState.notes[noteId];
@@ -886,7 +966,7 @@ class NotesProvider extends ChangeNotifier {
         driveFileId: fileId,
         remoteVersion: remoteNote.updatedAt,
         conflict:
-            SyncConflict(remoteVersion: remoteNote, detectedAt: DateTime.now()),
+        SyncConflict(remoteVersion: remoteNote, detectedAt: DateTime.now()),
       );
       _persistSyncState();
       return;
@@ -946,7 +1026,7 @@ class NotesProvider extends ChangeNotifier {
 
       if (fileId == null) {
         final list = await _retry(
-          () => api.files.list(
+              () => api.files.list(
             q: "name = '$imageId.bin' and '${_syncState.imagesFolderId}' in parents and trashed = false",
             $fields: 'files(id)',
             pageSize: 1,
@@ -962,7 +1042,7 @@ class NotesProvider extends ChangeNotifier {
 
       try {
         final response = await _retry(
-          () => api.files
+              () => api.files
               .get(fileId!, downloadOptions: drive.DownloadOptions.fullMedia),
           name: 'downloadImage:$imageId',
         );
@@ -993,6 +1073,8 @@ class NotesProvider extends ChangeNotifier {
       }
     }
   }
+
+  // ── Misc ────────────────────────────────────────────────────────────────────
 
   void refreshNotes() {
     _rebuildSearchIndex();

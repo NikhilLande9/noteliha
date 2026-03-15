@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import 'models.dart';
 import 'theme_helper.dart';
+import 'neu_theme.dart';
 import 'notes_provider.dart';
 import 'note_list_screen.dart';
 
@@ -32,6 +33,12 @@ class MyApp extends StatelessWidget {
     final settings = Provider.of<AppSettingsProvider>(context);
     final seed = AppSettingsProvider.seedColor(settings.appTheme);
 
+    // Neu.base() already reflects the active visual theme via Neu.setTheme().
+    final lightBase = Neu.base(false);
+    final darkBase  = Neu.base(true);
+    final lightBorder = Neu.cardBorder(false);
+    final darkBorder  = Neu.cardBorder(true);
+
     final baseCardTheme = CardThemeData(
       elevation: 0,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -44,40 +51,48 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
         colorSchemeSeed: seed,
         brightness: Brightness.light,
+        scaffoldBackgroundColor: lightBase,
+        dialogTheme: DialogThemeData(backgroundColor: lightBase),
         appBarTheme: AppBarTheme(
           centerTitle: false,
           elevation: 0,
-          scrolledUnderElevation: 1,
+          scrolledUnderElevation: 0,
+          backgroundColor: lightBase,
           titleTextStyle: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w700,
-              color: Colors.grey.shade900,
+              color: Neu.textPrimary(false),
               letterSpacing: -0.5),
         ),
         cardTheme: baseCardTheme.copyWith(
+          color: lightBase,
           shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(14),
-              side: BorderSide(color: Colors.grey.shade200)),
+              side: lightBorder),
         ),
       ),
       darkTheme: ThemeData(
         useMaterial3: true,
         colorSchemeSeed: seed,
         brightness: Brightness.dark,
-        appBarTheme: const AppBarTheme(
+        scaffoldBackgroundColor: darkBase,
+        dialogTheme: DialogThemeData(backgroundColor: darkBase),
+        appBarTheme: AppBarTheme(
           centerTitle: false,
           elevation: 0,
-          scrolledUnderElevation: 1,
+          scrolledUnderElevation: 0,
+          backgroundColor: darkBase,
           titleTextStyle: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w700,
-              color: Colors.white,
+              color: Neu.textPrimary(true),
               letterSpacing: -0.5),
         ),
         cardTheme: baseCardTheme.copyWith(
+          color: darkBase,
           shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(14),
-              side: BorderSide(color: Colors.grey.shade800)),
+              side: darkBorder),
         ),
       ),
       themeMode: settings.isDarkMode ? ThemeMode.dark : ThemeMode.light,

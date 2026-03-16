@@ -21,4 +21,7 @@ enum DriveAccountState {
 enum AppVisualTheme {
   material,   // Flat Material 3 — clean, no shadows
   neumorphic, // Soft extruded clay — raised/inset shadows
+  clay,       // Rounded pastel blobs — thick soft shadows, puffy shapes
+  glass,      // Frosted glass — blur + translucent surfaces
+  bento,      // Japanese grid boxes — sharp borders, bold accent corners
 }

@@ -579,14 +579,14 @@ class _MealField extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(
-          child: TextField(
+          child: NeuField(
+            isDark: isDark,
             controller: controller,
+            label: label,
+            hint: 'What are you eating?',
             maxLines: null,
             minLines: 2,
             onChanged: onChanged,
-            style: TextStyle(fontSize: 13, color: Neu.textPrimary(isDark)),
-            decoration: Neu.fieldDecoration(isDark, label,
-                hint: 'What are you eating?'),
           ),
         ),
         if (showRemoveButton) ...[

@@ -507,12 +507,13 @@ class _NeuField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TextField(
+    return NeuField(
+      isDark: isDark,
       controller: controller,
+      label: label,
+      icon: icon,
       maxLines: maxLines,
       onChanged: (_) => onChanged(),
-      style: TextStyle(fontSize: 13, color: Neu.textPrimary(isDark)),
-      decoration: Neu.fieldDecoration(isDark, label, icon: icon),
     );
   }
 }

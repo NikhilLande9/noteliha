@@ -143,16 +143,18 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
 
   @override
   Widget build(BuildContext context) {
-    final isDark      = Theme.of(context).brightness == Brightness.dark;
-    final base        = Neu.base(isDark);
+    final isDark  = Theme.of(context).brightness == Brightness.dark;
+    // cardTint() returns Neu.base() for neumorphic, tinted color for material.
+    // No theme check needed here — neu_theme.dart owns that decision.
+    final cardBg  = Neu.cardTint(_editing.colorTheme, isDark);
     final accent      = Neu.accentFromTheme(_editing.colorTheme);
     final textPrimary = Neu.textPrimary(isDark);
     final textSub     = Neu.textSecondary(isDark);
 
     return Scaffold(
-      backgroundColor: base,
+      backgroundColor: cardBg,
       appBar: AppBar(
-        backgroundColor: base,
+        backgroundColor: cardBg,
         elevation: 0,
         scrolledUnderElevation: 0,
         leading: NeuIconButton(
@@ -466,16 +468,12 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
         NoteType.recipe    => _buildRecipe(isDark),
       };
 
-  Widget _buildNormal(bool isDark) => TextField(
+  Widget _buildNormal(bool isDark) => NeuField(
+        isDark: isDark,
         controller: _contentCtrl,
         maxLines: null,
-        expands: true,
-        textCapitalization: TextCapitalization.sentences,
-        decoration: InputDecoration(
-          border: InputBorder.none,
-          hintText: 'Start writing…',
-          hintStyle: TextStyle(color: Neu.textTertiary(isDark)),
-        ),
+        minLines: 8,
+        hint: 'Start writing…',
         style: TextStyle(
             fontSize: 15.5,
             height: 1.6,
@@ -942,15 +940,14 @@ class _ChecklistItemTileState extends State<_ChecklistItemTile>
                       widget.onDelete();
                     }
                   },
-                  child: TextField(
+                  child: NeuField(
+                    isDark: isDark,
                     controller: _ctrl,
                     focusNode: widget.focusNode,
-                    decoration: InputDecoration(
-                      border: InputBorder.none,
-                      hintText: 'New item…',
-                      hintStyle:
-                          TextStyle(color: Neu.textTertiary(isDark)),
-                    ),
+                    hint: 'New item…',
+                    textInputAction: TextInputAction.next,
+                    onChanged: widget.onTextChanged,
+                    onSubmitted: widget.onSubmitted,
                     style: TextStyle(
                       fontSize: 15,
                       decoration: widget.item.checked
@@ -958,9 +955,6 @@ class _ChecklistItemTileState extends State<_ChecklistItemTile>
                           : TextDecoration.none,
                       color: widget.item.checked ? subColor : textColor,
                     ),
-                    textInputAction: TextInputAction.next,
-                    onChanged: widget.onTextChanged,
-                    onSubmitted: (_) => widget.onSubmitted(),
                   ),
                 ),
               ),
@@ -1002,7 +996,7 @@ class _SectionLabel extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Recipe Card
+// Recipe Card — ingredient table + step-by-step instructions
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _RecipeCard extends StatefulWidget {
@@ -1018,7 +1012,16 @@ class _RecipeCard extends StatefulWidget {
 }
 
 class _RecipeCardState extends State<_RecipeCard> {
-  late TextEditingController _prep, _cook, _serv, _ingr, _inst;
+  late TextEditingController _prep, _cook, _serv;
+
+  // Ingredient table controllers keyed by row id
+  final Map<String, TextEditingController> _nameCtrl = {};
+  final Map<String, TextEditingController> _qtyCtrl  = {};
+  final Map<String, TextEditingController> _unitCtrl = {};
+
+  // Step controllers keyed by step id
+  final Map<String, TextEditingController> _stepCtrl     = {};
+  final Map<String, FocusNode>             _stepFocus    = {};
 
   @override
   void initState() {
@@ -1026,110 +1029,339 @@ class _RecipeCardState extends State<_RecipeCard> {
     _prep = TextEditingController(text: widget.data.prepTime);
     _cook = TextEditingController(text: widget.data.cookTime);
     _serv = TextEditingController(text: widget.data.servings);
-    _ingr = TextEditingController(text: widget.data.ingredients);
-    _inst = TextEditingController(text: widget.data.instructions);
+    _initIngredientControllers();
+    _initStepControllers();
+  }
+
+  void _initIngredientControllers() {
+    for (final row in widget.data.ingredientRows) {
+      _nameCtrl[row.id] = TextEditingController(text: row.name);
+      _qtyCtrl[row.id]  = TextEditingController(text: row.quantity);
+      _unitCtrl[row.id] = TextEditingController(text: row.unit);
+    }
+  }
+
+  void _initStepControllers() {
+    for (final step in widget.data.steps) {
+      _stepCtrl[step.id]  = TextEditingController(text: step.text);
+      _stepFocus[step.id] = FocusNode();
+    }
   }
 
   @override
   void dispose() {
-    for (final c in [_prep, _cook, _serv, _ingr, _inst]) {
-      c.dispose();
-    }
+    _prep.dispose(); _cook.dispose(); _serv.dispose();
+    for (final c in _nameCtrl.values) { c.dispose(); }
+    for (final c in _qtyCtrl.values)  { c.dispose(); }
+    for (final c in _unitCtrl.values) { c.dispose(); }
+    for (final c in _stepCtrl.values) { c.dispose(); }
+    for (final f in _stepFocus.values) { f.dispose(); }
     super.dispose();
+  }
+
+  void _addIngredientRow() {
+    final row = IngredientRow();
+    setState(() {
+      widget.data.ingredientRows.add(row);
+      _nameCtrl[row.id] = TextEditingController();
+      _qtyCtrl[row.id]  = TextEditingController();
+      _unitCtrl[row.id] = TextEditingController();
+      widget.onChanged();
+    });
+  }
+
+  void _removeIngredientRow(String id) {
+    setState(() {
+      widget.data.ingredientRows.removeWhere((r) => r.id == id);
+      _nameCtrl[id]?.dispose(); _nameCtrl.remove(id);
+      _qtyCtrl[id]?.dispose();  _qtyCtrl.remove(id);
+      _unitCtrl[id]?.dispose(); _unitCtrl.remove(id);
+      widget.onChanged();
+    });
+  }
+
+  void _addStep({int? afterIndex}) {
+    final step = RecipeStep();
+    setState(() {
+      if (afterIndex != null && afterIndex < widget.data.steps.length - 1) {
+        widget.data.steps.insert(afterIndex + 1, step);
+      } else {
+        widget.data.steps.add(step);
+      }
+      _stepCtrl[step.id]  = TextEditingController();
+      _stepFocus[step.id] = FocusNode();
+      widget.onChanged();
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _stepFocus[step.id]?.requestFocus();
+    });
+  }
+
+  void _removeStep(String id) {
+    final idx = widget.data.steps.indexWhere((s) => s.id == id);
+    setState(() {
+      widget.data.steps.removeWhere((s) => s.id == id);
+      _stepCtrl[id]?.dispose();  _stepCtrl.remove(id);
+      _stepFocus[id]?.dispose(); _stepFocus.remove(id);
+      widget.onChanged();
+    });
+    // Focus previous step
+    if (idx > 0 && idx - 1 < widget.data.steps.length) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _stepFocus[widget.data.steps[idx - 1].id]?.requestFocus();
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final isDark = widget.isDark;
+    final isDark  = widget.isDark;
+    final accent  = Theme.of(context).colorScheme.primary;
+    final ter     = Neu.textTertiary(isDark);
+
     return SingleChildScrollView(
-      padding: const EdgeInsets.only(top: 12, bottom: 24),
+      padding: const EdgeInsets.only(top: 12, bottom: 32),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // ── Time chips ─────────────────────────────────────────────────────
           Row(children: [
-            Expanded(
-              child: _neuField(
-                isDark, _prep, 'Prep time',
-                icon: Icons.timer_outlined,
-                onChanged: (v) {
-                  widget.data.prepTime = v;
-                  widget.onChanged();
-                },
-              ),
-            ),
+            Expanded(child: _timeField(_prep, 'Prep', Icons.timer_outlined,
+                isDark, (v) { widget.data.prepTime = v; widget.onChanged(); })),
             const SizedBox(width: 8),
-            Expanded(
-              child: _neuField(
-                isDark, _cook, 'Cook time',
-                icon: Icons.local_fire_department_outlined,
-                onChanged: (v) {
-                  widget.data.cookTime = v;
-                  widget.onChanged();
-                },
-              ),
-            ),
+            Expanded(child: _timeField(_cook, 'Cook',
+                Icons.local_fire_department_outlined, isDark,
+                (v) { widget.data.cookTime = v; widget.onChanged(); })),
             const SizedBox(width: 8),
-            Expanded(
-              child: _neuField(
-                isDark, _serv, 'Servings',
-                icon: Icons.people_outline_rounded,
-                onChanged: (v) {
-                  widget.data.servings = v;
-                  widget.onChanged();
-                },
-              ),
-            ),
+            Expanded(child: _timeField(_serv, 'Serves',
+                Icons.people_outline_rounded, isDark,
+                (v) { widget.data.servings = v; widget.onChanged(); })),
           ]),
-          const SizedBox(height: 20),
-          _SectionLabel(
-              text: 'INGREDIENTS',
-              icon: Icons.kitchen_outlined,
+
+          const SizedBox(height: 24),
+
+          // ── Ingredients table ──────────────────────────────────────────────
+          _SectionLabel(text: 'INGREDIENTS', icon: Icons.kitchen_outlined,
               isDark: isDark),
-          const SizedBox(height: 6),
-          _neuField(
-            isDark, _ingr, '',
-            hint: 'One ingredient per line…',
-            maxLines: 6,
-            onChanged: (v) {
-              widget.data.ingredients = v;
-              widget.onChanged();
-            },
+          const SizedBox(height: 8),
+
+          // Header row
+          Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Row(children: [
+              SizedBox(
+                width: 28,
+                child: Text('#',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700,
+                        color: ter, letterSpacing: 0.5)),
+              ),
+              const SizedBox(width: 6),
+              Expanded(flex: 4,
+                  child: Text('Ingredient',
+                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700,
+                          color: ter, letterSpacing: 0.5))),
+              const SizedBox(width: 6),
+              Expanded(flex: 2,
+                  child: Text('Qty',
+                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700,
+                          color: ter, letterSpacing: 0.5))),
+              const SizedBox(width: 6),
+              Expanded(flex: 2,
+                  child: Text('Unit',
+                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700,
+                          color: ter, letterSpacing: 0.5))),
+              const SizedBox(width: 32), // space for delete button
+            ]),
           ),
-          const SizedBox(height: 20),
-          _SectionLabel(
-              text: 'INSTRUCTIONS',
-              icon: Icons.format_list_numbered_rounded,
-              isDark: isDark),
-          const SizedBox(height: 6),
-          _neuField(
-            isDark, _inst, '',
-            hint: 'Step-by-step instructions…',
-            maxLines: 8,
-            onChanged: (v) {
-              widget.data.instructions = v;
-              widget.onChanged();
-            },
+
+          // Ingredient rows
+          ...widget.data.ingredientRows.asMap().entries.map((entry) {
+            final i   = entry.key;
+            final row = entry.value;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  // Serial number
+                  SizedBox(
+                    width: 28,
+                    child: NeuContainer(
+                      isDark: isDark,
+                      radius: 8,
+                      inset: true,
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      child: Text('${i + 1}',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                              fontSize: 12, fontWeight: FontWeight.w700,
+                              color: accent)),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  // Ingredient name
+                  Expanded(
+                    flex: 4,
+                    child: _tableField(_nameCtrl[row.id]!, isDark, 'e.g. Flour',
+                        onChanged: (v) { row.name = v; widget.onChanged(); }),
+                  ),
+                  const SizedBox(width: 6),
+                  // Quantity
+                  Expanded(
+                    flex: 2,
+                    child: _tableField(_qtyCtrl[row.id]!, isDark, '200',
+                        onChanged: (v) { row.quantity = v; widget.onChanged(); }),
+                  ),
+                  const SizedBox(width: 6),
+                  // Unit
+                  Expanded(
+                    flex: 2,
+                    child: _tableField(_unitCtrl[row.id]!, isDark, 'g',
+                        onChanged: (v) { row.unit = v; widget.onChanged(); }),
+                  ),
+                  const SizedBox(width: 6),
+                  // Delete
+                  GestureDetector(
+                    onTap: widget.data.ingredientRows.length > 1
+                        ? () => _removeIngredientRow(row.id)
+                        : null,
+                    child: Icon(Icons.remove_circle_outline_rounded,
+                        size: 18,
+                        color: widget.data.ingredientRows.length > 1
+                            ? Colors.red.shade400
+                            : ter),
+                  ),
+                ],
+              ),
+            );
+          }),
+
+          // Add ingredient button
+          const SizedBox(height: 4),
+          NeuPressable(
+            isDark: isDark,
+            radius: 10,
+            onTap: _addIngredientRow,
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.add_rounded, size: 16, color: accent),
+                const SizedBox(width: 6),
+                Text('Add ingredient',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600,
+                        color: accent)),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 24),
+
+          // ── Instructions ───────────────────────────────────────────────────
+          _SectionLabel(text: 'INSTRUCTIONS',
+              icon: Icons.format_list_numbered_rounded, isDark: isDark),
+          const SizedBox(height: 8),
+
+          ...widget.data.steps.asMap().entries.map((entry) {
+            final i    = entry.key;
+            final step = entry.value;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Step number bubble
+                  Padding(
+                    padding: const EdgeInsets.only(top: 10),
+                    child: NeuContainer(
+                      isDark: isDark,
+                      radius: 14,
+                      inset: true,
+                      padding: const EdgeInsets.all(6),
+                      child: Text('${i + 1}',
+                          style: TextStyle(
+                              fontSize: 11, fontWeight: FontWeight.w800,
+                              color: accent)),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  // Step text field
+                  Expanded(
+                    child: NeuField(
+                      isDark: isDark,
+                      controller: _stepCtrl[step.id]!,
+                      focusNode: _stepFocus[step.id],
+                      hint: 'Describe step ${i + 1}…',
+                      maxLines: null,
+                      minLines: 1,
+                      textInputAction: TextInputAction.next,
+                      onChanged: (v) { step.text = v; widget.onChanged(); },
+                      onSubmitted: () => _addStep(afterIndex: i),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  // Delete step
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: GestureDetector(
+                      onTap: widget.data.steps.length > 1
+                          ? () => _removeStep(step.id)
+                          : null,
+                      child: Icon(Icons.remove_circle_outline_rounded,
+                          size: 18,
+                          color: widget.data.steps.length > 1
+                              ? Colors.red.shade400
+                              : ter),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+
+          // Add step button
+          const SizedBox(height: 4),
+          NeuPressable(
+            isDark: isDark,
+            radius: 10,
+            onTap: () => _addStep(),
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.add_rounded, size: 16, color: accent),
+                const SizedBox(width: 6),
+                Text('Add step',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600,
+                        color: accent)),
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _neuField(
-    bool isDark,
-    TextEditingController ctrl,
-    String label, {
-    IconData? icon,
-    String? hint,
-    int maxLines = 1,
-    required Function(String) onChanged,
-  }) {
-    return TextField(
+  Widget _timeField(TextEditingController ctrl, String label, IconData icon,
+      bool isDark, Function(String) onChanged) {
+    return NeuField(
+      isDark: isDark,
       controller: ctrl,
-      maxLines: maxLines,
+      label: label,
+      icon: icon,
+      onChanged: onChanged,
+    );
+  }
+
+  Widget _tableField(TextEditingController ctrl, bool isDark, String hint,
+      {required Function(String) onChanged}) {
+    return NeuField(
+      isDark: isDark,
+      controller: ctrl,
+      hint: hint,
       onChanged: onChanged,
       style: TextStyle(fontSize: 13, color: Neu.textPrimary(isDark)),
-      decoration: Neu.fieldDecoration(isDark, label, icon: icon, hint: hint),
     );
   }
 }

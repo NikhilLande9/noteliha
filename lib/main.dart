@@ -34,10 +34,14 @@ class MyApp extends StatelessWidget {
     final seed = AppSettingsProvider.seedColor(settings.appTheme);
 
     // Neu.base() already reflects the active visual theme via Neu.setTheme().
-    final lightBase = Neu.base(false);
-    final darkBase  = Neu.base(true);
+    final lightBase   = Neu.base(false);
+    final darkBase    = Neu.base(true);
     final lightBorder = Neu.cardBorder(false);
     final darkBorder  = Neu.cardBorder(true);
+    // Glass needs a solid background behind the blur; other themes use base.
+    final isGlass = Neu.currentTheme == AppVisualTheme.glass;
+    final lightScaffold = isGlass ? const Color(0xFFF0F4FF) : lightBase;
+    final darkScaffold  = isGlass ? const Color(0xFF0D1117)  : darkBase;
 
     final baseCardTheme = CardThemeData(
       elevation: 0,
@@ -51,7 +55,7 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
         colorSchemeSeed: seed,
         brightness: Brightness.light,
-        scaffoldBackgroundColor: lightBase,
+        scaffoldBackgroundColor: lightScaffold,
         dialogTheme: DialogThemeData(backgroundColor: lightBase),
         appBarTheme: AppBarTheme(
           centerTitle: false,
@@ -75,7 +79,7 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
         colorSchemeSeed: seed,
         brightness: Brightness.dark,
-        scaffoldBackgroundColor: darkBase,
+        scaffoldBackgroundColor: darkScaffold,
         dialogTheme: DialogThemeData(backgroundColor: darkBase),
         appBarTheme: AppBarTheme(
           centerTitle: false,

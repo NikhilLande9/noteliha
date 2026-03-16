@@ -164,75 +164,65 @@ class SettingsScreen extends StatelessWidget {
                                 color: Neu.textPrimary(isDark))),
                       ),
                       Padding(
-                        padding:
-                            const EdgeInsets.fromLTRB(12, 0, 12, 16),
-                        child: Row(
+                        padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
+                        child: Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
                           children: AppVisualTheme.values.map((vt) {
-                            final isSelected =
-                                settings.visualTheme == vt;
-                            final isPremium = Neu.isPremium(vt);
-                            return Expanded(
-                              child: Padding(
+                            final isSelected = settings.visualTheme == vt;
+                            final isPremium  = Neu.isPremium(vt);
+                            return GestureDetector(
+                              onTap: isPremium
+                                  ? () => _showLockedDialog(context, isDark, vt)
+                                  : () => settings.setVisualTheme(vt),
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 200),
+                                width: 80,
                                 padding: const EdgeInsets.symmetric(
-                                    horizontal: 4),
-                                child: GestureDetector(
-                                  onTap: isPremium
-                                      ? () =>
-                                          _showLockedDialog(context, isDark, vt)
-                                      : () => settings.setVisualTheme(vt),
-                                  child: AnimatedContainer(
-                                    duration:
-                                        const Duration(milliseconds: 200),
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 12, horizontal: 8),
-                                    decoration: BoxDecoration(
-                                      color: Neu.base(isDark),
-                                      borderRadius:
-                                          BorderRadius.circular(14),
-                                      boxShadow: isSelected
-                                          ? Neu.inset(isDark)
-                                          : Neu.raisedSm(isDark),
-                                    ),
-                                    child: Column(
+                                    vertical: 12, horizontal: 8),
+                                decoration: BoxDecoration(
+                                  color: Neu.base(isDark),
+                                  borderRadius: BorderRadius.circular(14),
+                                  boxShadow: isSelected
+                                      ? Neu.inset(isDark)
+                                      : Neu.raisedSm(isDark),
+                                ),
+                                child: Column(
+                                  children: [
+                                    Stack(
+                                      alignment: Alignment.topRight,
                                       children: [
-                                        Stack(
-                                          alignment: Alignment.topRight,
-                                          children: [
-                                            Icon(
-                                              Neu.visualThemeIcon(vt),
-                                              size: 26,
-                                              color: isSelected
-                                                  ? accent
-                                                  : Neu.textSecondary(
-                                                      isDark),
+                                        Icon(
+                                          Neu.visualThemeIcon(vt),
+                                          size: 26,
+                                          color: isSelected
+                                              ? accent
+                                              : Neu.textSecondary(isDark),
+                                        ),
+                                        if (isPremium)
+                                          Positioned(
+                                            top: -2,
+                                            right: -4,
+                                            child: Icon(
+                                              Icons.lock_rounded,
+                                              size: 12,
+                                              color: Neu.textTertiary(isDark),
                                             ),
-                                            if (isPremium)
-                                              Positioned(
-                                                top: -2,
-                                                right: -4,
-                                                child: Icon(
-                                                  Icons.lock_rounded,
-                                                  size: 12,
-                                                  color: Neu.textTertiary(
-                                                      isDark),
-                                                ),
-                                              ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 6),
-                                        Text(
-                                          Neu.visualThemeName(vt),
-                                          style: TextStyle(
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.w600,
-                                            color: isSelected
-                                                ? accent
-                                                : Neu.textSecondary(isDark),
                                           ),
-                                        ),
                                       ],
                                     ),
-                                  ),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      Neu.visualThemeName(vt),
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        color: isSelected
+                                            ? accent
+                                            : Neu.textSecondary(isDark),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             );

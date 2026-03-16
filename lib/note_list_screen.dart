@@ -29,116 +29,125 @@ class NoteCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // Always vivid, fully opaque accent — visible in both light and dark
     final accentColor = Neu.accentFromTheme(note.colorTheme);
-    final textColor = Neu.textPrimary(isDark);
-    final subColor = Neu.textSecondary(isDark);
-    final preview = _previewText();
+    final textColor   = Neu.textPrimary(isDark);
+    final subColor    = Neu.textSecondary(isDark);
+    final preview     = _previewText();
 
-    return NeuPressable(
-      isDark: isDark,
-      radius: 20,
-      onTap: () => Navigator.push(
-        context,
-        _SlideRoute(builder: (_) => NoteEditorScreen(note: note)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Accent bar — subtle color cue from note theme
-            Container(
-              height: 3,
-              width: 32,
-              margin: const EdgeInsets.only(bottom: 12),
-              decoration: BoxDecoration(
-                color: accentColor.withAlpha(isDark ? 180 : 200),
-                borderRadius: BorderRadius.circular(2),
-                boxShadow: [
-                  BoxShadow(
-                    color: accentColor.withAlpha(80),
-                    blurRadius: 6,
-                    spreadRadius: 0,
-                  ),
-                ],
-              ),
-            ),
-
-            // Title row
-            Row(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 150),
+      // cardDecoration() owns all theme-specific decisions — color, shadow, border.
+      decoration: Neu.cardDecoration(note.colorTheme, isDark),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(20),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: () => Navigator.push(
+            context,
+            _SlideRoute(builder: (_) => NoteEditorScreen(note: note)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (note.pinned)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 5, top: 1),
-                    child: Icon(Icons.push_pin_rounded,
-                        size: 13, color: accentColor.withAlpha(180)),
+                // Accent bar — color cue from note theme
+                Container(
+                  height: 3,
+                  width: 32,
+                  margin: const EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(
+                    color: accentColor.withAlpha(isDark ? 180 : 200),
+                    borderRadius: BorderRadius.circular(2),
+                    boxShadow: [
+                      BoxShadow(
+                        color: accentColor.withAlpha(80),
+                        blurRadius: 6,
+                        spreadRadius: 0,
+                      ),
+                    ],
                   ),
-                Expanded(
-                  child: Text(
-                    note.title.isNotEmpty ? note.title : 'Untitled',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: -0.3,
-                      color: textColor,
-                      height: 1.3,
+                ),
+
+                // Title row
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (note.pinned)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 5, top: 1),
+                        child: Icon(Icons.push_pin_rounded,
+                            size: 13, color: accentColor.withAlpha(180)),
+                      ),
+                    Expanded(
+                      child: Text(
+                        note.title.isNotEmpty ? note.title : 'Untitled',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -0.3,
+                          color: textColor,
+                          height: 1.3,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                    maxLines: 1,
+                  ],
+                ),
+
+                // Preview
+                if (preview.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    preview,
+                    maxLines: 3,
                     overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      color: subColor,
+                      height: 1.45,
+                    ),
                   ),
+                ],
+
+                // Image indicator
+                if (note.imageIds.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Row(children: [
+                    Icon(Icons.photo_library_outlined,
+                        size: 12, color: subColor),
+                    const SizedBox(width: 3),
+                    Text(
+                      '${note.imageIds.length} image${note.imageIds.length == 1 ? '' : 's'}',
+                      style: TextStyle(fontSize: 11, color: subColor),
+                    ),
+                  ]),
+                ],
+
+                const SizedBox(height: 14),
+
+                // Footer: type chip + date
+                Row(
+                  children: [
+                    _NeuTypeChip(
+                        note: note, isDark: isDark, accent: accentColor),
+                    const Spacer(),
+                    Text(
+                      _formatDate(note.updatedAt),
+                      style: TextStyle(
+                        fontSize: 10.5,
+                        color: subColor,
+                        fontWeight: FontWeight.w500,
+                        letterSpacing: 0.1,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
-
-            // Preview
-            if (preview.isNotEmpty) ...[
-              const SizedBox(height: 6),
-              Text(
-                preview,
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 12.5,
-                  color: subColor,
-                  height: 1.45,
-                ),
-              ),
-            ],
-
-            // Image indicator
-            if (note.imageIds.isNotEmpty) ...[
-              const SizedBox(height: 6),
-              Row(children: [
-                Icon(Icons.photo_library_outlined, size: 12, color: subColor),
-                const SizedBox(width: 3),
-                Text(
-                  '${note.imageIds.length} image${note.imageIds.length == 1 ? '' : 's'}',
-                  style: TextStyle(fontSize: 11, color: subColor),
-                ),
-              ]),
-            ],
-
-            const SizedBox(height: 14),
-
-            // Footer: type chip + date
-            Row(
-              children: [
-                _NeuTypeChip(note: note, isDark: isDark, accent: accentColor),
-                const Spacer(),
-                Text(
-                  _formatDate(note.updatedAt),
-                  style: TextStyle(
-                    fontSize: 10.5,
-                    color: subColor,
-                    fontWeight: FontWeight.w500,
-                    letterSpacing: 0.1,
-                  ),
-                ),
-              ],
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -386,14 +395,13 @@ class _NoteListScreenState extends State<NoteListScreen> {
       );
 
   Widget _buildSearchField(bool isDark) {
-    final base = Neu.base(isDark);
     final textColor = Neu.textPrimary(isDark);
     final subColor = Neu.textSecondary(isDark);
 
     return Container(
       height: 40,
       decoration: BoxDecoration(
-        color: base,
+        color: Neu.inputFill(isDark),
         borderRadius: BorderRadius.circular(12),
         boxShadow: Neu.inset(isDark),
       ),

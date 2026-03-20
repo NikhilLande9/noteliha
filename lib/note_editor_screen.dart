@@ -625,31 +625,6 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
           padding: const EdgeInsets.symmetric(vertical: 6),
           child: Row(
             children: [
-              _FormatButton(
-                label: 'B',
-                bold: true,
-                isActive: active.contains(_FormatType.bold),
-                isDark: isDark,
-                accent: accent,
-                onTap: () => _applyFormat(_FormatType.bold),
-              ),
-              const SizedBox(width: 6),
-              _FormatButton(
-                label: 'I',
-                italic: true,
-                isActive: active.contains(_FormatType.italic),
-                isDark: isDark,
-                accent: accent,
-                onTap: () => _applyFormat(_FormatType.italic),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 10),
-                child: Container(
-                  width: 1,
-                  height: 22,
-                  color: Neu.textTertiary(isDark).withAlpha(80),
-                ),
-              ),
               _FormatIconButton(
                 icon: Icons.format_list_bulleted_rounded,
                 isActive: active.contains(_FormatType.bullet),
@@ -667,6 +642,17 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                 tooltip: 'Numbered list',
                 onTap: () => _applyFormat(_FormatType.numbered),
               ),
+              const Spacer(),
+              Padding(
+                padding: const EdgeInsets.only(right: 4),
+                child: Text(
+                  'Select text for B / I',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Neu.textTertiary(isDark),
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -677,6 +663,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
             controller: _contentCtrl,
             baseColor: textColor,
             onSelectionChanged: () => setState(() {}),
+            onApplyFormat: _applyFormat,
           ),
         ),
       ],
@@ -702,7 +689,6 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
     final accent   = Theme.of(context).colorScheme.primary;
     final total    = _editing.checklistItems.length;
     final done     = _editing.checklistItems.where((i) => i.checked).length;
-    final progress = total > 0 ? done / total : 0.0;
 
     return Column(
       children: [
@@ -711,37 +697,12 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: Neu.base(isDark),
-                  borderRadius: BorderRadius.circular(10),
-                  boxShadow: Neu.inset(isDark),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.check_circle_outline_rounded,
-                        size: 15, color: accent),
-                    const SizedBox(width: 8),
-                    Text(
-                      total == 0
-                          ? 'No items yet'
-                          : '$done / $total tasks completed  •  ${(progress * 100).round()}%',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: done == total && total > 0
-                            ? accent
-                            : Neu.textSecondary(isDark),
-                      ),
-                    ),
-                    if (done == total && total > 0) ...[
-                      const SizedBox(width: 6),
-                      const Text('🎉', style: TextStyle(fontSize: 13)),
-                    ],
-                  ],
-                ),
+              // ── Stepped progress bar ───────────────────────────────────────
+              _SteppedProgressBar(
+                total: total,
+                done: done,
+                isDark: isDark,
+                accent: accent,
               ),
               const SizedBox(height: 6),
               Row(
@@ -1076,6 +1037,10 @@ class _RichTextController extends TextEditingController {
   final Color baseColor;
   final List<_FmtRange> _ranges = [];
 
+  /// Set to true before programmatic text changes (toggleList, toggleInline)
+  /// so _onRichChanged skips syncRanges for that notification.
+  bool _skipNextSync = false;
+
   _RichTextController({
     required this.baseColor,
     String? initialText,
@@ -1138,6 +1103,7 @@ class _RichTextController extends TextEditingController {
       _ranges.removeWhere((r) => r.type == type && r.overlaps(s, e));
       _ranges.add(_FmtRange(start: s, end: e, type: type));
     }
+    _skipNextSync = true;
     notifyListeners();
   }
 
@@ -1197,6 +1163,7 @@ class _RichTextController extends TextEditingController {
     _shiftRangesAfter(lineStarts.isEmpty ? 0 : lineStarts.first, delta);
 
     final newSelEnd = (sel.end + delta).clamp(0, newText.length);
+    _skipNextSync = true;
     value = TextEditingValue(
       text: newText,
       selection: TextSelection.collapsed(offset: newSelEnd),
@@ -1204,30 +1171,54 @@ class _RichTextController extends TextEditingController {
   }
 
   // ── Range sync ─────────────────────────────────────────────────────────────
+  //
+  // Called from _onRichChanged after every keystroke.
+  // Uses the controller's current cursor position as the authoritative edit
+  // point instead of a fragile LCS prefix/suffix scan.
+  //
+  // Rules:
+  //   • edit point = cursor position in the NEW text after the change
+  //   • delta      = newText.length - oldText.length  (+insert / -delete)
+  //   • Any range that starts AT or AFTER the edit point shifts by delta.
+  //   • Any range that straddles the edit point: end shifts, start stays.
+  //   • Ranges entirely before the edit point are untouched.
+  //   • Zero-length ranges are discarded.
 
   void syncRanges(String oldText, String newText) {
     if (oldText == newText) return;
-    int pre = 0;
-    final minLen = oldText.length < newText.length ? oldText.length : newText.length;
-    while (pre < minLen && oldText[pre] == newText[pre]) pre++;
-    int oldSuf = oldText.length;
-    int newSuf = newText.length;
-    while (oldSuf > pre && newSuf > pre && oldText[oldSuf - 1] == newText[newSuf - 1]) {
-      oldSuf--;
-      newSuf--;
+    final delta = newText.length - oldText.length;
+    if (delta == 0) return; // pure replacement — offsets unchanged
+
+    // Use the cursor (base offset in new value) as the edit point.
+    // Falls back to prefix scan only when selection is invalid.
+    int editPoint;
+    final sel = selection;
+    if (sel.isValid) {
+      // After an insertion the cursor sits just after the inserted chars.
+      // After a deletion the cursor sits at the deletion start.
+      editPoint = delta > 0 ? sel.baseOffset - delta : sel.baseOffset;
+      editPoint = editPoint.clamp(0, oldText.length);
+    } else {
+      // Fallback: find first differing character.
+      editPoint = 0;
+      final minLen = oldText.length < newText.length ? oldText.length : newText.length;
+      while (editPoint < minLen && oldText[editPoint] == newText[editPoint]) {
+        editPoint++;
+      }
     }
-    final delta = (newSuf - pre) - (oldSuf - pre);
-    if (delta == 0) return;
 
     final updated = <_FmtRange>[];
     for (final r in _ranges) {
       int s = r.start, e = r.end;
-      if (pre <= s) {
+      if (s >= editPoint) {
+        // Entire range is after the edit — shift both endpoints.
         s = (s + delta).clamp(0, newText.length);
         e = (e + delta).clamp(0, newText.length);
-      } else if (pre < e) {
+      } else if (e > editPoint) {
+        // Range straddles the edit point — only the end shifts.
         e = (e + delta).clamp(s, newText.length);
       }
+      // Drop zero-length ranges.
       if (s < e) updated.add(r.copyWith(start: s, end: e));
     }
     _ranges..clear()..addAll(updated);
@@ -1341,11 +1332,14 @@ class _RichTextController extends TextEditingController {
   static List<int> _lineStartsInSel(String text, TextSelection sel) {
     final starts = <int>[];
     final first  = _lineStart(text, sel.start);
+    // For a collapsed selection (cursor only), treat the cursor's line as the
+    // selected range so bullet/numbered toggling works without a text selection.
+    final effectiveEnd = sel.isCollapsed ? sel.start + 1 : sel.end;
     var   pos    = first;
     while (pos <= text.length) {
       starts.add(pos);
       final nl = text.indexOf('\n', pos);
-      if (nl == -1 || nl >= sel.end) break;
+      if (nl == -1 || nl >= effectiveEnd) break;
       pos = nl + 1;
     }
     return starts;
@@ -1396,9 +1390,6 @@ Widget renderMarkdown(String stored, TextStyle base) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _ListEnterFormatter extends TextInputFormatter {
-  final _RichTextController ctrl;
-  _ListEnterFormatter(this.ctrl);
-
   static final _bulletRe   = RegExp(r'^• ');
   static final _numberedRe = RegExp(r'^(\d+)\. ');
 
@@ -1426,7 +1417,6 @@ class _ListEnterFormatter extends TextInputFormatter {
     if (content.isEmpty) {
       // Empty list line → exit list
       final newText = old.substring(0, ls) + old.substring(ls + prefixLen);
-      ctrl.syncRanges(old, newText);
       return TextEditingValue(
         text: newText,
         selection: TextSelection.collapsed(offset: ls),
@@ -1440,7 +1430,6 @@ class _ListEnterFormatter extends TextInputFormatter {
     final before = newValue.text.substring(0, cursor);
     final after  = newValue.text.substring(cursor);
     final result = '$before$nextPrefix$after';
-    ctrl.syncRanges(old, result);
 
     return TextEditingValue(
       text: result,
@@ -1469,6 +1458,7 @@ class _RichTextField extends StatefulWidget {
   final TextEditingController controller; // holds serialised content
   final Color baseColor;
   final VoidCallback? onSelectionChanged;
+  final void Function(_FormatType)? onApplyFormat;
 
   const _RichTextField({
     super.key,
@@ -1476,6 +1466,7 @@ class _RichTextField extends StatefulWidget {
     required this.controller,
     required this.baseColor,
     this.onSelectionChanged,
+    this.onApplyFormat,
   });
 
   @override
@@ -1518,7 +1509,13 @@ class _RichTextFieldState extends State<_RichTextField> {
 
   void _onRichChanged() {
     final newPlain = _richCtrl.text;
-    _richCtrl.syncRanges(_prevPlainText, newPlain);
+    if (_richCtrl._skipNextSync) {
+      // This change came from a programmatic toggleInline/toggleList call.
+      // Ranges are already correct — just update _prevPlainText and mirror.
+      _richCtrl._skipNextSync = false;
+    } else {
+      _richCtrl.syncRanges(_prevPlainText, newPlain);
+    }
     _prevPlainText = newPlain;
     // Mirror plain text to parent controller (used by undo/snapshot/hasContent)
     if (widget.controller.text != newPlain) {
@@ -1534,6 +1531,8 @@ class _RichTextFieldState extends State<_RichTextField> {
       _richCtrl._ranges
         ..clear()
         ..addAll(ranges);
+      // Skip syncRanges in _onRichChanged — we just loaded authoritative ranges.
+      _richCtrl._skipNextSync = true;
       _richCtrl.value = TextEditingValue(text: text);
       _prevPlainText  = text;
     }
@@ -1587,7 +1586,43 @@ class _RichTextFieldState extends State<_RichTextField> {
         controller: _richCtrl,
         maxLines: null,
         minLines: 8,
-        inputFormatters: [_ListEnterFormatter(_richCtrl)],
+        inputFormatters: [_ListEnterFormatter()],
+        contextMenuBuilder: (ctx, editableTextState) {
+          final sel = _richCtrl.selection;
+          final hasSelection = sel.isValid && !sel.isCollapsed;
+          final active = activeFormats;
+          final accent = Theme.of(ctx).colorScheme.primary;
+          final isBold   = active.contains(_FormatType.bold);
+          final isItalic = active.contains(_FormatType.italic);
+
+          // Build the standard system buttons first, then prepend our own.
+          final systemButtons = editableTextState.contextMenuButtonItems;
+
+          // Bold and Italic buttons only appear when text is selected.
+          final formatButtons = hasSelection
+              ? [
+            ContextMenuButtonItem(
+              label: isBold ? '✓ Bold' : 'Bold',
+              onPressed: () {
+                ContextMenuController.removeAny();
+                widget.onApplyFormat?.call(_FormatType.bold);
+              },
+            ),
+            ContextMenuButtonItem(
+              label: isItalic ? '✓ Italic' : 'Italic',
+              onPressed: () {
+                ContextMenuController.removeAny();
+                widget.onApplyFormat?.call(_FormatType.italic);
+              },
+            ),
+          ]
+              : <ContextMenuButtonItem>[];
+
+          return AdaptiveTextSelectionToolbar.buttonItems(
+            anchors: editableTextState.contextMenuAnchors,
+            buttonItems: [...formatButtons, ...systemButtons],
+          );
+        },
         decoration: InputDecoration(
           hintText: 'Start writing…',
           hintStyle: TextStyle(
@@ -1608,59 +1643,6 @@ class _RichTextFieldState extends State<_RichTextField> {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Format button (Bold / Italic)
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _FormatButton extends StatelessWidget {
-  final String label;
-  final bool bold;
-  final bool italic;
-  final bool isActive;
-  final bool isDark;
-  final Color accent;
-  final VoidCallback onTap;
-
-  const _FormatButton({
-    required this.label,
-    required this.isDark,
-    required this.accent,
-    required this.onTap,
-    this.bold = false,
-    this.italic = false,
-    this.isActive = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        width: 36,
-        height: 32,
-        decoration: BoxDecoration(
-          color: isActive ? accent.withAlpha(20) : Neu.base(isDark),
-          borderRadius: BorderRadius.circular(8),
-          boxShadow: isActive ? Neu.inset(isDark) : Neu.raisedSm(isDark),
-          border: isActive
-              ? Border.all(color: accent.withAlpha(80), width: 1)
-              : null,
-        ),
-        alignment: Alignment.center,
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: bold ? FontWeight.w900 : FontWeight.w400,
-            fontStyle: italic ? FontStyle.italic : FontStyle.normal,
-            color: isActive ? accent : accent.withAlpha(160),
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Icon format button (bullet / numbered list)
@@ -1709,6 +1691,348 @@ class _FormatIconButton extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Stepped progress bar
+//
+// Renders one segment per checklist task.  Each segment animates from empty
+// to filled when its task is checked, and back when unchecked.
+// Up to _kMaxSegments segments are shown; beyond that the bar collapses into
+// a single smooth fill so the gaps don't become invisible.
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _SteppedProgressBar extends StatefulWidget {
+  final int total;
+  final int done;
+  final bool isDark;
+  final Color accent;
+
+  const _SteppedProgressBar({
+    required this.total,
+    required this.done,
+    required this.isDark,
+    required this.accent,
+  });
+
+  @override
+  State<_SteppedProgressBar> createState() => _SteppedProgressBarState();
+}
+
+class _SteppedProgressBarState extends State<_SteppedProgressBar>
+    with SingleTickerProviderStateMixin {
+  // When total exceeds this we render a continuous bar instead of segments.
+  static const int _kMaxSegments = 20;
+
+  late AnimationController _pulseCtrl;
+  late Animation<double>   _pulseAnim;
+
+  int _prevDone = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _prevDone = widget.done;
+    _pulseCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+    _pulseAnim = Tween<double>(begin: 1.0, end: 1.0).animate(_pulseCtrl);
+  }
+
+  @override
+  void didUpdateWidget(_SteppedProgressBar old) {
+    super.didUpdateWidget(old);
+    if (widget.done != _prevDone) {
+      // Pulse the label on every step change.
+      _pulseCtrl.forward(from: 0);
+      _prevDone = widget.done;
+    }
+  }
+
+  @override
+  void dispose() {
+    _pulseCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final total    = widget.total;
+    final done     = widget.done;
+    final accent   = widget.accent;
+    final isDark   = widget.isDark;
+    final allDone  = total > 0 && done == total;
+    final progress = total > 0 ? done / total : 0.0;
+
+    final trackColor = isDark
+        ? accent.withAlpha(30)
+        : accent.withAlpha(22);
+    final fillColor  = allDone ? accent : accent;
+    final textColor  = allDone ? accent : Neu.textSecondary(isDark);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: Neu.base(isDark),
+        borderRadius: BorderRadius.circular(10),
+        boxShadow: Neu.inset(isDark),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Label row ───────────────────────────────────────────────────────
+          Row(
+            children: [
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                transitionBuilder: (child, anim) =>
+                    ScaleTransition(scale: anim, child: child),
+                child: Icon(
+                  allDone
+                      ? Icons.check_circle_rounded
+                      : Icons.check_circle_outline_rounded,
+                  key: ValueKey(allDone),
+                  size: 15,
+                  color: accent,
+                ),
+              ),
+              const SizedBox(width: 8),
+              AnimatedDefaultTextStyle(
+                duration: const Duration(milliseconds: 250),
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: textColor,
+                ),
+                child: Text(
+                  total == 0
+                      ? 'No items yet'
+                      : '$done / $total completed',
+                ),
+              ),
+              if (allDone) ...[
+                const SizedBox(width: 6),
+                const Text('🎉', style: TextStyle(fontSize: 13)),
+              ],
+              const Spacer(),
+              // Percentage badge — pops in once there's something to show.
+              AnimatedOpacity(
+                opacity: total > 0 ? 1.0 : 0.0,
+                duration: const Duration(milliseconds: 200),
+                child: AnimatedDefaultTextStyle(
+                  duration: const Duration(milliseconds: 250),
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: allDone ? accent : Neu.textTertiary(isDark),
+                    letterSpacing: 0.3,
+                  ),
+                  child: Text('${(progress * 100).round()}%'),
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 8),
+
+          // ── Bar ─────────────────────────────────────────────────────────────
+          if (total == 0)
+          // Empty state: thin ghost track.
+            Container(
+              height: 6,
+              decoration: BoxDecoration(
+                color: trackColor,
+                borderRadius: BorderRadius.circular(3),
+              ),
+            )
+          else if (total > _kMaxSegments)
+          // Continuous animated fill for long lists.
+            ClipRRect(
+              borderRadius: BorderRadius.circular(3),
+              child: Stack(
+                children: [
+                  // Track
+                  Container(
+                    height: 6,
+                    color: trackColor,
+                  ),
+                  // Fill
+                  AnimatedFractionallySizedBox(
+                    duration: const Duration(milliseconds: 350),
+                    curve: Curves.easeOutCubic,
+                    widthFactor: progress,
+                    child: Container(
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color: fillColor,
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+          // Segmented bar — one slot per task.
+            LayoutBuilder(
+              builder: (ctx, constraints) {
+                const gap     = 3.0;
+                final barW    = constraints.maxWidth;
+                final segW    = (barW - gap * (total - 1)) / total;
+
+                return Row(
+                  children: List.generate(total, (i) {
+                    final filled = i < done;
+                    // The most-recently-completed segment gets a little bounce.
+                    final isNewlyFilled = filled && i == done - 1;
+
+                    return Padding(
+                      padding: EdgeInsets.only(right: i < total - 1 ? gap : 0),
+                      child: _AnimatedSegment(
+                        key: ValueKey(i),
+                        width: segW,
+                        filled: filled,
+                        bounce: isNewlyFilled,
+                        fillColor: fillColor,
+                        trackColor: trackColor,
+                        isDark: isDark,
+                      ),
+                    );
+                  }),
+                );
+              },
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Single animated segment
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _AnimatedSegment extends StatefulWidget {
+  final double width;
+  final bool   filled;
+  final bool   bounce;
+  final Color  fillColor;
+  final Color  trackColor;
+  final bool   isDark;
+
+  const _AnimatedSegment({
+    super.key,
+    required this.width,
+    required this.filled,
+    required this.bounce,
+    required this.fillColor,
+    required this.trackColor,
+    required this.isDark,
+  });
+
+  @override
+  State<_AnimatedSegment> createState() => _AnimatedSegmentState();
+}
+
+class _AnimatedSegmentState extends State<_AnimatedSegment>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double>   _fillAnim;
+  late Animation<double>   _scaleAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 380),
+    );
+
+    _fillAnim = CurvedAnimation(
+      parent: _ctrl,
+      curve:  Curves.easeOutCubic,
+    );
+
+    // The "bounce" overshoot on the fill height.
+    _scaleAnim = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween(begin: 1.0, end: 1.35)
+            .chain(CurveTween(curve: Curves.easeOut)),
+        weight: 40,
+      ),
+      TweenSequenceItem(
+        tween: Tween(begin: 1.35, end: 1.0)
+            .chain(CurveTween(curve: Curves.elasticOut)),
+        weight: 60,
+      ),
+    ]).animate(_ctrl);
+
+    if (widget.filled) _ctrl.value = 1.0;
+  }
+
+  @override
+  void didUpdateWidget(_AnimatedSegment old) {
+    super.didUpdateWidget(old);
+    if (widget.filled != old.filled) {
+      if (widget.filled) {
+        _ctrl.forward(from: 0);
+      } else {
+        _ctrl.reverse();
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _ctrl,
+      builder: (_, __) {
+        final h      = 6.0;
+        final scale  = widget.bounce ? _scaleAnim.value : 1.0;
+        final radius = BorderRadius.circular(3);
+
+        return SizedBox(
+          width: widget.width,
+          height: h * 1.35, // headroom for the bounce overshoot
+          child: Align(
+            alignment: Alignment.center,
+            child: ClipRRect(
+              borderRadius: radius,
+              child: Stack(
+                children: [
+                  // Track
+                  Container(
+                    width:  widget.width,
+                    height: h,
+                    color:  widget.trackColor,
+                  ),
+                  // Fill — grows left→right via FractionallySizedBox
+                  FractionallySizedBox(
+                    widthFactor:  _fillAnim.value,
+                    heightFactor: scale,
+                    alignment:    Alignment.centerLeft,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color:        widget.fillColor,
+                        borderRadius: radius,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

@@ -1,4 +1,5 @@
 // lib/settings_screen.dart
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -7,6 +8,20 @@ import 'models.dart';
 import 'theme_helper.dart';
 import 'neu_theme.dart';
 import 'notes_provider.dart';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Connectivity helper
+// ─────────────────────────────────────────────────────────────────────────────
+
+Future<bool> _hasInternet() async {
+  try {
+    final result = await InternetAddress.lookup('google.com')
+        .timeout(const Duration(seconds: 5));
+    return result.isNotEmpty && result.first.rawAddress.isNotEmpty;
+  } catch (_) {
+    return false;
+  }
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Settings Screen
@@ -504,6 +519,34 @@ class _LoggedInTile extends StatelessWidget {
   bool get _hasRemoteBackup =>
       prov.driveAccountState == DriveAccountState.returningUser;
 
+  // ── Internet-guarded action runner ─────────────────────────────────────────
+  Future<void> _runWithNetworkCheck(
+      BuildContext context,
+      VoidCallback action,
+      ) async {
+    final online = await _hasInternet();
+    if (!online) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Row(
+              children: [
+                Icon(Icons.wifi_off_rounded, color: Colors.white, size: 18),
+                SizedBox(width: 10),
+                Text('No internet connection'),
+              ],
+            ),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.red.shade700,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+      return;
+    }
+    action();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -599,7 +642,7 @@ class _LoggedInTile extends StatelessWidget {
             context,
             'Upload Backup',
             'Push all pending local changes to Google Drive?',
-            prov.uploadNotes,
+                () => _runWithNetworkCheck(context, prov.uploadNotes),
           ),
         ),
 
@@ -620,7 +663,7 @@ class _LoggedInTile extends StatelessWidget {
             context,
             'Restore from Drive',
             'Download notes from Drive and merge with local? Conflicts will be flagged for review.',
-            prov.downloadNotes,
+                () => _runWithNetworkCheck(context, prov.downloadNotes),
           ),
         ),
 

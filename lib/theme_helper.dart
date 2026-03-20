@@ -32,21 +32,21 @@ class ThemeHelper {
       bg.computeLuminance() > 0.5 ? Colors.black54 : Colors.white70;
 
   static String getThemeName(ColorTheme theme) => switch (theme) {
-        ColorTheme.default_ => 'Default',
-        ColorTheme.sunset   => 'Sunset',
-        ColorTheme.orange   => 'Orange',
-        ColorTheme.forest   => 'Forest',
-        ColorTheme.lavender => 'Lavender',
-        ColorTheme.rose     => 'Rose',
-      };
+    ColorTheme.default_ => 'Default',
+    ColorTheme.sunset   => 'Sunset',
+    ColorTheme.orange   => 'Orange',
+    ColorTheme.forest   => 'Forest',
+    ColorTheme.lavender => 'Lavender',
+    ColorTheme.rose     => 'Rose',
+  };
 
   static Icon getNoteTypeIcon(NoteType type) => switch (type) {
-        NoteType.normal    => const Icon(Icons.note_rounded, size: 14),
-        NoteType.checklist => const Icon(Icons.check_box_rounded, size: 14),
-        NoteType.itinerary => const Icon(Icons.flight_rounded, size: 14),
-        NoteType.mealPlan  => const Icon(Icons.restaurant_menu_rounded, size: 14),
-        NoteType.recipe    => const Icon(Icons.menu_book_rounded, size: 14),
-      };
+    NoteType.normal    => const Icon(Icons.note_rounded, size: 14),
+    NoteType.checklist => const Icon(Icons.check_box_rounded, size: 14),
+    NoteType.itinerary => const Icon(Icons.flight_rounded, size: 14),
+    NoteType.mealPlan  => const Icon(Icons.restaurant_menu_rounded, size: 14),
+    NoteType.recipe    => const Icon(Icons.menu_book_rounded, size: 14),
+  };
 }
 
 class AppSettingsProvider extends ChangeNotifier {
@@ -64,20 +64,20 @@ class AppSettingsProvider extends ChangeNotifier {
   }
 
   static Color seedColor(AppTheme theme) => switch (theme) {
-        AppTheme.amber  => Colors.amber,
-        AppTheme.teal   => Colors.teal,
-        AppTheme.indigo => Colors.indigo,
-        AppTheme.rose   => Colors.pink,
-        AppTheme.slate  => Colors.blueGrey,
-      };
+    AppTheme.amber  => Colors.amber,
+    AppTheme.teal   => Colors.teal,
+    AppTheme.indigo => Colors.indigo,
+    AppTheme.rose   => Colors.pink,
+    AppTheme.slate  => Colors.blueGrey,
+  };
 
   static String themeName(AppTheme theme) => switch (theme) {
-        AppTheme.amber  => 'Amber',
-        AppTheme.teal   => 'Teal',
-        AppTheme.indigo => 'Indigo',
-        AppTheme.rose   => 'Rose',
-        AppTheme.slate  => 'Slate',
-      };
+    AppTheme.amber  => 'Amber',
+    AppTheme.teal   => 'Teal',
+    AppTheme.indigo => 'Indigo',
+    AppTheme.rose   => 'Rose',
+    AppTheme.slate  => 'Slate',
+  };
 
   void setAppTheme(AppTheme theme) {
     _appTheme = theme;

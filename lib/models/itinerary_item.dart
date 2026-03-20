@@ -1,5 +1,6 @@
 // lib/models/itinerary_item.dart
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 import '../neu_theme.dart';
 
@@ -49,34 +50,34 @@ class _ModernItineraryBuilderState extends State<ModernItineraryBuilder> {
           child: widget.items.isEmpty
               ? _buildEmptyState(isDark)
               : CustomScrollView(
-                  slivers: [
-                    SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-                      sliver: SliverList.builder(
-                        itemCount: widget.items.length,
-                        itemBuilder: (context, index) {
-                          final item = widget.items[index];
-                          final isLast = index == widget.items.length - 1;
-                          final isExpanded = _expandedItems[item.id] ?? false;
-                          return _ItineraryTimelineItem(
-                            key: ValueKey(item.id),
-                            item: item,
-                            index: index,
-                            isLast: isLast,
-                            isExpanded: isExpanded,
-                            isDark: isDark,
-                            onToggleExpanded: () => _toggleExpanded(item.id),
-                            onDelete: () {
-                              widget.onDelete(index);
-                              setState(() => _expandedItems.remove(item.id));
-                            },
-                            onChanged: widget.onChanged,
-                          );
-                        },
-                      ),
-                    ),
-                  ],
+            slivers: [
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+                sliver: SliverList.builder(
+                  itemCount: widget.items.length,
+                  itemBuilder: (context, index) {
+                    final item = widget.items[index];
+                    final isLast = index == widget.items.length - 1;
+                    final isExpanded = _expandedItems[item.id] ?? false;
+                    return _ItineraryTimelineItem(
+                      key: ValueKey(item.id),
+                      item: item,
+                      index: index,
+                      isLast: isLast,
+                      isExpanded: isExpanded,
+                      isDark: isDark,
+                      onToggleExpanded: () => _toggleExpanded(item.id),
+                      onDelete: () {
+                        widget.onDelete(index);
+                        setState(() => _expandedItems.remove(item.id));
+                      },
+                      onChanged: widget.onChanged,
+                    );
+                  },
                 ),
+              ),
+            ],
+          ),
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -122,7 +123,7 @@ class _ModernItineraryBuilderState extends State<ModernItineraryBuilder> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Timeline Item
+// Timeline Item (stateful — owns controllers + expand animation)
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _ItineraryTimelineItem extends StatefulWidget {
@@ -157,9 +158,6 @@ class _ItineraryTimelineItemState extends State<_ItineraryTimelineItem>
   late Animation<double> _expandAnimation;
 
   late TextEditingController _locationCtrl;
-  late TextEditingController _dateCtrl;
-  late TextEditingController _arrivalCtrl;
-  late TextEditingController _departureCtrl;
   late TextEditingController _notesCtrl;
 
   @override
@@ -174,11 +172,8 @@ class _ItineraryTimelineItemState extends State<_ItineraryTimelineItem>
     );
     if (widget.isExpanded) _expandController.forward();
 
-    _locationCtrl  = TextEditingController(text: widget.item.location);
-    _dateCtrl      = TextEditingController(text: widget.item.date);
-    _arrivalCtrl   = TextEditingController(text: widget.item.arrivalTime);
-    _departureCtrl = TextEditingController(text: widget.item.departureTime);
-    _notesCtrl     = TextEditingController(text: widget.item.notes);
+    _locationCtrl = TextEditingController(text: widget.item.location);
+    _notesCtrl    = TextEditingController(text: widget.item.notes);
   }
 
   @override
@@ -197,25 +192,19 @@ class _ItineraryTimelineItemState extends State<_ItineraryTimelineItem>
   void dispose() {
     _expandController.dispose();
     _locationCtrl.dispose();
-    _dateCtrl.dispose();
-    _arrivalCtrl.dispose();
-    _departureCtrl.dispose();
     _notesCtrl.dispose();
     super.dispose();
   }
 
-  void _updateItem() {
-    widget.item.location      = _locationCtrl.text;
-    widget.item.date          = _dateCtrl.text;
-    widget.item.arrivalTime   = _arrivalCtrl.text;
-    widget.item.departureTime = _departureCtrl.text;
-    widget.item.notes         = _notesCtrl.text;
+  void _notifyChanged() {
+    widget.item.location = _locationCtrl.text;
+    widget.item.notes    = _notesCtrl.text;
     widget.onChanged();
   }
 
   @override
   Widget build(BuildContext context) {
-    final isDark = widget.isDark;
+    final isDark      = widget.isDark;
     final accentColor = Theme.of(context).colorScheme.primary;
 
     return Column(
@@ -224,12 +213,11 @@ class _ItineraryTimelineItemState extends State<_ItineraryTimelineItem>
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Timeline spine
+              // ── Timeline spine ─────────────────────────────────────────
               SizedBox(
                 width: 40,
                 child: Column(
                   children: [
-                    // Numbered circle — neumorphic raised
                     NeuContainer(
                       isDark: isDark,
                       radius: 16,
@@ -248,7 +236,6 @@ class _ItineraryTimelineItemState extends State<_ItineraryTimelineItem>
                         ),
                       ),
                     ),
-                    // Connector line
                     if (!widget.isLast)
                       Expanded(
                         child: Container(
@@ -270,7 +257,7 @@ class _ItineraryTimelineItemState extends State<_ItineraryTimelineItem>
                 ),
               ),
               const SizedBox(width: 12),
-              // Content
+              // ── Card content ───────────────────────────────────────────
               Expanded(
                 child: Column(
                   children: [
@@ -285,13 +272,11 @@ class _ItineraryTimelineItemState extends State<_ItineraryTimelineItem>
                       sizeFactor: _expandAnimation,
                       axisAlignment: -1,
                       child: _TimelineItemExpanded(
-                        locationCtrl:  _locationCtrl,
-                        dateCtrl:      _dateCtrl,
-                        arrivalCtrl:   _arrivalCtrl,
-                        departureCtrl: _departureCtrl,
-                        notesCtrl:     _notesCtrl,
-                        isDark:        isDark,
-                        onChanged:     _updateItem,
+                        item:         widget.item,
+                        locationCtrl: _locationCtrl,
+                        notesCtrl:    _notesCtrl,
+                        isDark:       isDark,
+                        onChanged:    _notifyChanged,
                       ),
                     ),
                   ],
@@ -307,7 +292,7 @@ class _ItineraryTimelineItemState extends State<_ItineraryTimelineItem>
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Header (collapsed view)
+// Collapsed header row
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _TimelineItemHeader extends StatelessWidget {
@@ -353,7 +338,6 @@ class _TimelineItemHeader extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              // Delete button
               GestureDetector(
                 onTap: onDelete,
                 child: Icon(Icons.close_rounded, size: 16, color: subColor),
@@ -388,6 +372,22 @@ class _TimelineItemHeader extends StatelessWidget {
               ),
             ]),
           ],
+          // ── Duration pill — shown only when both times are set ──────────
+          if (_duration() != null) ...[
+            const SizedBox(height: 4),
+            Row(children: [
+              Icon(Icons.timelapse_rounded, size: 12, color: subColor),
+              const SizedBox(width: 5),
+              Text(
+                _duration()!,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: subColor,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ]),
+          ],
         ],
       ),
     );
@@ -396,87 +396,243 @@ class _TimelineItemHeader extends StatelessWidget {
   String _formatTimeRange() {
     final a = item.arrivalTime.isNotEmpty   ? item.arrivalTime   : 'TBD';
     final d = item.departureTime.isNotEmpty ? item.departureTime : 'TBD';
-    return '$a – $d';
+    return '$a → $d';
+  }
+
+  /// Returns a human-readable duration string like "2 hrs 30 min" or "45 min"
+  /// when both arrival and departure are set and departure is after arrival.
+  /// Returns null otherwise so the row is hidden.
+  String? _duration() {
+    if (item.arrivalTime.isEmpty || item.departureTime.isEmpty) return null;
+
+    TimeOfDay? parseTime(String s) {
+      final parts = s.split(':');
+      if (parts.length != 2) return null;
+      final h = int.tryParse(parts[0]);
+      final m = int.tryParse(parts[1]);
+      if (h == null || m == null) return null;
+      return TimeOfDay(hour: h, minute: m);
+    }
+
+    final arrival   = parseTime(item.arrivalTime);
+    final departure = parseTime(item.departureTime);
+    if (arrival == null || departure == null) return null;
+
+    final arrMins = arrival.hour   * 60 + arrival.minute;
+    final depMins = departure.hour * 60 + departure.minute;
+
+    // Handle overnight spans (e.g. 22:00 → 02:00 = 4 hrs)
+    final diff = depMins >= arrMins
+        ? depMins - arrMins
+        : (24 * 60 - arrMins) + depMins;
+
+    if (diff <= 0) return null;
+
+    final hrs = diff ~/ 60;
+    final min = diff % 60;
+
+    if (hrs == 0)         return '$min min';
+    if (min == 0)         return '$hrs ${hrs == 1 ? 'hr' : 'hrs'}';
+    return '$hrs ${hrs == 1 ? 'hr' : 'hrs'} $min min';
   }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Expanded content
+// Expanded form — location + date picker + time pickers + notes
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _TimelineItemExpanded extends StatelessWidget {
+class _TimelineItemExpanded extends StatefulWidget {
+  final ItineraryItem item;
   final TextEditingController locationCtrl;
-  final TextEditingController dateCtrl;
-  final TextEditingController arrivalCtrl;
-  final TextEditingController departureCtrl;
   final TextEditingController notesCtrl;
   final bool isDark;
   final VoidCallback onChanged;
 
   const _TimelineItemExpanded({
+    required this.item,
     required this.locationCtrl,
-    required this.dateCtrl,
-    required this.arrivalCtrl,
-    required this.departureCtrl,
     required this.notesCtrl,
     required this.isDark,
     required this.onChanged,
   });
 
   @override
+  State<_TimelineItemExpanded> createState() => _TimelineItemExpandedState();
+}
+
+class _TimelineItemExpandedState extends State<_TimelineItemExpanded> {
+  // ── Date helpers ────────────────────────────────────────────────────────────
+
+  /// Parse stored date string ("Mon, Jan 6") back to a DateTime for the picker.
+  DateTime? _parseDate(String stored) {
+    if (stored.isEmpty) return null;
+    try {
+      // Format saved by _pickDate: "EEE, MMM d"
+      final parts = stored.split(', ');
+      if (parts.length == 2) {
+        final d = DateFormat('MMM d').parse(parts[1].trim());
+        final now = DateTime.now();
+        return DateTime(now.year, d.month, d.day);
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  Future<void> _pickDate() async {
+    final initial = _parseDate(widget.item.date) ?? DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initial,
+      firstDate: DateTime.now().subtract(const Duration(days: 365)),
+      lastDate: DateTime.now().add(const Duration(days: 730)),
+    );
+    if (picked != null && mounted) {
+      setState(() {
+        widget.item.date =
+        '${DateFormat('EEE').format(picked)}, ${DateFormat('MMM d').format(picked)}';
+      });
+      widget.onChanged();
+    }
+  }
+
+  // ── Time helpers ────────────────────────────────────────────────────────────
+
+  /// Parse stored time string ("14:30") back to a TimeOfDay.
+  TimeOfDay? _parseTime(String stored) {
+    if (stored.isEmpty) return null;
+    try {
+      final parts = stored.split(':');
+      if (parts.length == 2) {
+        return TimeOfDay(
+          hour: int.parse(parts[0]),
+          minute: int.parse(parts[1]),
+        );
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  String _formatTime(TimeOfDay t) =>
+      '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+
+  Future<void> _pickArrival() async {
+    final initial = _parseTime(widget.item.arrivalTime) ?? TimeOfDay.now();
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: initial,
+    );
+    if (picked != null && mounted) {
+      setState(() => widget.item.arrivalTime = _formatTime(picked));
+      widget.onChanged();
+    }
+  }
+
+  Future<void> _pickDeparture() async {
+    final initial = _parseTime(widget.item.departureTime) ??
+        (_parseTime(widget.item.arrivalTime) ?? TimeOfDay.now());
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: initial,
+    );
+    if (picked != null && mounted) {
+      setState(() => widget.item.departureTime = _formatTime(picked));
+      widget.onChanged();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final isDark = widget.isDark;
+
     return NeuContainer(
       isDark: isDark,
       radius: 14,
       inset: true,
       padding: const EdgeInsets.all(12),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _NeuField(
+          // ── Location text field ─────────────────────────────────────────
+          NeuField(
+            isDark: isDark,
+            controller: widget.locationCtrl,
             label: 'Location',
             icon: Icons.location_on_outlined,
-            controller: locationCtrl,
-            isDark: isDark,
-            onChanged: onChanged,
+            onChanged: (_) => widget.onChanged(),
           ),
-          const SizedBox(height: 8),
-          _NeuField(
-            label: 'Date',
-            icon: Icons.calendar_today_outlined,
-            controller: dateCtrl,
+
+          const SizedBox(height: 10),
+
+          // ── Date picker button ──────────────────────────────────────────
+          _PickerButton(
             isDark: isDark,
-            onChanged: onChanged,
+            icon: Icons.calendar_today_rounded,
+            label: widget.item.date.isNotEmpty
+                ? widget.item.date
+                : 'Pick date',
+            hasValue: widget.item.date.isNotEmpty,
+            onTap: _pickDate,
+            onClear: widget.item.date.isNotEmpty
+                ? () => setState(() {
+              widget.item.date = '';
+              widget.onChanged();
+            })
+                : null,
           ),
-          const SizedBox(height: 8),
-          Row(children: [
-            Expanded(
-              child: _NeuField(
-                label: 'Arrival',
-                icon: Icons.flight_land_outlined,
-                controller: arrivalCtrl,
-                isDark: isDark,
-                onChanged: onChanged,
+
+          const SizedBox(height: 10),
+
+          // ── Arrival & Departure time pickers side by side ───────────────
+          Row(
+            children: [
+              Expanded(
+                child: _PickerButton(
+                  isDark: isDark,
+                  icon: Icons.flight_land_outlined,
+                  label: widget.item.arrivalTime.isNotEmpty
+                      ? widget.item.arrivalTime
+                      : 'Arrival',
+                  hasValue: widget.item.arrivalTime.isNotEmpty,
+                  onTap: _pickArrival,
+                  onClear: widget.item.arrivalTime.isNotEmpty
+                      ? () => setState(() {
+                    widget.item.arrivalTime = '';
+                    widget.onChanged();
+                  })
+                      : null,
+                ),
               ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: _NeuField(
-                label: 'Departure',
-                icon: Icons.flight_takeoff_outlined,
-                controller: departureCtrl,
-                isDark: isDark,
-                onChanged: onChanged,
+              const SizedBox(width: 8),
+              Expanded(
+                child: _PickerButton(
+                  isDark: isDark,
+                  icon: Icons.flight_takeoff_outlined,
+                  label: widget.item.departureTime.isNotEmpty
+                      ? widget.item.departureTime
+                      : 'Departure',
+                  hasValue: widget.item.departureTime.isNotEmpty,
+                  onTap: _pickDeparture,
+                  onClear: widget.item.departureTime.isNotEmpty
+                      ? () => setState(() {
+                    widget.item.departureTime = '';
+                    widget.onChanged();
+                  })
+                      : null,
+                ),
               ),
-            ),
-          ]),
-          const SizedBox(height: 8),
-          _NeuField(
+            ],
+          ),
+
+          const SizedBox(height: 10),
+
+          // ── Notes text field ────────────────────────────────────────────
+          NeuField(
+            isDark: isDark,
+            controller: widget.notesCtrl,
             label: 'Notes',
             icon: Icons.notes_outlined,
-            controller: notesCtrl,
-            isDark: isDark,
             maxLines: 2,
-            onChanged: onChanged,
+            onChanged: (_) => widget.onChanged(),
           ),
         ],
       ),
@@ -485,35 +641,65 @@ class _TimelineItemExpanded extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Neumorphic text field
+// Reusable tappable picker button (date or time)
+// Mirrors the style of _DatePickerButton in meal_plan_item.dart
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _NeuField extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final TextEditingController controller;
+class _PickerButton extends StatelessWidget {
   final bool isDark;
-  final VoidCallback onChanged;
-  final int maxLines;
+  final IconData icon;
+  final String label;
+  final bool hasValue;
+  final VoidCallback onTap;
+  final VoidCallback? onClear;
 
-  const _NeuField({
-    required this.label,
-    required this.icon,
-    required this.controller,
+  const _PickerButton({
     required this.isDark,
-    required this.onChanged,
-    this.maxLines = 1,
+    required this.icon,
+    required this.label,
+    required this.hasValue,
+    required this.onTap,
+    this.onClear,
   });
 
   @override
   Widget build(BuildContext context) {
-    return NeuField(
-      isDark: isDark,
-      controller: controller,
-      label: label,
-      icon: icon,
-      maxLines: maxLines,
-      onChanged: (_) => onChanged(),
+    final textColor = hasValue
+        ? Neu.textPrimary(isDark)
+        : Neu.textSecondary(isDark);
+    final subColor = Neu.textSecondary(isDark);
+
+    return GestureDetector(
+      onTap: onTap,
+      child: NeuContainer(
+        isDark: isDark,
+        radius: 10,
+        inset: true,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+        child: Row(
+          children: [
+            Icon(icon, size: 15, color: subColor),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight:
+                  hasValue ? FontWeight.w600 : FontWeight.w400,
+                  color: textColor,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            if (onClear != null)
+              GestureDetector(
+                onTap: onClear,
+                child: Icon(Icons.close_rounded, size: 14, color: subColor),
+              ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -577,22 +763,22 @@ class ItineraryItem {
   });
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'location': location,
-        'date': date,
-        'arrivalTime': arrivalTime,
-        'departureTime': departureTime,
-        'notes': notes,
-      };
+    'id': id,
+    'location': location,
+    'date': date,
+    'arrivalTime': arrivalTime,
+    'departureTime': departureTime,
+    'notes': notes,
+  };
 
   factory ItineraryItem.fromJson(Map<String, dynamic> json) => ItineraryItem(
-        id: json['id'] ?? const Uuid().v4(),
-        location: json['location'] ?? '',
-        date: json['date'] ?? '',
-        arrivalTime: json['arrivalTime'] ?? '',
-        departureTime: json['departureTime'] ?? '',
-        notes: json['notes'] ?? '',
-      );
+    id: json['id'] ?? const Uuid().v4(),
+    location: json['location'] ?? '',
+    date: json['date'] ?? '',
+    arrivalTime: json['arrivalTime'] ?? '',
+    departureTime: json['departureTime'] ?? '',
+    notes: json['notes'] ?? '',
+  );
 
   ItineraryItem copyWith({
     String? id,

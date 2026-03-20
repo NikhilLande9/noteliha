@@ -336,7 +336,7 @@ class Neu {
       _                    => radius,
     };
     final effectiveBorder = (_theme == AppVisualTheme.bento && pressed)
-        ? BorderSide(color: const Color(0xFF888888), width: 2.5)
+        ? const BorderSide(color: Color(0xFF888888), width: 2.5)
         : border;
     return BoxDecoration(
       color: pressed &&

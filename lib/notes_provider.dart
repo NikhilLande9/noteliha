@@ -78,6 +78,15 @@ class NotesProvider extends ChangeNotifier {
       _loadSyncState();
       _rebuildSearchIndex();
 
+      // ── Notify immediately so the note list renders on the first frame ──────
+      // This must happen before signInSilently() is called. On some platforms
+      // signInSilently() triggers onCurrentUserChanged synchronously, which
+      // fires _checkDriveManifestExists() and its own notifyListeners() calls
+      // before the one below would have had a chance to run. Notifying here
+      // guarantees the UI sees the fully-loaded local notes right away,
+      // regardless of sign-in / network state.
+      notifyListeners();
+
       _googleSignIn.onCurrentUserChanged.listen((account) async {
         _currentUser = account;
         if (account != null) {
@@ -95,10 +104,13 @@ class NotesProvider extends ChangeNotifier {
         notifyListeners();
       });
 
+      // signInSilently() can trigger onCurrentUserChanged before it returns,
+      // so local notes are already visible by the time that happens.
       _currentUser = await _googleSignIn.signInSilently();
-      if (_currentUser == null) notifyListeners();
+      notifyListeners();
     } catch (e) {
       debugPrint('Init error: $e');
+      notifyListeners();
     }
   }
 

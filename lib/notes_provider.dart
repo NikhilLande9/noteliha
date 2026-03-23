@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math' show pow, min;
 import 'dart:typed_data';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:extension_google_sign_in_as_googleapis_auth/extension_google_sign_in_as_googleapis_auth.dart';
@@ -17,6 +18,12 @@ const String kImagesBox = 'images_box_v1';
 const String kSearchIndexBox = 'search_index_box_v2';
 const String kSyncStateBox = 'sync_state_box_v3';
 
+// ── Web OAuth client ID ───────────────────────────────────────────────────────
+// Replace this with your actual Web client ID from the Google Cloud Console.
+// On Android/iOS the ID is read from google-services.json / GoogleService-Info.plist
+// so this value is only used when running on the web.
+const String _kWebClientId =
+    'YOUR_WEB_CLIENT_ID.apps.googleusercontent.com';
 const String kDriveRootName = '.liha_notes_app';
 const String kDriveNotesDir = 'notes';
 const String kDriveImagesDir = 'images';
@@ -65,7 +72,11 @@ class NotesProvider extends ChangeNotifier {
       _notesBox?.values.cast<Note>().where((n) => n.deleted).toList() ?? [];
 
   NotesProvider() {
-    _googleSignIn = GoogleSignIn(scopes: [drive.DriveApi.driveFileScope]);
+    _googleSignIn = GoogleSignIn(
+      scopes: [drive.DriveApi.driveFileScope],
+      // Web requires the OAuth client ID to be provided explicitly.
+      clientId: kIsWeb ? _kWebClientId : null,
+    );
   }
 
   Future<void> init() async {
@@ -110,6 +121,10 @@ class NotesProvider extends ChangeNotifier {
       notifyListeners();
     } catch (e) {
       debugPrint('Init error: $e');
+      // Surface auth-configuration errors immediately so they're visible in settings.
+      if (e.toString().contains('appClientId') || e.toString().contains('clientId')) {
+        _setStatus(_friendlyAuthError(e), isError: true);
+      }
       notifyListeners();
     }
   }
@@ -393,12 +408,39 @@ class NotesProvider extends ChangeNotifier {
 
   // ── Auth ────────────────────────────────────────────────────────────────────
 
+  /// Returns a human-readable message for common sign-in failures.
+  String _friendlyAuthError(Object e) {
+    final raw = e.toString();
+    if (raw.contains('appClientId') || raw.contains('clientId') || raw.contains('CLIENT_ID')) {
+      return 'Google Sign-In is not configured for this platform. '
+          'Please add your Web Client ID to the app.';
+    }
+    if (raw.contains('network_error') || raw.contains('SocketException') || raw.contains('NetworkException')) {
+      return 'No internet connection. Please check your network and try again.';
+    }
+    if (raw.contains('sign_in_canceled') || raw.contains('PlatformException(sign_in_canceled')) {
+      return 'Sign-in was cancelled.';
+    }
+    if (raw.contains('sign_in_failed') || raw.contains('PlatformException(sign_in_failed')) {
+      return 'Sign-in failed. Please try again.';
+    }
+    if (raw.contains('access_denied') || raw.contains('ApiException: 10')) {
+      return 'Access denied. Make sure the app is authorised in your Google account.';
+    }
+    if (raw.contains('popup_closed') || raw.contains('popup_blocked')) {
+      return 'The sign-in popup was closed or blocked. Please allow popups and try again.';
+    }
+    // Fallback: show only the first sentence of the exception, not the full stack.
+    final firstLine = raw.split('\n').first.trim();
+    return firstLine.length > 120 ? '${firstLine.substring(0, 120)}…' : firstLine;
+  }
+
   Future<void> signIn() async {
     try {
       _currentUser = await _googleSignIn.signIn();
       notifyListeners();
     } catch (e) {
-      _setStatus('Sign in failed: $e', isError: true);
+      _setStatus(_friendlyAuthError(e), isError: true);
     }
   }
 

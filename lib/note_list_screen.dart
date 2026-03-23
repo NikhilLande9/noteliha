@@ -55,9 +55,9 @@ class NoteCard extends StatelessWidget {
     // Apply user-defined bold/italic ranges
     for (final r in ranges) {
       if (r.type == FormatType.bold) {
-        for (int i = r.start; i < r.end && i < len; i++) bold[i] = true;
+        for (int i = r.start; i < r.end && i < len; i++) { bold[i] = true; }
       } else {
-        for (int i = r.start; i < r.end && i < len; i++) italic[i] = true;
+        for (int i = r.start; i < r.end && i < len; i++) { italic[i] = true; }
       }
     }
 
@@ -81,7 +81,7 @@ class NoteCard extends StatelessWidget {
       final isBold   = bold[i];
       final isItalic = italic[i];
       int j = i + 1;
-      while (j < len && bold[j] == isBold && italic[j] == isItalic) j++;
+      while (j < len && bold[j] == isBold && italic[j] == isItalic) { j++; }
       spans.add(TextSpan(
         text: plainText.substring(i, j),
         style: base.copyWith(
@@ -720,11 +720,14 @@ class _NoteListScreenState extends State<NoteListScreen> {
     showModalBottomSheet(
       context: context,
       backgroundColor: base,
+      isScrollControlled: true,
+      useSafeArea: true,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (_) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+      builder: (_) {
+        final bottomInset = MediaQuery.of(context).padding.bottom;
+        return Padding(
+          padding: EdgeInsets.fromLTRB(16, 12, 16, 16 + bottomInset),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -806,8 +809,8 @@ class _NoteListScreenState extends State<NoteListScreen> {
               }),
             ],
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -1018,11 +1021,14 @@ class _NoteListScreenState extends State<NoteListScreen> {
     showModalBottomSheet(
       context: context,
       backgroundColor: base,
+      isScrollControlled: true,
+      useSafeArea: true,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
-      builder: (context) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      builder: (context) {
+        final bottomInset = MediaQuery.of(context).padding.bottom;
+        return Padding(
+          padding: EdgeInsets.fromLTRB(16, 8, 16, 8 + bottomInset),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1106,8 +1112,8 @@ class _NoteListScreenState extends State<NoteListScreen> {
               const SizedBox(height: 8),
             ],
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -1120,169 +1126,173 @@ class _NoteListScreenState extends State<NoteListScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: base,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
       builder: (ctx) => DraggableScrollableSheet(
         expand: false,
         initialChildSize: 0.6,
-        builder: (_, scrollCtrl) => Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 36,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: 20),
-                  decoration: BoxDecoration(
-                    color: base,
-                    borderRadius: BorderRadius.circular(2),
-                    boxShadow: Neu.inset(isDark),
+        builder: (_, scrollCtrl) {
+          final bottomInset = MediaQuery.of(ctx).padding.bottom;
+          return Padding(
+            padding: EdgeInsets.fromLTRB(16, 8, 16, 16 + bottomInset),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 20),
+                    decoration: BoxDecoration(
+                      color: base,
+                      borderRadius: BorderRadius.circular(2),
+                      boxShadow: Neu.inset(isDark),
+                    ),
                   ),
                 ),
-              ),
-              Row(children: [
-                NeuContainer(
-                  isDark: isDark,
-                  radius: 10,
-                  padding: const EdgeInsets.all(8),
-                  child: Icon(Icons.warning_amber_rounded,
-                      color: Colors.orange.shade600, size: 18),
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  'Sync conflicts',
-                  style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w700,
-                    color: textColor,
-                    letterSpacing: -0.3,
+                Row(children: [
+                  NeuContainer(
+                    isDark: isDark,
+                    radius: 10,
+                    padding: const EdgeInsets.all(8),
+                    child: Icon(Icons.warning_amber_rounded,
+                        color: Colors.orange.shade600, size: 18),
                   ),
-                ),
-                const Spacer(),
-                NeuContainer(
-                  isDark: isDark,
-                  radius: 20,
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 4),
-                  child: Text(
-                    '${prov.syncConflicts.length}',
+                  const SizedBox(width: 12),
+                  Text(
+                    'Sync conflicts',
                     style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.orange.shade600),
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                      color: textColor,
+                      letterSpacing: -0.3,
+                    ),
+                  ),
+                  const Spacer(),
+                  NeuContainer(
+                    isDark: isDark,
+                    radius: 20,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 4),
+                    child: Text(
+                      '${prov.syncConflicts.length}',
+                      style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.orange.shade600),
+                    ),
+                  ),
+                ]),
+                const SizedBox(height: 8),
+                Text(
+                  'These notes were modified on multiple devices.',
+                  style: TextStyle(fontSize: 13, color: subColor),
+                ),
+                const SizedBox(height: 16),
+                Expanded(
+                  child: ListView(
+                    controller: scrollCtrl,
+                    children: prov.syncConflicts.map((ns) {
+                      final localNote = prov.notes.firstWhere(
+                            (n) => n.id == ns.noteId,
+                        orElse: () => Note(
+                            id: ns.noteId,
+                            title: '(Deleted)',
+                            content: '',
+                            updatedAt: DateTime.now()),
+                      );
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: NeuContainer(
+                          isDark: isDark,
+                          radius: 16,
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                localNote.title.isNotEmpty
+                                    ? localNote.title
+                                    : 'Untitled',
+                                style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 15,
+                                    color: textColor),
+                              ),
+                              const SizedBox(height: 6),
+                              Row(children: [
+                                _ConflictTimestamp(
+                                    label: 'Local',
+                                    dt: localNote.updatedAt,
+                                    isDark: isDark),
+                                const SizedBox(width: 14),
+                                _ConflictTimestamp(
+                                    label: 'Remote',
+                                    dt: ns.conflict!.remoteVersion.updatedAt,
+                                    isDark: isDark),
+                              ]),
+                              const SizedBox(height: 14),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _NeuConflictButton(
+                                      label: 'Keep local',
+                                      icon: Icons.phone_android_rounded,
+                                      isDark: isDark,
+                                      onTap: () {
+                                        prov.resolveConflictKeepLocal(
+                                            ns.noteId);
+                                        if (prov.syncConflicts.isEmpty) {
+                                          Navigator.pop(ctx);
+                                        }
+                                      },
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: _NeuConflictButton(
+                                      label: 'Keep remote',
+                                      icon: Icons.cloud_outlined,
+                                      isDark: isDark,
+                                      onTap: () {
+                                        prov.resolveConflictKeepRemote(
+                                            ns.noteId);
+                                        if (prov.syncConflicts.isEmpty) {
+                                          Navigator.pop(ctx);
+                                        }
+                                      },
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: _NeuConflictButton(
+                                      label: 'Keep both',
+                                      icon: Icons.call_merge_rounded,
+                                      isDark: isDark,
+                                      onTap: () {
+                                        prov.resolveConflictKeepBoth(
+                                            ns.noteId);
+                                        if (prov.syncConflicts.isEmpty) {
+                                          Navigator.pop(ctx);
+                                        }
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }).toList(),
                   ),
                 ),
-              ]),
-              const SizedBox(height: 8),
-              Text(
-                'These notes were modified on multiple devices.',
-                style: TextStyle(fontSize: 13, color: subColor),
-              ),
-              const SizedBox(height: 16),
-              Expanded(
-                child: ListView(
-                  controller: scrollCtrl,
-                  children: prov.syncConflicts.map((ns) {
-                    final localNote = prov.notes.firstWhere(
-                          (n) => n.id == ns.noteId,
-                      orElse: () => Note(
-                          id: ns.noteId,
-                          title: '(Deleted)',
-                          content: '',
-                          updatedAt: DateTime.now()),
-                    );
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: NeuContainer(
-                        isDark: isDark,
-                        radius: 16,
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              localNote.title.isNotEmpty
-                                  ? localNote.title
-                                  : 'Untitled',
-                              style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 15,
-                                  color: textColor),
-                            ),
-                            const SizedBox(height: 6),
-                            Row(children: [
-                              _ConflictTimestamp(
-                                  label: 'Local',
-                                  dt: localNote.updatedAt,
-                                  isDark: isDark),
-                              const SizedBox(width: 14),
-                              _ConflictTimestamp(
-                                  label: 'Remote',
-                                  dt: ns.conflict!.remoteVersion.updatedAt,
-                                  isDark: isDark),
-                            ]),
-                            const SizedBox(height: 14),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _NeuConflictButton(
-                                    label: 'Keep local',
-                                    icon: Icons.phone_android_rounded,
-                                    isDark: isDark,
-                                    onTap: () {
-                                      prov.resolveConflictKeepLocal(
-                                          ns.noteId);
-                                      if (prov.syncConflicts.isEmpty) {
-                                        Navigator.pop(ctx);
-                                      }
-                                    },
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: _NeuConflictButton(
-                                    label: 'Keep remote',
-                                    icon: Icons.cloud_outlined,
-                                    isDark: isDark,
-                                    onTap: () {
-                                      prov.resolveConflictKeepRemote(
-                                          ns.noteId);
-                                      if (prov.syncConflicts.isEmpty) {
-                                        Navigator.pop(ctx);
-                                      }
-                                    },
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: _NeuConflictButton(
-                                    label: 'Keep both',
-                                    icon: Icons.call_merge_rounded,
-                                    isDark: isDark,
-                                    onTap: () {
-                                      prov.resolveConflictKeepBoth(
-                                          ns.noteId);
-                                      if (prov.syncConflicts.isEmpty) {
-                                        Navigator.pop(ctx);
-                                      }
-                                    },
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ),
-            ],
-          ),
-        ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
@@ -1562,6 +1572,7 @@ class _NotePreviewSheet {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => _NotePreviewContent(note: note),
     );
@@ -1770,9 +1781,9 @@ class _NotePreviewContent extends StatelessWidget {
 
     for (final r in ranges) {
       if (r.type == FormatType.bold) {
-        for (int i = r.start; i < r.end && i < len; i++) bold[i] = true;
+        for (int i = r.start; i < r.end && i < len; i++) { bold[i] = true; }
       } else {
-        for (int i = r.start; i < r.end && i < len; i++) italic[i] = true;
+        for (int i = r.start; i < r.end && i < len; i++) { italic[i] = true; }
       }
     }
 

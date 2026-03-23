@@ -69,7 +69,8 @@ class SettingsScreen extends StatelessWidget {
 
           Expanded(
             child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+              padding: EdgeInsets.fromLTRB(
+                  16, 8, 16, MediaQuery.of(context).padding.bottom + 24),
               children: [
                 // ── Account ─────────────────────────────────────────────────
                 _SectionHeader(text: 'Account', isDark: isDark),
@@ -263,6 +264,28 @@ class SettingsScreen extends StatelessWidget {
                         ),
                       ),
                     ],
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                // ── Recycle Bin ──────────────────────────────────────────────
+                _SectionHeader(text: 'Data', isDark: isDark),
+                NeuContainer(
+                  isDark: isDark,
+                  radius: 16,
+                  child: _NeuActionTile(
+                    icon: Icons.delete_sweep_outlined,
+                    title: 'Recycle Bin',
+                    subtitle: 'View and restore deleted notes',
+                    isDark: isDark,
+                    accent: accent,
+                    enabled: true,
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const RecycleBinScreen()),
+                    ),
                   ),
                 ),
 
@@ -664,21 +687,6 @@ class _LoggedInTile extends StatelessWidget {
             'Restore from Drive',
             'Download notes from Drive and merge with local? Conflicts will be flagged for review.',
                 () => _runWithNetworkCheck(context, prov.downloadNotes),
-          ),
-        ),
-
-        _NeuDivider(isDark: isDark),
-
-        _NeuActionTile(
-          icon: Icons.delete_sweep_outlined,
-          title: 'Recycle Bin',
-          subtitle: 'View deleted notes',
-          isDark: isDark,
-          accent: accent,
-          enabled: true,
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const RecycleBinScreen()),
           ),
         ),
 
@@ -1153,7 +1161,8 @@ class RecycleBinScreen extends StatelessWidget {
         ),
       )
           : ListView.builder(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+        padding: EdgeInsets.fromLTRB(
+            16, 12, 16, MediaQuery.of(context).padding.bottom + 24),
         itemCount: items.length,
         itemBuilder: (_, i) {
           final n = items[i];

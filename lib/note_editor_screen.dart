@@ -965,9 +965,13 @@ typedef FormatType = _FormatType;
 /// that needs to read plain text out of a stored note.content string.
 class RichContentCodec {
   /// Encode plain text + ranges → JSON string saved to note.content.
-  static String encode(String plainText, List<_FmtRange> ranges) {
+  /// Accepts [List<dynamic>] so the public signature avoids the private [_FmtRange] type.
+  static String encode(String plainText, List<dynamic> ranges) {
     if (ranges.isEmpty) return plainText;
-    final rangeList = ranges.map((r) => [r.start, r.end, r.type.index]).toList();
+    final rangeList = ranges.map((r) {
+      final fmt = r as _FmtRange;
+      return [fmt.start, fmt.end, fmt.type.index];
+    }).toList();
     return jsonEncode({'t': plainText, 'r': rangeList});
   }
 
@@ -1257,9 +1261,9 @@ class _RichTextController extends TextEditingController {
 
     for (final r in _ranges) {
       if (r.type == _FormatType.bold) {
-        for (int i = r.start; i < r.end && i < len; i++) bold[i] = true;
+        for (int i = r.start; i < r.end && i < len; i++) { bold[i] = true; }
       } else {
-        for (int i = r.start; i < r.end && i < len; i++) italic[i] = true;
+        for (int i = r.start; i < r.end && i < len; i++) { italic[i] = true; }
       }
     }
 
@@ -1360,9 +1364,9 @@ Widget renderMarkdown(String stored, TextStyle base) {
   final italic = List<bool>.filled(len, false);
   for (final r in ranges) {
     if (r.type == _FormatType.bold) {
-      for (int i = r.start; i < r.end && i < len; i++) bold[i] = true;
+      for (int i = r.start; i < r.end && i < len; i++) { bold[i] = true; }
     } else {
-      for (int i = r.start; i < r.end && i < len; i++) italic[i] = true;
+      for (int i = r.start; i < r.end && i < len; i++) { italic[i] = true; }
     }
   }
 
@@ -1372,7 +1376,7 @@ Widget renderMarkdown(String stored, TextStyle base) {
     final isBold   = bold[i];
     final isItalic = italic[i];
     int j = i + 1;
-    while (j < len && bold[j] == isBold && italic[j] == isItalic) j++;
+    while (j < len && bold[j] == isBold && italic[j] == isItalic) { j++; }
     spans.add(TextSpan(
       text: text.substring(i, j),
       style: base.copyWith(
@@ -1591,7 +1595,6 @@ class _RichTextFieldState extends State<_RichTextField> {
           final sel = _richCtrl.selection;
           final hasSelection = sel.isValid && !sel.isCollapsed;
           final active = activeFormats;
-          final accent = Theme.of(ctx).colorScheme.primary;
           final isBold   = active.contains(_FormatType.bold);
           final isItalic = active.contains(_FormatType.italic);
 
@@ -1727,7 +1730,6 @@ class _SteppedProgressBarState extends State<_SteppedProgressBar>
   static const int _kMaxSegments = 20;
 
   late AnimationController _pulseCtrl;
-  late Animation<double>   _pulseAnim;
 
   int _prevDone = 0;
 
@@ -1739,7 +1741,6 @@ class _SteppedProgressBarState extends State<_SteppedProgressBar>
       vsync: this,
       duration: const Duration(milliseconds: 400),
     );
-    _pulseAnim = Tween<double>(begin: 1.0, end: 1.0).animate(_pulseCtrl);
   }
 
   @override
@@ -1996,9 +1997,9 @@ class _AnimatedSegmentState extends State<_AnimatedSegment>
     return AnimatedBuilder(
       animation: _ctrl,
       builder: (_, __) {
-        final h      = 6.0;
+        const h      = 6.0;
         final scale  = widget.bounce ? _scaleAnim.value : 1.0;
-        final radius = BorderRadius.circular(3);
+        const radius = BorderRadius.all(Radius.circular(3));
 
         return SizedBox(
           width: widget.width,
@@ -2597,11 +2598,11 @@ class _RecipeCardState extends State<_RecipeCard> {
     _prep.dispose();
     _cook.dispose();
     _serv.dispose();
-    for (final c in _nameCtrl.values) c.dispose();
-    for (final c in _qtyCtrl.values)  c.dispose();
-    for (final c in _unitCtrl.values) c.dispose();
-    for (final c in _stepCtrl.values) c.dispose();
-    for (final f in _stepFocus.values) f.dispose();
+    for (final c in _nameCtrl.values) { c.dispose(); }
+    for (final c in _qtyCtrl.values)  { c.dispose(); }
+    for (final c in _unitCtrl.values) { c.dispose(); }
+    for (final c in _stepCtrl.values) { c.dispose(); }
+    for (final f in _stepFocus.values) { f.dispose(); }
     super.dispose();
   }
 

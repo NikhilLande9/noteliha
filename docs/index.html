@@ -375,11 +375,11 @@
       position: absolute;
       left: 0;
       top: 0;
-      transform: rotate(-15deg);
-      transform-origin: center center;
-      font-size: 22px;
       z-index: 3;
       pointer-events: none;
+      display: inline-block;
+      transform: rotate(-15deg);
+      transform-origin: center center;
     }
 
     #footer-text-layer {
@@ -705,7 +705,16 @@
         © noteliha · All Rights Reserved · Crafted by Navkon Labs
       </span>
       <div class="footer-bottom-inner">
-        <span id="pencil-rider">✏️</span>
+        <span id="pencil-rider">
+  <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2a7a6f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Full pencil outline as one closed shape -->
+    <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" fill="#e0f0ed" stroke="#2a7a6f" stroke-width="1.8"/>
+    <!-- Eraser band line -->
+    <line x1="15.5" y1="4.5" x2="19.5" y2="8.5" stroke="#2a7a6f" stroke-width="1.4"/>
+    <!-- Tip line -->
+    <line x1="3.5" y1="16.5" x2="7" y2="20" stroke="#2a7a6f" stroke-width="1.4"/>
+  </svg>
+</span>
         <div id="footer-text-layer">
           <span id="footer-text-content"></span>
         </div>

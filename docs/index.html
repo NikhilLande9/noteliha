@@ -35,7 +35,7 @@
   <link rel="prefetch" href="PUBLISHING_CHECKLIST.html">
   <link rel="prefetch" href="PUBLISH_README.html">
 
-  <!-- Structured Data: WebSite + Organization + App + Page list -->
+  <!-- Structured Data -->
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -79,36 +79,12 @@
         "@type": "ItemList",
         "name": "noteliha Documentation Pages",
         "itemListElement": [
-          {
-            "@type": "ListItem", "position": 1,
-            "name": "Privacy Policy",
-            "url": "https://noteliha.navkon.com/PRIVACY_POLICY.html"
-          },
-          {
-            "@type": "ListItem", "position": 2,
-            "name": "Terms of Service",
-            "url": "https://noteliha.navkon.com/TERMS_OF_SERVICE.html"
-          },
-          {
-            "@type": "ListItem", "position": 3,
-            "name": "Google Play Store Listing",
-            "url": "https://noteliha.navkon.com/GOOGLE_PLAY_STORE_LISTING.html"
-          },
-          {
-            "@type": "ListItem", "position": 4,
-            "name": "Apple App Store Listing",
-            "url": "https://noteliha.navkon.com/APPLE_APP_STORE_LISTING.html"
-          },
-          {
-            "@type": "ListItem", "position": 5,
-            "name": "Publishing Checklist",
-            "url": "https://noteliha.navkon.com/PUBLISHING_CHECKLIST.html"
-          },
-          {
-            "@type": "ListItem", "position": 6,
-            "name": "Documentation Package README",
-            "url": "https://noteliha.navkon.com/PUBLISH_README.html"
-          }
+          { "@type": "ListItem", "position": 1, "name": "Privacy Policy", "url": "https://noteliha.navkon.com/PRIVACY_POLICY.html" },
+          { "@type": "ListItem", "position": 2, "name": "Terms of Service", "url": "https://noteliha.navkon.com/TERMS_OF_SERVICE.html" },
+          { "@type": "ListItem", "position": 3, "name": "Google Play Store Listing", "url": "https://noteliha.navkon.com/GOOGLE_PLAY_STORE_LISTING.html" },
+          { "@type": "ListItem", "position": 4, "name": "Apple App Store Listing", "url": "https://noteliha.navkon.com/APPLE_APP_STORE_LISTING.html" },
+          { "@type": "ListItem", "position": 5, "name": "Publishing Checklist", "url": "https://noteliha.navkon.com/PUBLISHING_CHECKLIST.html" },
+          { "@type": "ListItem", "position": 6, "name": "Documentation Package README", "url": "https://noteliha.navkon.com/PUBLISH_README.html" }
         ]
       }
     ]
@@ -160,18 +136,42 @@
 
     .page { max-width: 780px; margin: 0 auto; padding: 0 28px 100px; }
 
-    header { padding: 72px 0 56px; position: relative; }
+    /* ── Header ── */
+    header { padding: 64px 0 28px; position: relative; }
 
     .header-rule {
       width: 40px; height: 3px;
       background: var(--teal);
-      margin-bottom: 28px;
+      margin-bottom: 32px;
       animation: slideIn 0.6s cubic-bezier(.22,1,.36,1) both;
     }
 
     .logo-line {
-      display: flex; align-items: baseline; gap: 0;
+      display: flex; align-items: center; gap: 20px;
       animation: fadeUp 0.7s cubic-bezier(.22,1,.36,1) 0.1s both;
+    }
+
+    /* ── App Icon ── */
+    .app-icon-wrap {
+      flex-shrink: 0;
+      width: 84px; height: 84px;
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 6px 20px rgba(42,122,111,0.20), 0 1px 4px rgba(0,0,0,0.10);
+      border: 1px solid rgba(42,122,111,0.12);
+      background: var(--teal-light);
+    }
+
+    .app-icon-wrap img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .logo-text-group { display: flex; flex-direction: column; gap: 0; }
+
+    .logo-wordmark {
+      display: flex; align-items: baseline; gap: 0;
     }
 
     .logo-note {
@@ -217,9 +217,26 @@
       background: var(--teal); border-radius: 50%;
     }
 
+    /* ── Graphics Banner ── */
+    .banner-wrap {
+      margin: 28px 0 0;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--rule);
+      box-shadow: 0 4px 24px rgba(0,0,0,0.07);
+      animation: fadeUp 0.7s cubic-bezier(.22,1,.36,1) 0.35s both;
+      background: var(--paper-warm);
+    }
+
+    .banner-wrap img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
     .divider {
-      height: 1px; background: var(--rule); margin: 0 0 48px;
-      animation: fadeUp 0.5s ease 0.35s both;
+      height: 1px; background: var(--rule); margin: 36px 0 44px;
+      animation: fadeUp 0.5s ease 0.45s both;
     }
 
     .section {
@@ -227,9 +244,9 @@
       animation: fadeUp 0.7s cubic-bezier(.22,1,.36,1) both;
     }
 
-    .section:nth-child(1) { animation-delay: 0.4s; }
-    .section:nth-child(2) { animation-delay: 0.5s; }
-    .section:nth-child(3) { animation-delay: 0.6s; }
+    .section:nth-child(1) { animation-delay: 0.5s; }
+    .section:nth-child(2) { animation-delay: 0.6s; }
+    .section:nth-child(3) { animation-delay: 0.65s; }
     .section:nth-child(4) { animation-delay: 0.7s; }
     .section:nth-child(5) { animation-delay: 0.75s; }
 
@@ -322,56 +339,200 @@
       letter-spacing: 0.06em; white-space: nowrap;
     }
 
+    /* ── Animated Footer ── */
     footer {
-      margin-top: 64px; padding-top: 28px;
+      margin-top: 64px;
       border-top: 1px solid var(--rule);
+      overflow: hidden;
+    }
+
+    .footer-top {
+      padding: 20px 0;
       display: flex; align-items: center; justify-content: space-between;
-      animation: fadeUp 0.6s ease 0.8s both;
     }
 
     .footer-left { font-size: 12px; color: var(--ink-muted); }
     .footer-left strong { color: var(--ink-soft); font-weight: 500; }
     .footer-right { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--ink-muted); letter-spacing: 0.1em; }
 
+    .footer-bottom {
+      border-top: 1px solid var(--rule);
+      background: var(--paper-warm);
+      height: 72px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .footer-bottom-inner {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #pencil-rider {
+      position: absolute;
+      left: 0;
+      top: 0;
+      transform: rotate(-15deg);
+      transform-origin: center center;
+      font-size: 22px;
+      z-index: 3;
+      pointer-events: none;
+    }
+
+    #footer-text-layer {
+      position: relative;
+      z-index: 2;
+      font-size: 12px;
+      font-family: 'DM Sans', sans-serif;
+      color: var(--ink-soft);
+      letter-spacing: 0.01em;
+      display: flex;
+      align-items: center;
+      white-space: nowrap;
+    }
+
+    /* Each character starts invisible, fades in when pencil passes */
+    .fchar {
+      opacity: 0;
+      transition: opacity 0.15s ease;
+      display: inline;
+    }
+
+    #footer-text-content strong { color: var(--ink); font-weight: 500; }
+
+    .sr-footer {
+      position: absolute; width: 1px; height: 1px;
+      padding: 0; margin: -1px; overflow: hidden;
+      clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+    }
+
+    .navkon-link {
+      font-weight: 600;
+      color: var(--teal);
+      text-decoration: none;
+      border-bottom: 1px solid rgba(42,122,111,0.3);
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .navkon-link:hover { color: var(--teal-mid); border-color: var(--teal-mid); }
+
+    /* ── About / SEO section ── */
+    .about-section {
+      margin-bottom: 52px;
+      padding: 28px 32px;
+      background: #fff;
+      border: 1px solid var(--rule);
+      border-radius: 8px;
+      animation: fadeUp 0.7s cubic-bezier(.22,1,.36,1) 0.72s both;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .about-section::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0;
+      width: 3px; height: 100%;
+      background: var(--teal);
+      border-radius: 0 2px 2px 0;
+    }
+
+    .about-title {
+      font-family: 'DM Mono', monospace;
+      font-size: 10px; font-weight: 500;
+      color: var(--ink-muted); letter-spacing: 0.14em;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    .about-text {
+      font-size: 13.5px;
+      font-weight: 300;
+      color: var(--ink-soft);
+      line-height: 1.75;
+    }
+
+    .about-text strong {
+      color: var(--ink);
+      font-weight: 500;
+    }
+
+    .about-text a {
+      color: var(--teal);
+      text-decoration: none;
+      font-weight: 400;
+      border-bottom: 1px solid rgba(42,122,111,0.25);
+      transition: border-color 0.15s;
+    }
+
+    .about-text a:hover { border-color: var(--teal); }
+
+    .about-tags {
+      display: flex; flex-wrap: wrap; gap: 6px;
+      margin-top: 16px;
+    }
+
+    .about-tag {
+      font-family: 'DM Mono', monospace;
+      font-size: 10px; font-weight: 500;
+      color: var(--teal);
+      background: var(--teal-light);
+      border: 1px solid rgba(42,122,111,0.15);
+      border-radius: 3px;
+      padding: 3px 8px;
+      letter-spacing: 0.06em;
+    }
+
+    @media (max-width: 600px) {
+      .about-section { padding: 20px 20px 20px 24px; }
+      .about-text { font-size: 13px; }
+    }
+
     @keyframes slideIn { from { width: 0; opacity: 0; } to { width: 40px; opacity: 1; } }
     @keyframes fadeUp  { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
 
-  /* ═══════════════════════════════════════════
-     MOBILE RESPONSIVE
-  ═══════════════════════════════════════════ */
-  @media (max-width: 600px) {
-    .page { padding: 0 16px 72px; }
+    /* ═══════════════════════════════════════════
+       MOBILE RESPONSIVE
+    ═══════════════════════════════════════════ */
+    @media (max-width: 600px) {
+      .page { padding: 0 16px 72px; }
 
-    header { padding: 40px 0 36px; }
-    .logo-note, .logo-liha { font-size: clamp(38px, 10vw, 52px); letter-spacing: -1.5px; }
-    .header-sub { font-size: 13px; margin-top: 12px; }
-    .doc-badge { font-size: 10px; padding: 5px 10px; margin-top: 16px; }
+      header { padding: 40px 0 32px; }
 
-    .divider { margin: 0 0 32px; }
+      .logo-line { gap: 14px; }
+      .app-icon-wrap { width: 60px; height: 60px; border-radius: 15px; }
+      .logo-note, .logo-liha { font-size: clamp(36px, 10vw, 48px); letter-spacing: -1.5px; }
 
-    .section { margin-bottom: 36px; }
-    .section-label-text { font-size: 9.5px; }
+      .header-sub { font-size: 13px; margin-top: 12px; }
+      .doc-badge { font-size: 10px; padding: 5px 10px; margin-top: 16px; }
 
-    .card-grid.two-col { grid-template-columns: 1fr; }
+      .banner-wrap { border-radius: 8px; }
+      .divider { margin: 28px 0 32px; }
 
-    .doc-card { padding: 14px 16px; gap: 12px; }
-    .card-icon { width: 34px; height: 34px; font-size: 15px; }
-    .card-title { font-size: 13.5px; }
-    .card-desc  { font-size: 11.5px; }
+      .section { margin-bottom: 36px; }
+      .section-label-text { font-size: 9.5px; }
 
-    .github-card { padding: 16px 18px; gap: 12px; }
-    .github-icon { width: 36px; height: 36px; font-size: 17px; }
-    .github-title { font-size: 13.5px; }
-    .github-desc  { font-size: 11.5px; }
-    .github-tag   { font-size: 9.5px; padding: 3px 8px; }
+      .card-grid.two-col { grid-template-columns: 1fr; }
 
-    footer { flex-direction: column; gap: 4px; padding-top: 20px; margin-top: 40px; }
-  }
+      .doc-card { padding: 14px 16px; gap: 12px; }
+      .card-icon { width: 34px; height: 34px; font-size: 15px; }
+      .card-title { font-size: 13.5px; }
+      .card-desc  { font-size: 11.5px; }
 
-  @media (hover: none) {
-    .doc-card:hover { transform: none; box-shadow: none; }
-  }
+      .github-card { padding: 16px 18px; gap: 12px; }
+      .github-icon { width: 36px; height: 36px; font-size: 17px; }
+      .github-title { font-size: 13.5px; }
+      .github-desc  { font-size: 11.5px; }
+      .github-tag   { font-size: 9.5px; padding: 3px 8px; }
 
+      footer { flex-direction: column; gap: 4px; padding-top: 20px; margin-top: 40px; }
+    }
+
+    @media (hover: none) {
+      .doc-card:hover { transform: none; box-shadow: none; }
+    }
   </style>
 </head>
 <body>
@@ -380,12 +541,31 @@
 
   <header>
     <div class="header-rule"></div>
+
+    <!-- Logo line with app icon -->
     <div class="logo-line">
-      <span class="logo-note">note</span><span class="logo-liha">liha</span>
+      <div class="app-icon-wrap">
+        <img src="../assets/icons/noteliha.png" alt="noteliha app icon" width="64" height="64">
+      </div>
+      <div class="logo-text-group">
+        <div class="logo-wordmark">
+          <span class="logo-note">note</span><span class="logo-liha">liha</span>
+        </div>
+      </div>
     </div>
+
     <p class="header-sub">Official documentation by <span>Nikhil Lande – Navkon Labs</span></p>
     <div class="doc-badge">Documentation</div>
   </header>
+
+  <!-- Graphics Banner -->
+  <div class="banner-wrap">
+    <img
+      src="../assets/publish/noteliha_graphics_banner.png"
+      alt="noteliha – privacy-focused note-taking app graphic banner"
+      loading="lazy"
+    >
+  </div>
 
   <div class="divider"></div>
 
@@ -473,6 +653,29 @@
     </div>
   </nav>
 
+  <!-- About / SEO -->
+  <section class="about-section" aria-label="About noteliha">
+    <div class="about-title">About</div>
+    <p class="about-text">
+      <strong>noteliha</strong> is a fast, offline-first note-taking app for <strong>Android and iOS</strong>,
+      built by <strong>Nikhil Lande</strong> at <strong>Navkon Labs</strong>. It's designed around one idea:
+      your notes belong to you. There are no ads, no trackers, and no accounts required.
+      Notes are stored locally on your device, with optional <strong>Google Drive backup</strong> entirely
+      under your control. Whether you're jotting quick thoughts, planning a trip, managing a meal plan,
+      or keeping a checklist — noteliha keeps it private, fast, and free.
+    </p>
+    <div class="about-tags">
+      <span class="about-tag">Offline-first</span>
+      <span class="about-tag">No ads</span>
+      <span class="about-tag">No tracking</span>
+      <span class="about-tag">Google Drive backup</span>
+      <span class="about-tag">Android</span>
+      <span class="about-tag">iOS</span>
+      <span class="about-tag">Free</span>
+      <span class="about-tag">Open source</span>
+    </div>
+  </section>
+
   <!-- Repository -->
   <div class="section">
     <div class="section-label">
@@ -489,10 +692,184 @@
     </div>
   </div>
 
-  <footer>
-    <div class="footer-left"><strong>noteliha</strong> · Navkon Labs</div>
-    <div class="footer-right">DOCS v1.0</div>
+  <footer id="site-footer">
+    <!-- Top row: branding + version -->
+    <div class="footer-top">
+      <div class="footer-left"><strong>noteliha</strong> · Navkon Labs</div>
+      <div class="footer-right">DOCS v1.0</div>
+    </div>
+
+    <!-- Animated scribble strip -->
+    <div class="footer-bottom" id="footer-bottom">
+      <span class="sr-footer">
+        © noteliha · All Rights Reserved · Crafted by Navkon Labs
+      </span>
+      <div class="footer-bottom-inner">
+        <span id="pencil-rider">✏️</span>
+        <div id="footer-text-layer">
+          <span id="footer-text-content"></span>
+        </div>
+      </div>
+    </div>
   </footer>
+
+  <script>
+  (function () {
+    var bottom   = document.getElementById('footer-bottom');
+    var pencil   = document.getElementById('pencil-rider');
+    var textEl   = document.getElementById('footer-text-content');
+    var triggered = false;
+
+    var DURATION = 4000; // ms total for pencil to cross the text
+
+    // Text segments — each will "appear" as pencil passes over it
+    // Full text as array of chars with optional HTML wrapping
+    var fullParts = [
+      { chars: '© noteliha', bold: true },
+      { chars: '  ·  All Rights Reserved', bold: false },
+      { chars: '  ·  Crafted by ', bold: false },
+      { chars: 'Navkon Labs', bold: false, link: 'https://www.navkon.com/' }
+    ];
+
+    // Build char-by-char spans, each starting invisible
+    var allChars = []; // [{el, triggerX}] filled after layout
+
+    function buildTextHTML() {
+      var html = '';
+      var idx = 0;
+      fullParts.forEach(function(part) {
+        var chars = part.chars;
+        for (var i = 0; i < chars.length; i++) {
+          var ch = chars[i];
+          var display = ch === ' ' ? '&nbsp;' : ch;
+          if (part.bold) {
+            html += '<span class="fchar" id="fc' + idx + '"><strong>' + display + '</strong></span>';
+          } else if (part.link) {
+            html += '<a href="' + part.link + '" target="_blank" rel="noopener noreferrer" class="navkon-link fchar" id="fc' + idx + '" style="opacity:0;transition:opacity 0.18s ease;">' + display + '</a>';
+          } else {
+            html += '<span class="fchar" id="fc' + idx + '">' + display + '</span>';
+          }
+          idx++;
+        }
+      });
+      return html;
+    }
+
+    var totalChars = 0;
+    fullParts.forEach(function(p) { totalChars += p.chars.length; });
+
+    function run() {
+      if (triggered) return;
+      triggered = true;
+
+      var W = bottom.offsetWidth;
+      var H = bottom.offsetHeight;
+
+      if (W === 0 || H === 0) {
+        triggered = false;
+        setTimeout(run, 50);
+        return;
+      }
+
+      // Render all segments hidden
+      textEl.innerHTML = buildTextHTML();
+
+      // Wait one frame so spans are laid out and measurable
+      requestAnimationFrame(function() {
+        // Get the bounding box of the entire text block
+        var bottomRect = bottom.getBoundingClientRect();
+
+        // Collect each char element and its trigger X position
+        allChars = [];
+        for (var ci = 0; ci < totalChars; ci++) {
+          var el = document.getElementById('fc' + ci);
+          if (!el) continue;
+          var r = el.getBoundingClientRect();
+          // Trigger when pencil reaches the right edge of this char
+          var triggerX = (r.right - bottomRect.left);
+          allChars.push({ el: el, triggerX: triggerX });
+        }
+
+        var textRect   = textEl.getBoundingClientRect();
+        var textLeft   = textRect.left  - bottomRect.left;
+        var textRight  = textRect.right - bottomRect.left;
+
+        // Pencil starts just before the text, ends just after
+        var pencilStart = textLeft  - 20;
+        var pencilEnd   = textRight + 10;
+
+        var startTime  = null;
+        var revealed   = {};
+
+        pencil.style.left = (pencilStart - pencil.offsetWidth / 2) + 'px';
+        pencil.style.top  = (H / 2 - pencil.offsetHeight * 0.85) + 'px';
+
+        function frame(ts) {
+          if (!startTime) startTime = ts;
+          var elapsed  = ts - startTime;
+          var progress = Math.min(elapsed / DURATION, 1);
+
+          // Move pencil — tip on text, chaotic fast/slow vertical motion
+          var px = pencilStart + progress * (pencilEnd - pencilStart);
+          // Pull pencil up so the tip (bottom of emoji) sits on the text line
+          var tipY = H / 2 - pencil.offsetHeight * 0.85;
+          var t = elapsed * 0.001;
+          // Mix of very fast bursts and slow drifts — no regular pattern
+          var wobbleY = tipY
+            + Math.sin(t * 31.0) * 2.0
+            + Math.sin(t * 17.3) * 1.5
+            + Math.sin(t *  7.9) * 2.5
+            + Math.sin(t *  3.1) * 1.8
+            + Math.sin(t * 53.7) * 0.8
+            + (Math.random() - 0.5) * 3.5;
+          pencil.style.left = (px - pencil.offsetWidth / 2) + 'px';
+          pencil.style.top  = wobbleY + 'px';
+
+          // Reveal chars one by one as pencil passes each
+          for (var ci = 0; ci < allChars.length; ci++) {
+            if (revealed[ci]) continue;
+            if (px >= allChars[ci].triggerX) {
+              revealed[ci] = true;
+              allChars[ci].el.style.opacity = '1';
+            }
+          }
+
+          if (progress < 1) {
+            requestAnimationFrame(frame);
+          } else {
+            // Ensure all chars visible
+            for (var ci = 0; ci < allChars.length; ci++) {
+              allChars[ci].el.style.opacity = '1';
+            }
+            pencil.style.transition = 'opacity 0.5s ease';
+            pencil.style.opacity    = '0';
+            setTimeout(function () { pencil.style.display = 'none'; }, 600);
+          }
+        }
+
+        requestAnimationFrame(frame);
+      });
+    }
+
+    if ('IntersectionObserver' in window) {
+      var obs = new IntersectionObserver(function (entries) {
+        if (entries[0].isIntersecting) {
+          obs.disconnect();
+          setTimeout(run, 120);
+        }
+      }, { threshold: 0.5 });
+      obs.observe(bottom);
+    } else {
+      // Fallback — show everything immediately
+      textEl.innerHTML = buildTextHTML();
+      segments.forEach(function(s) {
+        var el = document.getElementById(s.id);
+        if (el) el.classList.add('footer-seg-visible');
+      });
+      if (pencil) pencil.style.display = 'none';
+    }
+  })();
+  </script>
 
 </main>
 

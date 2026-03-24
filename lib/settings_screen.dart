@@ -361,7 +361,7 @@ class SettingsScreen extends StatelessWidget {
                       _NeuInfoTile(
                         icon: Icons.info_outline_rounded,
                         title: 'Version',
-                        trailing: Text('1.0.0',
+                        trailing: Text('1.0.0.5',
                             style: TextStyle(
                                 color: Neu.textTertiary(isDark), fontSize: 13)),
                         isDark: isDark,

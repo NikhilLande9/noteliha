@@ -23,7 +23,7 @@ const String kSyncStateBox = 'sync_state_box_v3';
 // On Android/iOS the ID is read from google-services.json / GoogleService-Info.plist
 // so this value is only used when running on the web.
 const String _kWebClientId =
-    'YOUR_WEB_CLIENT_ID.apps.googleusercontent.com';
+    '986108762069-tfo8ft6c8od7f63untc9sgla36j97oba.apps.googleusercontent.com';
 const String kDriveRootName = '.liha_notes_app';
 const String kDriveNotesDir = 'notes';
 const String kDriveImagesDir = 'images';
@@ -50,9 +50,14 @@ class NotesProvider extends ChangeNotifier {
 
   DriveAccountState _driveAccountState = DriveAccountState.unknown;
   bool _isCheckingDrive = false;
+  bool _driveCheckFailed = false;
 
   DriveAccountState get driveAccountState => _driveAccountState;
   bool get isCheckingDrive => _isCheckingDrive;
+
+  /// True when the last Drive manifest check ended with an error.
+  /// The UI can surface a "Retry" button when this is true.
+  bool get driveCheckFailed => _driveCheckFailed;
 
   GoogleSignInAccount? get user => _currentUser;
   SyncStatus get syncStatus => _syncStatus;
@@ -73,8 +78,11 @@ class NotesProvider extends ChangeNotifier {
 
   NotesProvider() {
     _googleSignIn = GoogleSignIn(
-      scopes: [drive.DriveApi.driveFileScope],
-      // Web requires the OAuth client ID to be provided explicitly.
+      scopes: [
+        'email',
+        'profile',
+        drive.DriveApi.driveFileScope,
+      ],
       clientId: kIsWeb ? _kWebClientId : null,
     );
   }
@@ -107,6 +115,11 @@ class NotesProvider extends ChangeNotifier {
           if (alreadySyncedOnThisDevice) {
             _driveAccountState = DriveAccountState.returningUser;
           } else {
+            // On web, the OAuth token is written to the browser credential
+            // store asynchronously after onCurrentUserChanged fires.
+            // A short delay lets the token settle so authenticatedClient()
+            // succeeds on the first attempt instead of needing several retries.
+            if (kIsWeb) await Future.delayed(const Duration(milliseconds: 500));
             await _checkDriveManifestExists();
           }
         } else {
@@ -115,14 +128,24 @@ class NotesProvider extends ChangeNotifier {
         notifyListeners();
       });
 
-      // signInSilently() can trigger onCurrentUserChanged before it returns,
-      // so local notes are already visible by the time that happens.
-      _currentUser = await _googleSignIn.signInSilently();
+      // On web, signInSilently() triggers google.accounts.id.prompt() (the
+      // One Tap / FedCM flow) which produces console warnings about deprecated
+      // UI status methods and fails if FedCM is blocked in browser settings.
+      // On web we skip the silent sign-in entirely at startup — the user signs
+      // in explicitly via the "Sign In" button, which uses the standard popup
+      // flow and does not trigger One Tap. Session state is restored across
+      // page reloads automatically by the google_sign_in_web credential cache.
+      if (!kIsWeb) {
+        // signInSilently() can trigger onCurrentUserChanged before it returns,
+        // so local notes are already visible by the time that happens.
+        _currentUser = await _googleSignIn.signInSilently();
+      }
       notifyListeners();
     } catch (e) {
       debugPrint('Init error: $e');
       // Surface auth-configuration errors immediately so they're visible in settings.
-      if (e.toString().contains('appClientId') || e.toString().contains('clientId')) {
+      if (e.toString().contains('appClientId') ||
+          e.toString().contains('clientId')) {
         _setStatus(_friendlyAuthError(e), isError: true);
       }
       notifyListeners();
@@ -132,65 +155,95 @@ class NotesProvider extends ChangeNotifier {
   Future<void> _checkDriveManifestExists() async {
     if (_currentUser == null) return;
     _isCheckingDrive = true;
+    _driveCheckFailed = false;
     _setStatus('Checking Drive for existing backup…',
         isSyncing: true, persistent: true);
     notifyListeners();
 
     try {
-      final client = await _googleSignIn.authenticatedClient();
-      if (client == null) throw Exception('Authentication failed');
-
-      final api = drive.DriveApi(client);
-
-      final rootList = await _retry(
-            () => api.files.list(
-          q: "name = '$kDriveRootName' and mimeType = 'application/vnd.google-apps.folder' and trashed = false",
-          $fields: 'files(id)',
-          pageSize: 1,
-        ),
-        name: 'checkRootFolder',
-      );
-
-      if (rootList.files?.isEmpty ?? true) {
-        _driveAccountState = DriveAccountState.newUser;
-        _setStatus('No backup found. Upload to create first backup.',
-            persistent: true);
-        return;
-      }
-
-      final rootId = rootList.files!.first.id!;
-
-      final manifestList = await _retry(
-            () => api.files.list(
-          q: "name = '$kManifestName' and '$rootId' in parents and trashed = false",
-          $fields: 'files(id)',
-          pageSize: 1,
-        ),
-        name: 'checkManifest',
-      );
-
-      if (manifestList.files?.isNotEmpty ?? false) {
-        _syncState.rootFolderId = rootId;
-        _syncState.manifestFileId = manifestList.files!.first.id;
-        _persistSyncState();
-        _driveAccountState = DriveAccountState.returningUser;
-        _setStatus('Existing backup found. Sync to merge notes from cloud.',
-            persistent: true);
-      } else {
-        _syncState.rootFolderId = rootId;
-        _persistSyncState();
-        _driveAccountState = DriveAccountState.newUser;
-        _setStatus('No backup found. Upload to create first backup.',
-            persistent: true);
-      }
+      // Race the whole check against a 15-second wall-clock timeout so the UI
+      // is never stuck in an indefinite "checking…" state.
+      await Future.any([
+        _doCheckDriveManifest(),
+        Future.delayed(const Duration(seconds: 15)).then((_) {
+          // Only treat it as a timeout if the check is still running.
+          if (_isCheckingDrive) {
+            throw TimeoutException(
+                'Drive check timed out after 15 seconds', const Duration(seconds: 15));
+          }
+        }),
+      ]);
+    } on TimeoutException catch (e) {
+      debugPrint('Drive check timeout: $e');
+      _driveAccountState = DriveAccountState.unknown;
+      _driveCheckFailed = true;
+      _setStatus('Drive check timed out. Tap "Retry" to try again.', isError: true);
     } catch (e) {
       debugPrint('Drive check error: $e');
       _driveAccountState = DriveAccountState.unknown;
-      _setStatus('Could not check Drive: $e', isError: true);
+      _driveCheckFailed = true;
+      _setStatus('Could not check Drive. Tap "Retry" to try again.', isError: true);
     } finally {
       _isCheckingDrive = false;
       notifyListeners();
     }
+  }
+
+  /// Inner work for [_checkDriveManifestExists] — separated so the timeout
+  /// wrapper above stays readable.
+  Future<void> _doCheckDriveManifest() async {
+    final client = await _getAuthenticatedClient();
+    final api = drive.DriveApi(client);
+
+    final rootList = await _retry(
+          () => api.files.list(
+        q: "name = '$kDriveRootName' and mimeType = 'application/vnd.google-apps.folder' and trashed = false",
+        $fields: 'files(id)',
+        pageSize: 1,
+      ),
+      name: 'checkRootFolder',
+    );
+
+    if (rootList.files?.isEmpty ?? true) {
+      _driveAccountState = DriveAccountState.newUser;
+      _setStatus('No backup found. Upload to create first backup.',
+          persistent: true);
+      return;
+    }
+
+    final rootId = rootList.files!.first.id!;
+
+    final manifestList = await _retry(
+          () => api.files.list(
+        q: "name = '$kManifestName' and '$rootId' in parents and trashed = false",
+        $fields: 'files(id)',
+        pageSize: 1,
+      ),
+      name: 'checkManifest',
+    );
+
+    if (manifestList.files?.isNotEmpty ?? false) {
+      _syncState.rootFolderId = rootId;
+      _syncState.manifestFileId = manifestList.files!.first.id;
+      _persistSyncState();
+      _driveAccountState = DriveAccountState.returningUser;
+      _setStatus('Existing backup found. Sync to merge notes from cloud.',
+          persistent: true);
+    } else {
+      _syncState.rootFolderId = rootId;
+      _persistSyncState();
+      _driveAccountState = DriveAccountState.newUser;
+      _setStatus('No backup found. Upload to create first backup.',
+          persistent: true);
+    }
+  }
+
+  /// Public method that lets the Settings UI trigger a manual retry after a
+  /// failed Drive check.
+  Future<void> retryDriveCheck() async {
+    if (_isCheckingDrive || _currentUser == null) return;
+    _driveCheckFailed = false;
+    await _checkDriveManifestExists();
   }
 
   @override
@@ -411,17 +464,23 @@ class NotesProvider extends ChangeNotifier {
   /// Returns a human-readable message for common sign-in failures.
   String _friendlyAuthError(Object e) {
     final raw = e.toString();
-    if (raw.contains('appClientId') || raw.contains('clientId') || raw.contains('CLIENT_ID')) {
+    if (raw.contains('appClientId') ||
+        raw.contains('clientId') ||
+        raw.contains('CLIENT_ID')) {
       return 'Google Sign-In is not configured for this platform. '
           'Please add your Web Client ID to the app.';
     }
-    if (raw.contains('network_error') || raw.contains('SocketException') || raw.contains('NetworkException')) {
+    if (raw.contains('network_error') ||
+        raw.contains('SocketException') ||
+        raw.contains('NetworkException')) {
       return 'No internet connection. Please check your network and try again.';
     }
-    if (raw.contains('sign_in_canceled') || raw.contains('PlatformException(sign_in_canceled')) {
+    if (raw.contains('sign_in_canceled') ||
+        raw.contains('PlatformException(sign_in_canceled')) {
       return 'Sign-in was cancelled.';
     }
-    if (raw.contains('sign_in_failed') || raw.contains('PlatformException(sign_in_failed')) {
+    if (raw.contains('sign_in_failed') ||
+        raw.contains('PlatformException(sign_in_failed')) {
       return 'Sign-in failed. Please try again.';
     }
     if (raw.contains('access_denied') || raw.contains('ApiException: 10')) {
@@ -430,9 +489,29 @@ class NotesProvider extends ChangeNotifier {
     if (raw.contains('popup_closed') || raw.contains('popup_blocked')) {
       return 'The sign-in popup was closed or blocked. Please allow popups and try again.';
     }
+    // FedCM / browser third-party sign-in blocked (common in Chrome when
+    // "Block third-party sign-in" is enabled, or when FedCM rejects the request).
+    if (raw.contains('FedCM') ||
+        raw.contains('NetworkError') ||
+        raw.contains('Error retrieving a token')) {
+      return 'Sign-in was blocked by your browser. '
+          'Check that third-party sign-in is allowed in your browser settings, '
+          'then try again.';
+    }
+    // ClientException is thrown by the web HTTP client when the OAuth flow is
+    // interrupted or returns an unexpected response — the raw message is a
+    // JSON fragment and is not user-friendly.
+    if (raw.contains('ClientException') ||
+        raw.startsWith('{') ||
+        raw.startsWith('Exception: {')) {
+      return 'Sign-in could not be completed. '
+          'Please try again, or sign out and back in if the problem persists.';
+    }
     // Fallback: show only the first sentence of the exception, not the full stack.
     final firstLine = raw.split('\n').first.trim();
-    return firstLine.length > 120 ? '${firstLine.substring(0, 120)}…' : firstLine;
+    return firstLine.length > 120
+        ? '${firstLine.substring(0, 120)}…'
+        : firstLine;
   }
 
   Future<void> signIn() async {
@@ -518,6 +597,54 @@ class NotesProvider extends ChangeNotifier {
         notifyListeners();
       });
     }
+  }
+
+  // ── Authenticated client with retry ─────────────────────────────────────────
+
+  /// Obtains a valid authenticated HTTP client, retrying up to [_kAuthMaxRetries]
+  /// times with [_kAuthRetryDelay] between attempts.
+  ///
+  /// We deliberately do **not** call `signInSilently(reAuthenticate: true)`
+  /// here for either platform:
+  /// - On **web** it triggers the deprecated popup OAuth flow, causing
+  ///   Cross-Origin-Opener-Policy `window.closed` errors, a 403 on the
+  ///   People API, and Google's "Auto re-authn" 10-minute rate-limit warning.
+  /// - On **native** the `signInSilently()` call in `init()` already ensures
+  ///   the token is fresh before any Drive operation is attempted, so a second
+  ///   re-auth here is redundant.
+  ///
+  /// If no client is returned after all retries the user's session has truly
+  /// expired and they must sign in again interactively.
+  ///
+  /// Throws an [Exception] if no valid client is obtained after all retries.
+  static const int _kAuthMaxRetries = 5;
+  static const Duration _kAuthRetryDelay = Duration(seconds: 2);
+
+  Future<dynamic> _getAuthenticatedClient() async {
+    for (int attempt = 1; attempt <= _kAuthMaxRetries; attempt++) {
+      try {
+        final client = await _googleSignIn.authenticatedClient();
+        if (client != null) {
+          debugPrint('[Auth] Got authenticated client on attempt $attempt');
+          return client;
+        }
+        debugPrint('[Auth] authenticatedClient() returned null on attempt $attempt');
+      } catch (e) {
+        debugPrint('[Auth] authenticatedClient() threw on attempt $attempt: $e');
+      }
+
+      if (attempt < _kAuthMaxRetries) {
+        debugPrint(
+            '[Auth] Retrying in ${_kAuthRetryDelay.inSeconds}s '
+                '(attempt $attempt/$_kAuthMaxRetries)…');
+        await Future.delayed(_kAuthRetryDelay);
+      }
+    }
+
+    throw Exception(
+        'Authentication failed: could not obtain an authenticated client '
+            'after $_kAuthMaxRetries attempts. '
+            'Please sign out and sign in again.');
   }
 
   // ── Retry logic ─────────────────────────────────────────────────────────────
@@ -716,9 +843,7 @@ class NotesProvider extends ChangeNotifier {
     _setStatus('Uploading…', isSyncing: true);
 
     try {
-      final client = await _googleSignIn.authenticatedClient();
-      if (client == null) throw Exception('Authentication failed');
-
+      final client = await _getAuthenticatedClient();
       final api = drive.DriveApi(client);
       await _ensureFolders(api);
 
@@ -911,9 +1036,7 @@ class NotesProvider extends ChangeNotifier {
     _setStatus('Checking for updates…', isSyncing: true);
 
     try {
-      final client = await _googleSignIn.authenticatedClient();
-      if (client == null) throw Exception('Authentication failed');
-
+      final client = await _getAuthenticatedClient();
       final api = drive.DriveApi(client);
       await _ensureFolders(api);
 

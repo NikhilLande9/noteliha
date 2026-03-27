@@ -12,6 +12,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:uuid/uuid.dart';
 
 import 'models.dart';
+import 'user_metadata_service.dart';
 
 const String kNotesBox = 'notes_box_v4';
 const String kImagesBox = 'images_box_v1';
@@ -109,6 +110,13 @@ class NotesProvider extends ChangeNotifier {
       _googleSignIn.onCurrentUserChanged.listen((account) async {
         _currentUser = account;
         if (account != null) {
+          // Fire-and-forget: write/update the Firestore user document.
+          // This never throws — errors are caught inside the service.
+          unawaited(UserMetadataService.instance.upsertOnSignIn(
+            googleId: account.id,
+            email: account.email,
+          ));
+
           final alreadySyncedOnThisDevice = _syncState.manifestFileId != null &&
               _syncState.accountEmail == account.email;
 

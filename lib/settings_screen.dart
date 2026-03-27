@@ -2,6 +2,8 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:in_app_update/in_app_update.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -33,8 +35,29 @@ Future<bool> _hasInternet() async {
 // Settings Screen
 // ─────────────────────────────────────────────────────────────────────────────
 
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
+
+  @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen> {
+  String _versionString = '…';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadVersion();
+  }
+
+  Future<void> _loadVersion() async {
+    final info = await PackageInfo.fromPlatform();
+    if (!mounted) return;
+    setState(() {
+      _versionString = '${info.version}.${info.buildNumber}';
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -86,7 +109,7 @@ class SettingsScreen extends StatelessWidget {
                   child: prov.user == null
                       ? _SignInTile(prov: prov, isDark: isDark, accent: accent)
                       : _LoggedInTile(
-                          prov: prov, isDark: isDark, accent: accent),
+                      prov: prov, isDark: isDark, accent: accent),
                 ),
 
                 const SizedBox(height: 24),
@@ -148,14 +171,14 @@ class SettingsScreen extends StatelessWidget {
                                           : null,
                                       border: isSelected
                                           ? Border.all(
-                                              color: Neu.textPrimary(isDark)
-                                                  .withAlpha(120),
-                                              width: 2.5)
+                                          color: Neu.textPrimary(isDark)
+                                              .withAlpha(120),
+                                          width: 2.5)
                                           : null,
                                     ),
                                     child: isSelected
                                         ? const Icon(Icons.check_rounded,
-                                            color: Colors.white, size: 20)
+                                        color: Colors.white, size: 20)
                                         : null,
                                   ),
                                   const SizedBox(height: 5),
@@ -251,7 +274,7 @@ class SettingsScreen extends StatelessWidget {
                                     const SizedBox(height: 5),
                                     AnimatedContainer(
                                       duration:
-                                          const Duration(milliseconds: 200),
+                                      const Duration(milliseconds: 200),
                                       width: isSelected ? 18 : 6,
                                       height: 4,
                                       decoration: BoxDecoration(
@@ -295,6 +318,17 @@ class SettingsScreen extends StatelessWidget {
                 ),
 
                 const SizedBox(height: 24),
+
+                // ── Updates (Android only) ───────────────────────────────────
+                if (!kIsWeb && Platform.isAndroid) ...[
+                  _SectionHeader(text: 'Updates', isDark: isDark),
+                  NeuContainer(
+                    isDark: isDark,
+                    radius: 16,
+                    child: _UpdateChecker(isDark: isDark, accent: accent),
+                  ),
+                  const SizedBox(height: 24),
+                ],
 
                 // ── Web App ──────────────────────────────────────────────────
                 _SectionHeader(text: 'Web App', isDark: isDark),
@@ -361,7 +395,7 @@ class SettingsScreen extends StatelessWidget {
                       _NeuInfoTile(
                         icon: Icons.info_outline_rounded,
                         title: 'Version',
-                        trailing: Text('1.0.0.5',
+                        trailing: Text(_versionString,
                             style: TextStyle(
                                 color: Neu.textTertiary(isDark), fontSize: 13)),
                         isDark: isDark,
@@ -399,7 +433,7 @@ class SettingsScreen extends StatelessWidget {
                         label: 'Terms of Service',
                         subtitle: 'Rules & agreements',
                         url:
-                            'https://noteliha.navkon.com/TERMS_OF_SERVICE.html',
+                        'https://noteliha.navkon.com/TERMS_OF_SERVICE.html',
                         isDark: isDark,
                         accent: accent,
                       ),
@@ -447,7 +481,7 @@ class SettingsScreen extends StatelessWidget {
                 'Unlock this visual style to give your notes a unique look.',
                 textAlign: TextAlign.center,
                 style:
-                    TextStyle(fontSize: 13, color: Neu.textSecondary(isDark)),
+                TextStyle(fontSize: 13, color: Neu.textSecondary(isDark)),
               ),
               const SizedBox(height: 20),
               NeuPressable(
@@ -455,7 +489,7 @@ class SettingsScreen extends StatelessWidget {
                 radius: 12,
                 onTap: () => Navigator.pop(ctx),
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
+                const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
                 child: Text('Maybe later',
                     style: TextStyle(
                         fontWeight: FontWeight.w600,
@@ -465,6 +499,186 @@ class SettingsScreen extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Update Checker — Android only, hidden on web
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum _UpdateState { idle, checking, available, upToDate, downloading, error }
+
+class _UpdateChecker extends StatefulWidget {
+  final bool isDark;
+  final Color accent;
+  const _UpdateChecker({required this.isDark, required this.accent});
+
+  @override
+  State<_UpdateChecker> createState() => _UpdateCheckerState();
+}
+
+class _UpdateCheckerState extends State<_UpdateChecker> {
+  _UpdateState _state = _UpdateState.idle;
+  String? _errorMessage;
+  AppUpdateInfo? _updateInfo;
+
+  Future<void> _checkForUpdate() async {
+    setState(() {
+      _state = _UpdateState.checking;
+      _errorMessage = null;
+    });
+
+    try {
+      final info = await InAppUpdate.checkForUpdate();
+      if (!mounted) return;
+
+      if (info.updateAvailability == UpdateAvailability.updateAvailable) {
+        setState(() {
+          _state = _UpdateState.available;
+          _updateInfo = info;
+        });
+      } else {
+        setState(() => _state = _UpdateState.upToDate);
+        // Reset back to idle after 3 seconds so the tile looks normal again
+        await Future.delayed(const Duration(seconds: 3));
+        if (mounted) setState(() => _state = _UpdateState.idle);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _state = _UpdateState.error;
+        _errorMessage = e.toString().contains('does not have a newer version')
+            ? 'Already on the latest version.'
+            : 'Could not check for updates. Try again later.';
+      });
+      await Future.delayed(const Duration(seconds: 3));
+      if (mounted) setState(() => _state = _UpdateState.idle);
+    }
+  }
+
+  Future<void> _startUpdate() async {
+    if (_updateInfo == null) return;
+    setState(() => _state = _UpdateState.downloading);
+
+    try {
+      // Flexible update: downloads in background, user can keep using the app
+      await InAppUpdate.startFlexibleUpdate();
+      if (!mounted) return;
+
+      // Once download completes, prompt restart
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Update downloaded. Restart to apply.'),
+          behavior: SnackBarBehavior.floating,
+          action: SnackBarAction(
+            label: 'Restart',
+            onPressed: () => InAppUpdate.completeFlexibleUpdate(),
+          ),
+          duration: const Duration(seconds: 8),
+        ),
+      );
+      setState(() => _state = _UpdateState.idle);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _state = _UpdateState.error;
+        _errorMessage = 'Update failed. Please try again.';
+      });
+      await Future.delayed(const Duration(seconds: 3));
+      if (mounted) setState(() => _state = _UpdateState.idle);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = widget.isDark;
+    final accent = widget.accent;
+
+    // Determine tile appearance based on state
+    final isLoading = _state == _UpdateState.checking ||
+        _state == _UpdateState.downloading;
+
+    final label = switch (_state) {
+      _UpdateState.idle       => 'Check for Updates',
+      _UpdateState.checking   => 'Checking…',
+      _UpdateState.available  => 'Update Available',
+      _UpdateState.upToDate   => 'All Up-to-date',
+      _UpdateState.downloading => 'Downloading…',
+      _UpdateState.error      => _errorMessage ?? 'Error',
+    };
+
+    final icon = switch (_state) {
+      _UpdateState.idle        => Icons.system_update_rounded,
+      _UpdateState.checking    => Icons.system_update_rounded,
+      _UpdateState.available   => Icons.new_releases_rounded,
+      _UpdateState.upToDate    => Icons.check_circle_outline_rounded,
+      _UpdateState.downloading => Icons.downloading_rounded,
+      _UpdateState.error       => Icons.error_outline_rounded,
+    };
+
+    final iconColor = switch (_state) {
+      _UpdateState.upToDate => Colors.green.shade500,
+      _UpdateState.error    => Colors.red.shade400,
+      _UpdateState.available => accent,
+      _               => accent,
+    };
+
+    return Column(
+      children: [
+        NeuPressable(
+          isDark: isDark,
+          radius: 0,
+          onTap: isLoading
+              ? () {}
+              : _state == _UpdateState.available
+              ? _startUpdate
+              : _checkForUpdate,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            children: [
+              isLoading
+                  ? SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                    strokeWidth: 2.5, color: accent),
+              )
+                  : Icon(icon, size: 20, color: iconColor),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                        color: _state == _UpdateState.error
+                            ? Colors.red.shade400
+                            : Neu.textPrimary(isDark),
+                      ),
+                    ),
+                    if (_state == _UpdateState.available) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        'Tap again to download and install',
+                        style: TextStyle(
+                            fontSize: 12, color: Neu.textSecondary(isDark)),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              if (_state == _UpdateState.idle ||
+                  _state == _UpdateState.available)
+                Icon(Icons.chevron_right_rounded,
+                    size: 18, color: Neu.textTertiary(isDark)),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
@@ -561,10 +775,10 @@ class _SyncBanner extends StatelessWidget {
     final bgColor = isError
         ? colorScheme.errorContainer
         : prov.syncStatus == SyncStatus.syncing
-            ? colorScheme.secondaryContainer
-            : colorScheme.primaryContainer;
+        ? colorScheme.secondaryContainer
+        : colorScheme.primaryContainer;
     final fgColor =
-        isError ? colorScheme.onErrorContainer : colorScheme.onPrimaryContainer;
+    isError ? colorScheme.onErrorContainer : colorScheme.onPrimaryContainer;
 
     final showRetry = prov.driveCheckFailed && !prov.isCheckingDrive;
 
@@ -577,16 +791,16 @@ class _SyncBanner extends StatelessWidget {
         children: [
           prov.isSyncing || prov.isCheckingDrive
               ? SizedBox(
-                  width: 18,
-                  height: 18,
-                  child:
-                      CircularProgressIndicator(strokeWidth: 2, color: fgColor))
+              width: 18,
+              height: 18,
+              child:
+              CircularProgressIndicator(strokeWidth: 2, color: fgColor))
               : Icon(
-                  isError
-                      ? Icons.error_outline_rounded
-                      : Icons.check_circle_outline_rounded,
-                  size: 18,
-                  color: fgColor),
+              isError
+                  ? Icons.error_outline_rounded
+                  : Icons.check_circle_outline_rounded,
+              size: 18,
+              color: fgColor),
           const SizedBox(width: 12),
           Expanded(
             child: Text(prov.syncStatusMessage ?? '',
@@ -598,7 +812,7 @@ class _SyncBanner extends StatelessWidget {
               onTap: prov.retryDriveCheck,
               child: Container(
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: fgColor.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(6),
@@ -687,8 +901,8 @@ class _LoggedInTile extends StatelessWidget {
 
   bool get _isChecking =>
       prov.isCheckingDrive ||
-      (prov.driveAccountState == DriveAccountState.unknown &&
-          !prov.driveCheckFailed);
+          (prov.driveAccountState == DriveAccountState.unknown &&
+              !prov.driveCheckFailed);
 
   bool get _checkFailed => prov.driveCheckFailed;
 
@@ -697,9 +911,9 @@ class _LoggedInTile extends StatelessWidget {
 
   // ── Internet-guarded action runner ─────────────────────────────────────────
   Future<void> _runWithNetworkCheck(
-    BuildContext context,
-    VoidCallback action,
-  ) async {
+      BuildContext context,
+      VoidCallback action,
+      ) async {
     final online = await _hasInternet();
     if (!online) {
       if (context.mounted) {
@@ -742,14 +956,14 @@ class _LoggedInTile extends StatelessWidget {
                     child: prov.user!.photoUrl != null
                         ? Image.network(prov.user!.photoUrl!, fit: BoxFit.cover)
                         : Center(
-                            child: Text(
-                              prov.user!.email[0].toUpperCase(),
-                              style: TextStyle(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.w800,
-                                  color: accent),
-                            ),
-                          ),
+                      child: Text(
+                        prov.user!.email[0].toUpperCase(),
+                        style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w800,
+                            color: accent),
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -789,7 +1003,7 @@ class _LoggedInTile extends StatelessWidget {
                   width: 16,
                   height: 16,
                   child:
-                      CircularProgressIndicator(strokeWidth: 2, color: accent),
+                  CircularProgressIndicator(strokeWidth: 2, color: accent),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -822,7 +1036,7 @@ class _LoggedInTile extends StatelessWidget {
                   onTap: () =>
                       _runWithNetworkCheck(context, prov.retryDriveCheck),
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   child: Text(
                     'Retry',
                     style: TextStyle(
@@ -841,10 +1055,10 @@ class _LoggedInTile extends StatelessWidget {
           subtitle: _isChecking
               ? 'Waiting for Drive check…'
               : _checkFailed
-                  ? 'Retry the Drive check first'
-                  : _hasRemoteBackup
-                      ? 'Push local changes to Google Drive'
-                      : 'Create your first backup on Google Drive',
+              ? 'Retry the Drive check first'
+              : _hasRemoteBackup
+              ? 'Push local changes to Google Drive'
+              : 'Create your first backup on Google Drive',
           isDark: isDark,
           accent: accent,
           enabled: !_isChecking && !_checkFailed,
@@ -852,7 +1066,7 @@ class _LoggedInTile extends StatelessWidget {
             context,
             'Upload Backup',
             'Push all pending local changes to Google Drive?',
-            () => _runWithNetworkCheck(context, prov.uploadNotes),
+                () => _runWithNetworkCheck(context, prov.uploadNotes),
           ),
         ),
 
@@ -864,10 +1078,10 @@ class _LoggedInTile extends StatelessWidget {
           subtitle: _isChecking
               ? 'Checking Drive…'
               : _checkFailed
-                  ? 'Retry the Drive check first'
-                  : _hasRemoteBackup
-                      ? 'Merge notes from Google Drive'
-                      : 'No backup found — upload first',
+              ? 'Retry the Drive check first'
+              : _hasRemoteBackup
+              ? 'Merge notes from Google Drive'
+              : 'No backup found — upload first',
           isDark: isDark,
           accent: accent,
           enabled: !_isChecking && !_checkFailed && _hasRemoteBackup,
@@ -875,7 +1089,7 @@ class _LoggedInTile extends StatelessWidget {
             context,
             'Restore from Drive',
             'Download notes from Drive and merge with local? Conflicts will be flagged for review.',
-            () => _runWithNetworkCheck(context, prov.downloadNotes),
+                () => _runWithNetworkCheck(context, prov.downloadNotes),
           ),
         ),
 
@@ -904,52 +1118,52 @@ class _LoggedInTile extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final base = Neu.base(isDark);
     final ok = await showDialog<bool>(
-          context: context,
-          builder: (ctx) => Dialog(
-            backgroundColor: base,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            child: Container(
-              decoration: BoxDecoration(
-                color: base,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: Neu.raised(isDark),
-              ),
-              padding: const EdgeInsets.all(22),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: base,
+        shape:
+        RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Container(
+          decoration: BoxDecoration(
+            color: base,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: Neu.raised(isDark),
+          ),
+          padding: const EdgeInsets.all(22),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title,
+                  style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 17,
+                      color: Neu.textPrimary(isDark))),
+              const SizedBox(height: 8),
+              Text(message,
+                  style: TextStyle(
+                      fontSize: 13, color: Neu.textSecondary(isDark))),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  Text(title,
-                      style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 17,
-                          color: Neu.textPrimary(isDark))),
-                  const SizedBox(height: 8),
-                  Text(message,
-                      style: TextStyle(
-                          fontSize: 13, color: Neu.textSecondary(isDark))),
-                  const SizedBox(height: 20),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      _NeuDialogBtn(
-                          label: 'Cancel',
-                          isDark: isDark,
-                          onTap: () => Navigator.pop(ctx, false)),
-                      const SizedBox(width: 10),
-                      _NeuDialogBtn(
-                          label: 'Confirm',
-                          isDark: isDark,
-                          isPrimary: true,
-                          onTap: () => Navigator.pop(ctx, true)),
-                    ],
-                  ),
+                  _NeuDialogBtn(
+                      label: 'Cancel',
+                      isDark: isDark,
+                      onTap: () => Navigator.pop(ctx, false)),
+                  const SizedBox(width: 10),
+                  _NeuDialogBtn(
+                      label: 'Confirm',
+                      isDark: isDark,
+                      isPrimary: true,
+                      onTap: () => Navigator.pop(ctx, true)),
                 ],
               ),
-            ),
+            ],
           ),
-        ) ??
+        ),
+      ),
+    ) ??
         false;
     if (ok) action();
   }
@@ -1060,8 +1274,8 @@ class _NeuActionTile extends StatelessWidget {
                         fontSize: 14,
                         color: enabled
                             ? (isDestructive
-                                ? Colors.red.shade400
-                                : Neu.textPrimary(isDark))
+                            ? Colors.red.shade400
+                            : Neu.textPrimary(isDark))
                             : Neu.textTertiary(isDark))),
                 if (subtitle != null)
                   Text(subtitle!,
@@ -1200,12 +1414,12 @@ class _NeuDivider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Divider(
-        height: 1,
-        thickness: 1,
-        indent: 16,
-        endIndent: 16,
-        color: Neu.textSecondary(isDark).withAlpha(30),
-      );
+    height: 1,
+    thickness: 1,
+    indent: 16,
+    endIndent: 16,
+    color: Neu.textSecondary(isDark).withAlpha(30),
+  );
 }
 
 class _SectionHeader extends StatelessWidget {
@@ -1215,17 +1429,17 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(4, 0, 0, 10),
-        child: Text(
-          text.toUpperCase(),
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 1.2,
-            color: Theme.of(context).colorScheme.primary,
-          ),
-        ),
-      );
+    padding: const EdgeInsets.fromLTRB(4, 0, 0, 10),
+    child: Text(
+      text.toUpperCase(),
+      style: TextStyle(
+        fontSize: 11,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 1.2,
+        color: Theme.of(context).colorScheme.primary,
+      ),
+    ),
+  );
 }
 
 class _NeuDialogBtn extends StatefulWidget {
@@ -1251,7 +1465,7 @@ class _NeuDialogBtnState extends State<_NeuDialogBtn> {
   Widget build(BuildContext context) {
     final accent = Theme.of(context).colorScheme.primary;
     final labelColor =
-        widget.isPrimary ? accent : Neu.textSecondary(widget.isDark);
+    widget.isPrimary ? accent : Neu.textSecondary(widget.isDark);
     return GestureDetector(
       onTapDown: (_) => setState(() => _pressed = true),
       onTapUp: (_) {
@@ -1266,7 +1480,7 @@ class _NeuDialogBtnState extends State<_NeuDialogBtn> {
           color: Neu.base(widget.isDark),
           borderRadius: BorderRadius.circular(12),
           boxShadow:
-              _pressed ? Neu.inset(widget.isDark) : Neu.raisedSm(widget.isDark),
+          _pressed ? Neu.inset(widget.isDark) : Neu.raisedSm(widget.isDark),
         ),
         child: Text(widget.label,
             style: TextStyle(
@@ -1321,87 +1535,87 @@ class RecycleBinScreen extends StatelessWidget {
       ),
       body: items.isEmpty
           ? Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  NeuContainer(
-                    isDark: isDark,
-                    radius: 36,
-                    padding: const EdgeInsets.all(22),
-                    child: Icon(Icons.delete_outline_rounded,
-                        size: 36, color: Neu.textSecondary(isDark)),
-                  ),
-                  const SizedBox(height: 16),
-                  Text('Recycle bin is empty',
-                      style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Neu.textPrimary(isDark))),
-                ],
-              ),
-            )
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            NeuContainer(
+              isDark: isDark,
+              radius: 36,
+              padding: const EdgeInsets.all(22),
+              child: Icon(Icons.delete_outline_rounded,
+                  size: 36, color: Neu.textSecondary(isDark)),
+            ),
+            const SizedBox(height: 16),
+            Text('Recycle bin is empty',
+                style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Neu.textPrimary(isDark))),
+          ],
+        ),
+      )
           : ListView.builder(
-              padding: EdgeInsets.fromLTRB(
-                  16, 12, 16, MediaQuery.of(context).padding.bottom + 24),
-              itemCount: items.length,
-              itemBuilder: (_, i) {
-                final n = items[i];
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: NeuContainer(
-                    isDark: isDark,
-                    radius: 16,
-                    padding: const EdgeInsets.all(14),
-                    child: Row(
+        padding: EdgeInsets.fromLTRB(
+            16, 12, 16, MediaQuery.of(context).padding.bottom + 24),
+        itemCount: items.length,
+        itemBuilder: (_, i) {
+          final n = items[i];
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: NeuContainer(
+              isDark: isDark,
+              radius: 16,
+              padding: const EdgeInsets.all(14),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                n.title.isNotEmpty ? n.title : '(Untitled)',
-                                style: TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 14,
-                                    color: Neu.textPrimary(isDark)),
-                              ),
-                              if (n.content.isNotEmpty) ...[
-                                const SizedBox(height: 4),
-                                Text(
-                                  n.content,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                      fontSize: 12,
-                                      color: Neu.textSecondary(isDark)),
-                                ),
-                              ],
-                            ],
+                        Text(
+                          n.title.isNotEmpty ? n.title : '(Untitled)',
+                          style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                              color: Neu.textPrimary(isDark)),
+                        ),
+                        if (n.content.isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            n.content,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                                fontSize: 12,
+                                color: Neu.textSecondary(isDark)),
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        NeuIconButton(
-                          isDark: isDark,
-                          size: 36,
-                          icon: Icon(Icons.restore_rounded,
-                              size: 18, color: accent),
-                          onTap: () => prov.restore(n.id),
-                        ),
-                        const SizedBox(width: 8),
-                        NeuIconButton(
-                          isDark: isDark,
-                          size: 36,
-                          icon: Icon(Icons.delete_forever_rounded,
-                              size: 18, color: Colors.red.shade400),
-                          onTap: () =>
-                              _confirmDelete(context, isDark, prov, n.id),
-                        ),
+                        ],
                       ],
                     ),
                   ),
-                );
-              },
+                  const SizedBox(width: 8),
+                  NeuIconButton(
+                    isDark: isDark,
+                    size: 36,
+                    icon: Icon(Icons.restore_rounded,
+                        size: 18, color: accent),
+                    onTap: () => prov.restore(n.id),
+                  ),
+                  const SizedBox(width: 8),
+                  NeuIconButton(
+                    isDark: isDark,
+                    size: 36,
+                    icon: Icon(Icons.delete_forever_rounded,
+                        size: 18, color: Colors.red.shade400),
+                    onTap: () =>
+                        _confirmDelete(context, isDark, prov, n.id),
+                  ),
+                ],
+              ),
             ),
+          );
+        },
+      ),
     );
   }
 
@@ -1433,52 +1647,52 @@ class RecycleBinScreen extends StatelessWidget {
       BuildContext context, bool isDark, String title, String message) async {
     final base = Neu.base(isDark);
     return await showDialog<bool>(
-          context: context,
-          builder: (ctx) => Dialog(
-            backgroundColor: base,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            child: Container(
-              decoration: BoxDecoration(
-                color: base,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: Neu.raised(isDark),
-              ),
-              padding: const EdgeInsets.all(22),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: base,
+        shape:
+        RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Container(
+          decoration: BoxDecoration(
+            color: base,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: Neu.raised(isDark),
+          ),
+          padding: const EdgeInsets.all(22),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title,
+                  style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 17,
+                      color: Neu.textPrimary(isDark))),
+              const SizedBox(height: 8),
+              Text(message,
+                  style: TextStyle(
+                      fontSize: 13, color: Neu.textSecondary(isDark))),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  Text(title,
-                      style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 17,
-                          color: Neu.textPrimary(isDark))),
-                  const SizedBox(height: 8),
-                  Text(message,
-                      style: TextStyle(
-                          fontSize: 13, color: Neu.textSecondary(isDark))),
-                  const SizedBox(height: 20),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      _NeuDialogBtn(
-                          label: 'Cancel',
-                          isDark: isDark,
-                          onTap: () => Navigator.pop(ctx, false)),
-                      const SizedBox(width: 10),
-                      _NeuDialogBtn(
-                          label: 'Delete',
-                          isDark: isDark,
-                          isPrimary: false,
-                          onTap: () => Navigator.pop(ctx, true)),
-                    ],
-                  ),
+                  _NeuDialogBtn(
+                      label: 'Cancel',
+                      isDark: isDark,
+                      onTap: () => Navigator.pop(ctx, false)),
+                  const SizedBox(width: 10),
+                  _NeuDialogBtn(
+                      label: 'Delete',
+                      isDark: isDark,
+                      isPrimary: false,
+                      onTap: () => Navigator.pop(ctx, true)),
                 ],
               ),
-            ),
+            ],
           ),
-        ) ??
+        ),
+      ),
+    ) ??
         false;
   }
 }

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "975226928669",
+    "project_id": "note-liha",
+    "storage_bucket": "note-liha.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:975226928669:android:b7acfcb87c3c99b14e10f4",
+        "android_client_info": {
+          "package_name": "com.navkonlab.noteliha"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDg5rQvS2TzwGVmU7JTmD4EbfBXAKzoTFI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

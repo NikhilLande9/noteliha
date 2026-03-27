@@ -2,7 +2,6 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
-import 'package:in_app_update/in_app_update.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -11,6 +10,7 @@ import 'models.dart';
 import 'theme_helper.dart';
 import 'neu_theme.dart';
 import 'notes_provider.dart';
+import 'update_state.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Connectivity helper
@@ -55,7 +55,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final info = await PackageInfo.fromPlatform();
     if (!mounted) return;
     setState(() {
-      _versionString = '${info.version}.${info.buildNumber}';
+      _versionString = '${info.version}+${info.buildNumber}';
     });
   }
 
@@ -507,133 +507,74 @@ class _SettingsScreenState extends State<SettingsScreen> {
 // Update Checker — Android only, hidden on web
 // ─────────────────────────────────────────────────────────────────────────────
 
-enum _UpdateState { idle, checking, available, upToDate, downloading, error }
-
-class _UpdateChecker extends StatefulWidget {
+class _UpdateChecker extends StatelessWidget {
   final bool isDark;
   final Color accent;
   const _UpdateChecker({required this.isDark, required this.accent});
 
   @override
-  State<_UpdateChecker> createState() => _UpdateCheckerState();
-}
-
-class _UpdateCheckerState extends State<_UpdateChecker> {
-  _UpdateState _state = _UpdateState.idle;
-  String? _errorMessage;
-  AppUpdateInfo? _updateInfo;
-
-  Future<void> _checkForUpdate() async {
-    setState(() {
-      _state = _UpdateState.checking;
-      _errorMessage = null;
-    });
-
-    try {
-      final info = await InAppUpdate.checkForUpdate();
-      if (!mounted) return;
-
-      if (info.updateAvailability == UpdateAvailability.updateAvailable) {
-        setState(() {
-          _state = _UpdateState.available;
-          _updateInfo = info;
-        });
-      } else {
-        setState(() => _state = _UpdateState.upToDate);
-        // Reset back to idle after 3 seconds so the tile looks normal again
-        await Future.delayed(const Duration(seconds: 3));
-        if (mounted) setState(() => _state = _UpdateState.idle);
-      }
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _state = _UpdateState.error;
-        _errorMessage = e.toString().contains('does not have a newer version')
-            ? 'Already on the latest version.'
-            : 'Could not check for updates. Try again later.';
-      });
-      await Future.delayed(const Duration(seconds: 3));
-      if (mounted) setState(() => _state = _UpdateState.idle);
-    }
-  }
-
-  Future<void> _startUpdate() async {
-    if (_updateInfo == null) return;
-    setState(() => _state = _UpdateState.downloading);
-
-    try {
-      // Flexible update: downloads in background, user can keep using the app
-      await InAppUpdate.startFlexibleUpdate();
-      if (!mounted) return;
-
-      // Once download completes, prompt restart
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Update downloaded. Restart to apply.'),
-          behavior: SnackBarBehavior.floating,
-          action: SnackBarAction(
-            label: 'Restart',
-            onPressed: () => InAppUpdate.completeFlexibleUpdate(),
-          ),
-          duration: const Duration(seconds: 8),
-        ),
-      );
-      setState(() => _state = _UpdateState.idle);
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _state = _UpdateState.error;
-        _errorMessage = 'Update failed. Please try again.';
-      });
-      await Future.delayed(const Duration(seconds: 3));
-      if (mounted) setState(() => _state = _UpdateState.idle);
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final isDark = widget.isDark;
-    final accent = widget.accent;
+    return ListenableBuilder(
+      listenable: UpdateStateNotifier.instance,
+      builder: (context, _) {
+        final updater = UpdateStateNotifier.instance;
+        final state = updater.state;
 
-    // Determine tile appearance based on state
-    final isLoading = _state == _UpdateState.checking ||
-        _state == _UpdateState.downloading;
+        final isLoading = state == UpdateAvailableState.checking ||
+            state == UpdateAvailableState.downloading;
 
-    final label = switch (_state) {
-      _UpdateState.idle       => 'Check for Updates',
-      _UpdateState.checking   => 'Checking…',
-      _UpdateState.available  => 'Update Available',
-      _UpdateState.upToDate   => 'All Up-to-date',
-      _UpdateState.downloading => 'Downloading…',
-      _UpdateState.error      => _errorMessage ?? 'Error',
-    };
+        final label = switch (state) {
+          UpdateAvailableState.idle        => 'Check for Updates',
+          UpdateAvailableState.checking    => 'Checking…',
+          UpdateAvailableState.available   => 'Update Available',
+          UpdateAvailableState.upToDate    => 'All Up-to-date',
+          UpdateAvailableState.downloading => 'Downloading…',
+          UpdateAvailableState.error       =>
+          updater.errorMessage ?? 'Error',
+        };
 
-    final icon = switch (_state) {
-      _UpdateState.idle        => Icons.system_update_rounded,
-      _UpdateState.checking    => Icons.system_update_rounded,
-      _UpdateState.available   => Icons.new_releases_rounded,
-      _UpdateState.upToDate    => Icons.check_circle_outline_rounded,
-      _UpdateState.downloading => Icons.downloading_rounded,
-      _UpdateState.error       => Icons.error_outline_rounded,
-    };
+        final icon = switch (state) {
+          UpdateAvailableState.available   => Icons.new_releases_rounded,
+          UpdateAvailableState.upToDate    => Icons.check_circle_outline_rounded,
+          UpdateAvailableState.downloading => Icons.downloading_rounded,
+          UpdateAvailableState.error       => Icons.error_outline_rounded,
+          _                               => Icons.system_update_rounded,
+        };
 
-    final iconColor = switch (_state) {
-      _UpdateState.upToDate => Colors.green.shade500,
-      _UpdateState.error    => Colors.red.shade400,
-      _UpdateState.available => accent,
-      _               => accent,
-    };
+        final iconColor = switch (state) {
+          UpdateAvailableState.upToDate => Colors.green.shade500,
+          UpdateAvailableState.error    => Colors.red.shade400,
+          _                             => accent,
+        };
 
-    return Column(
-      children: [
-        NeuPressable(
+        return NeuPressable(
           isDark: isDark,
           radius: 0,
           onTap: isLoading
               ? () {}
-              : _state == _UpdateState.available
-              ? _startUpdate
-              : _checkForUpdate,
+              : state == UpdateAvailableState.available
+              ? () async {
+            final success =
+            await UpdateStateNotifier.instance.startUpdate();
+            if (success && context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                // ignore: prefer_const_constructors
+                SnackBar(
+                  content:
+                  const Text('Update downloaded. Restart to apply.'),
+                  behavior: SnackBarBehavior.floating,
+                  // ignore: prefer_const_constructors
+                  action: SnackBarAction(
+                    label: 'Restart',
+                    onPressed: UpdateStateNotifier.completeUpdate,
+                  ),
+                  duration: const Duration(seconds: 8),
+                ),
+              );
+            }
+          }
+              : () => UpdateStateNotifier.instance
+              .checkForUpdate(silent: false),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Row(
             children: [
@@ -655,15 +596,15 @@ class _UpdateCheckerState extends State<_UpdateChecker> {
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
                         fontSize: 14,
-                        color: _state == _UpdateState.error
+                        color: state == UpdateAvailableState.error
                             ? Colors.red.shade400
                             : Neu.textPrimary(isDark),
                       ),
                     ),
-                    if (_state == _UpdateState.available) ...[
+                    if (state == UpdateAvailableState.available) ...[
                       const SizedBox(height: 2),
                       Text(
-                        'Tap again to download and install',
+                        'Tap to download and install',
                         style: TextStyle(
                             fontSize: 12, color: Neu.textSecondary(isDark)),
                       ),
@@ -671,14 +612,14 @@ class _UpdateCheckerState extends State<_UpdateChecker> {
                   ],
                 ),
               ),
-              if (_state == _UpdateState.idle ||
-                  _state == _UpdateState.available)
+              if (state == UpdateAvailableState.idle ||
+                  state == UpdateAvailableState.available)
                 Icon(Icons.chevron_right_rounded,
                     size: 18, color: Neu.textTertiary(isDark)),
             ],
           ),
-        ),
-      ],
+        );
+      },
     );
   }
 }

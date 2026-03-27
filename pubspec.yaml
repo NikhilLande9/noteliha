@@ -2,7 +2,7 @@ name: noteliha
 description: Cross-platform minimal notes application with offline-first and manual sync
 publish_to: 'none'
 
-version: 1.0.0+6
+version: 1.0.0+7
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -29,6 +29,7 @@ dependencies:
   # ── User metadata (Firestore + device/app info) ──────────────────────────────
   cloud_firestore: ^5.0.0
   firebase_core: ^3.0.0
+  firebase_crashlytics: ^4.0.0
   device_info_plus: ^10.0.0
   package_info_plus: ^8.0.0
 

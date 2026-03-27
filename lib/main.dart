@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import 'package:flutter/foundation.dart';
 
 import 'firebase_options.dart';
 import 'models.dart';
@@ -15,6 +17,20 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  // ── Crashlytics setup ──────────────────────────────────────────────────────
+  // Only enable on non-web platforms — Crashlytics is not supported on web.
+  if (!kIsWeb) {
+    // Forward all uncaught Flutter framework errors to Crashlytics.
+    FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
+
+    // Forward all uncaught async/platform errors to Crashlytics.
+    PlatformDispatcher.instance.onError = (error, stack) {
+      FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+      return true;
+    };
+  }
+
   await Hive.initFlutter();
   Hive.registerAdapter(NoteAdapter());
 

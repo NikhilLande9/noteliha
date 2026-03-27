@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math' show pow, min;
 import 'dart:typed_data';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -149,8 +150,11 @@ class NotesProvider extends ChangeNotifier {
         _currentUser = await _googleSignIn.signInSilently();
       }
       notifyListeners();
-    } catch (e) {
+    } catch (e, st) {
       debugPrint('Init error: $e');
+      if (!kIsWeb) {
+        FirebaseCrashlytics.instance.recordError(e, st, reason: 'init failed');
+      }
       // Surface auth-configuration errors immediately so they're visible in settings.
       if (e.toString().contains('appClientId') ||
           e.toString().contains('clientId')) {
@@ -176,8 +180,8 @@ class NotesProvider extends ChangeNotifier {
         Future.delayed(const Duration(seconds: 15)).then((_) {
           // Only treat it as a timeout if the check is still running.
           if (_isCheckingDrive) {
-            throw TimeoutException(
-                'Drive check timed out after 15 seconds', const Duration(seconds: 15));
+            throw TimeoutException('Drive check timed out after 15 seconds',
+                const Duration(seconds: 15));
           }
         }),
       ]);
@@ -185,12 +189,14 @@ class NotesProvider extends ChangeNotifier {
       debugPrint('Drive check timeout: $e');
       _driveAccountState = DriveAccountState.unknown;
       _driveCheckFailed = true;
-      _setStatus('Drive check timed out. Tap "Retry" to try again.', isError: true);
+      _setStatus('Drive check timed out. Tap "Retry" to try again.',
+          isError: true);
     } catch (e) {
       debugPrint('Drive check error: $e');
       _driveAccountState = DriveAccountState.unknown;
       _driveCheckFailed = true;
-      _setStatus('Could not check Drive. Tap "Retry" to try again.', isError: true);
+      _setStatus('Could not check Drive. Tap "Retry" to try again.',
+          isError: true);
     } finally {
       _isCheckingDrive = false;
       notifyListeners();
@@ -204,7 +210,7 @@ class NotesProvider extends ChangeNotifier {
     final api = drive.DriveApi(client);
 
     final rootList = await _retry(
-          () => api.files.list(
+      () => api.files.list(
         q: "name = '$kDriveRootName' and mimeType = 'application/vnd.google-apps.folder' and trashed = false",
         $fields: 'files(id)',
         pageSize: 1,
@@ -222,7 +228,7 @@ class NotesProvider extends ChangeNotifier {
     final rootId = rootList.files!.first.id!;
 
     final manifestList = await _retry(
-          () => api.files.list(
+      () => api.files.list(
         q: "name = '$kManifestName' and '$rootId' in parents and trashed = false",
         $fields: 'files(id)',
         pageSize: 1,
@@ -352,12 +358,12 @@ class NotesProvider extends ChangeNotifier {
   // ── CRUD ────────────────────────────────────────────────────────────────────
 
   Future<void> addNote(
-      String title,
-      String content, {
-        String category = 'General',
-        NoteType noteType = NoteType.normal,
-        ColorTheme colorTheme = ColorTheme.default_,
-      }) async {
+    String title,
+    String content, {
+    String category = 'General',
+    NoteType noteType = NoteType.normal,
+    ColorTheme colorTheme = ColorTheme.default_,
+  }) async {
     if (_notesBox == null) return;
     if (title.isEmpty && content.isEmpty) return;
 
@@ -526,8 +532,12 @@ class NotesProvider extends ChangeNotifier {
     try {
       _currentUser = await _googleSignIn.signIn();
       notifyListeners();
-    } catch (e) {
+    } catch (e, st) {
       _setStatus(_friendlyAuthError(e), isError: true);
+      if (!kIsWeb) {
+        FirebaseCrashlytics.instance
+            .recordError(e, st, reason: 'sign-in failed', fatal: false);
+      }
     }
   }
 
@@ -594,8 +604,8 @@ class NotesProvider extends ChangeNotifier {
     _syncStatus = msg == null
         ? SyncStatus.idle
         : (isError
-        ? SyncStatus.error
-        : (isSyncing ? SyncStatus.syncing : SyncStatus.idle));
+            ? SyncStatus.error
+            : (isSyncing ? SyncStatus.syncing : SyncStatus.idle));
     notifyListeners();
 
     if (msg != null && !isSyncing && !persistent) {
@@ -636,23 +646,24 @@ class NotesProvider extends ChangeNotifier {
           debugPrint('[Auth] Got authenticated client on attempt $attempt');
           return client;
         }
-        debugPrint('[Auth] authenticatedClient() returned null on attempt $attempt');
+        debugPrint(
+            '[Auth] authenticatedClient() returned null on attempt $attempt');
       } catch (e) {
-        debugPrint('[Auth] authenticatedClient() threw on attempt $attempt: $e');
+        debugPrint(
+            '[Auth] authenticatedClient() threw on attempt $attempt: $e');
       }
 
       if (attempt < _kAuthMaxRetries) {
-        debugPrint(
-            '[Auth] Retrying in ${_kAuthRetryDelay.inSeconds}s '
-                '(attempt $attempt/$_kAuthMaxRetries)…');
+        debugPrint('[Auth] Retrying in ${_kAuthRetryDelay.inSeconds}s '
+            '(attempt $attempt/$_kAuthMaxRetries)…');
         await Future.delayed(_kAuthRetryDelay);
       }
     }
 
     throw Exception(
         'Authentication failed: could not obtain an authenticated client '
-            'after $_kAuthMaxRetries attempts. '
-            'Please sign out and sign in again.');
+        'after $_kAuthMaxRetries attempts. '
+        'Please sign out and sign in again.');
   }
 
   // ── Retry logic ─────────────────────────────────────────────────────────────
@@ -707,7 +718,7 @@ class NotesProvider extends ChangeNotifier {
 
   Future<void> _ensureFolders(drive.DriveApi api) async {
     _syncState.rootFolderId ??=
-    await _findOrCreateFolder(api, kDriveRootName, parentId: null);
+        await _findOrCreateFolder(api, kDriveRootName, parentId: null);
     _syncState.notesFolderId ??= await _findOrCreateFolder(api, kDriveNotesDir,
         parentId: _syncState.rootFolderId!);
     _syncState.imagesFolderId ??= await _findOrCreateFolder(
@@ -720,7 +731,7 @@ class NotesProvider extends ChangeNotifier {
       {required String? parentId}) async {
     final parentClause = parentId != null ? " and '$parentId' in parents" : '';
     final list = await _retry(
-          () => api.files.list(
+      () => api.files.list(
         q: "name = '$name' and mimeType = 'application/vnd.google-apps.folder' and trashed = false$parentClause",
         $fields: 'files(id)',
         pageSize: 1,
@@ -734,7 +745,7 @@ class NotesProvider extends ChangeNotifier {
       ..mimeType = 'application/vnd.google-apps.folder'
       ..parents = parentId != null ? [parentId] : null;
     final created =
-    await _retry(() => api.files.create(meta), name: 'createFolder:$name');
+        await _retry(() => api.files.create(meta), name: 'createFolder:$name');
     return created.id!;
   }
 
@@ -743,7 +754,7 @@ class NotesProvider extends ChangeNotifier {
   Future<DriveManifest> _fetchManifest(drive.DriveApi api) async {
     if (_syncState.manifestFileId == null) {
       final list = await _retry(
-            () => api.files.list(
+        () => api.files.list(
           q: "name = '$kManifestName' and '${_syncState.rootFolderId}' in parents and trashed = false",
           $fields: 'files(id)',
           pageSize: 1,
@@ -759,7 +770,7 @@ class NotesProvider extends ChangeNotifier {
 
     try {
       final response = await _retry(
-            () => api.files.get(_syncState.manifestFileId!,
+        () => api.files.get(_syncState.manifestFileId!,
             downloadOptions: drive.DownloadOptions.fullMedia),
         name: 'fetchManifest',
       );
@@ -785,7 +796,7 @@ class NotesProvider extends ChangeNotifier {
       if (!referencedImages.contains(entry.key) && entry.value.existsOnDrive) {
         try {
           await _retry(
-                () => api.files.delete(entry.value.driveFileId!),
+            () => api.files.delete(entry.value.driveFileId!),
             name: 'deleteOrphanedImage:${entry.key}',
           );
           _syncState.images.remove(entry.key);
@@ -823,7 +834,7 @@ class NotesProvider extends ChangeNotifier {
 
     if (_syncState.manifestFileId != null) {
       await _retry(
-            () => api.files.update(drive.File(), _syncState.manifestFileId!,
+        () => api.files.update(drive.File(), _syncState.manifestFileId!,
             uploadMedia: media),
         name: 'updateManifest',
       );
@@ -832,7 +843,7 @@ class NotesProvider extends ChangeNotifier {
         ..name = kManifestName
         ..parents = [_syncState.rootFolderId!];
       final created = await _retry(
-              () => api.files.create(file, uploadMedia: media),
+          () => api.files.create(file, uploadMedia: media),
           name: 'createManifest');
       _syncState.manifestFileId = created.id;
       _persistSyncState();
@@ -894,9 +905,13 @@ class NotesProvider extends ChangeNotifier {
 
       _setStatus('Upload complete ✓');
       notifyListeners();
-    } catch (e) {
+    } catch (e, st) {
       _setStatus('Upload failed: $e', isError: true);
       debugPrint('Upload error: $e');
+      if (!kIsWeb) {
+        FirebaseCrashlytics.instance
+            .recordError(e, st, reason: 'Drive upload failed');
+      }
     } finally {
       if (_syncStatus == SyncStatus.syncing) {
         _syncStatus = SyncStatus.idle;
@@ -924,7 +939,7 @@ class NotesProvider extends ChangeNotifier {
     String? fileId = imgSync?.driveFileId;
     if (fileId != null) {
       await _retry(
-            () => api.files.update(drive.File(), fileId!, uploadMedia: media),
+        () => api.files.update(drive.File(), fileId!, uploadMedia: media),
         name: 'updateImage:$imageId',
       );
     } else {
@@ -932,7 +947,7 @@ class NotesProvider extends ChangeNotifier {
         ..name = '$imageId.bin'
         ..parents = [_syncState.imagesFolderId!];
       final created = await _retry(
-              () => api.files.create(file, uploadMedia: media),
+          () => api.files.create(file, uploadMedia: media),
           name: 'createImage:$imageId');
       fileId = created.id;
     }
@@ -956,7 +971,7 @@ class NotesProvider extends ChangeNotifier {
 
     if (fileId != null) {
       await _retry(
-            () => api.files.update(drive.File(), fileId!, uploadMedia: media),
+        () => api.files.update(drive.File(), fileId!, uploadMedia: media),
         name: 'updateNote:${note.id}',
       );
     } else if (!note.deleted) {
@@ -964,7 +979,7 @@ class NotesProvider extends ChangeNotifier {
         ..name = '${note.id}.json'
         ..parents = [_syncState.notesFolderId!];
       final created = await _retry(
-              () => api.files.create(file, uploadMedia: media),
+          () => api.files.create(file, uploadMedia: media),
           name: 'createNote:${note.id}');
       fileId = created.id;
     }
@@ -985,7 +1000,7 @@ class NotesProvider extends ChangeNotifier {
 
     for (int i = 0; i < imageIds.length; i += maxConcurrent) {
       final batch =
-      imageIds.sublist(i, min(i + maxConcurrent, imageIds.length));
+          imageIds.sublist(i, min(i + maxConcurrent, imageIds.length));
       await Future.wait(
         batch.map((imgId) async {
           final imgSync = _syncState.images[imgId];
@@ -1007,7 +1022,7 @@ class NotesProvider extends ChangeNotifier {
           String? fileId = imgSync?.driveFileId;
           if (fileId != null) {
             await _retry(
-                  () => api.files.update(drive.File(), fileId!, uploadMedia: media),
+              () => api.files.update(drive.File(), fileId!, uploadMedia: media),
               name: 'updateImage:$imgId',
             );
           } else {
@@ -1015,7 +1030,7 @@ class NotesProvider extends ChangeNotifier {
               ..name = '$imgId.bin'
               ..parents = [_syncState.imagesFolderId!];
             final created = await _retry(
-                    () => api.files.create(file, uploadMedia: media),
+                () => api.files.create(file, uploadMedia: media),
                 name: 'createImage:$imgId');
             fileId = created.id;
           }
@@ -1070,9 +1085,13 @@ class NotesProvider extends ChangeNotifier {
       _persistSyncState();
       _setStatus('Download complete ✓');
       notifyListeners();
-    } catch (e) {
+    } catch (e, st) {
       _setStatus('Download failed: $e', isError: true);
       debugPrint('Download error: $e');
+      if (!kIsWeb) {
+        FirebaseCrashlytics.instance
+            .recordError(e, st, reason: 'Drive download failed');
+      }
     } finally {
       if (_syncStatus == SyncStatus.syncing) {
         _syncStatus = SyncStatus.idle;
@@ -1110,7 +1129,7 @@ class NotesProvider extends ChangeNotifier {
     String? fileId = _syncState.notes[noteId]?.driveFileId;
     if (fileId == null) {
       final list = await _retry(
-            () => api.files.list(
+        () => api.files.list(
           q: "name = '$noteId.json' and '${_syncState.notesFolderId}' in parents and trashed = false",
           $fields: 'files(id)',
           pageSize: 1,
@@ -1125,7 +1144,7 @@ class NotesProvider extends ChangeNotifier {
     }
 
     final response = await _retry(
-          () => api.files
+      () => api.files
           .get(fileId!, downloadOptions: drive.DownloadOptions.fullMedia),
       name: 'downloadNote:$noteId',
     );
@@ -1133,7 +1152,7 @@ class NotesProvider extends ChangeNotifier {
 
     final bytes = await response.stream.expand((c) => c).toList();
     final remoteNote =
-    Note.fromJson(jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>);
+        Note.fromJson(jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>);
 
     final localNote = _notesBox!.get(noteId) as Note?;
     final ns = _syncState.notes[noteId];
@@ -1151,7 +1170,7 @@ class NotesProvider extends ChangeNotifier {
         driveFileId: fileId,
         remoteVersion: remoteNote.updatedAt,
         conflict:
-        SyncConflict(remoteVersion: remoteNote, detectedAt: DateTime.now()),
+            SyncConflict(remoteVersion: remoteNote, detectedAt: DateTime.now()),
       );
       _persistSyncState();
       return;
@@ -1211,7 +1230,7 @@ class NotesProvider extends ChangeNotifier {
 
       if (fileId == null) {
         final list = await _retry(
-              () => api.files.list(
+          () => api.files.list(
             q: "name = '$imageId.bin' and '${_syncState.imagesFolderId}' in parents and trashed = false",
             $fields: 'files(id)',
             pageSize: 1,
@@ -1227,7 +1246,7 @@ class NotesProvider extends ChangeNotifier {
 
       try {
         final response = await _retry(
-              () => api.files
+          () => api.files
               .get(fileId!, downloadOptions: drive.DownloadOptions.fullMedia),
           name: 'downloadImage:$imageId',
         );

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -7,6 +8,7 @@ import 'neu_theme.dart';
 import 'notes_provider.dart';
 import 'note_editor_screen.dart';
 import 'settings_screen.dart';
+import 'update_state.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Note Card — Neumorphic
@@ -398,6 +400,16 @@ class _NoteListScreenState extends State<NoteListScreen> {
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocus = FocusNode();
   Timer? _debounceTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    if (!kIsWeb) {
+      // Silently check for updates — result surfaces in Settings screen only
+      WidgetsBinding.instance.addPostFrameCallback((_) =>
+          UpdateStateNotifier.instance.checkForUpdate(silent: true));
+    }
+  }
 
   @override
   void dispose() {
@@ -1764,8 +1776,6 @@ class _NotePreviewContent extends StatelessWidget {
 
   // ── Normal note ─────────────────────────────────────────────────────────────
   Widget _previewNormal(Color textPrimary, Color textSub) {
-    // Decode stored content — handles JSON envelope (bold/italic) and
-    // legacy plain strings (no ranges) transparently.
     final decoded   = RichContentCodec.decode(note.content);
     final plainText = decoded.text;
     final ranges    = decoded.ranges;
@@ -1787,7 +1797,6 @@ class _NotePreviewContent extends StatelessWidget {
       }
     }
 
-    // List prefix chars (• / 1. etc.) are always bold, never italic.
     int lineOff = 0;
     for (final line in plainText.split('\n')) {
       final m = RegExp(r'^(• |\d+\. )').firstMatch(line);
@@ -1800,7 +1809,6 @@ class _NotePreviewContent extends StatelessWidget {
       lineOff += line.length + 1;
     }
 
-    // Build one RichText per line
     final lines   = plainText.split('\n');
     int   offset  = 0;
     final widgets = <Widget>[];
@@ -1856,7 +1864,6 @@ class _NotePreviewContent extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Progress summary
         Container(
           margin: const EdgeInsets.only(bottom: 14),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -1880,7 +1887,6 @@ class _NotePreviewContent extends StatelessWidget {
             ),
           ]),
         ),
-        // Items
         ...note.checklistItems.map((item) => Padding(
           padding: const EdgeInsets.only(bottom: 8),
           child: Row(
@@ -1931,7 +1937,6 @@ class _NotePreviewContent extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Number bubble
               Container(
                 width: 28,
                 height: 28,
@@ -2076,7 +2081,6 @@ class _NotePreviewContent extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Time chips
         if (r.prepTime.isNotEmpty || r.cookTime.isNotEmpty ||
             r.servings.isNotEmpty)
           Wrap(
@@ -2100,7 +2104,6 @@ class _NotePreviewContent extends StatelessWidget {
           ),
         const SizedBox(height: 16),
 
-        // Ingredients
         if (r.ingredientRows.any((row) => row.name.isNotEmpty)) ...[
           _PreviewSectionLabel(
               text: 'INGREDIENTS',
@@ -2129,7 +2132,6 @@ class _NotePreviewContent extends StatelessWidget {
           const SizedBox(height: 16),
         ],
 
-        // Instructions
         if (r.steps.any((s) => s.text.isNotEmpty)) ...[
           _PreviewSectionLabel(
               text: 'INSTRUCTIONS',

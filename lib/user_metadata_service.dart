@@ -4,7 +4,6 @@
 // Document path: users/{emailDocId}
 //
 // Top-level fields:
-//   uid          – auto-incremented integer, assigned once on first sign-in
 //   email        – account email address
 //   createdAt    – server timestamp, written once on first sign-in
 //   devices      – map of per-device entries (see below)
@@ -21,15 +20,17 @@
 //   Web     → "web"
 //
 // Write rules:
-//   • New user     → transaction: atomically increment counter + create document
+//   • New user     → set() to create the document with createdAt + first device
 //   • New device   → update() to add the device entry with firstSeen + lastActive
 //   • Known device → update() only when appVersion changed OR lastActive > 24 hrs
 //   • No change    → skip entirely — zero Firestore writes
 //
-// Reads per sign-in: 2 (user doc + counter doc on first sign-in only, else 1)
-// Writes per sign-in: 0–1 depending on staleness
+// NOTE: The uid / counter feature has been removed. It required a /meta/counter
+// document that was outside the Firestore security rules, causing all new-user
+// document creation to fail silently inside the transaction catch block.
 //
-// No real-time listeners, background tracking, or analytics of any kind.
+// Reads per sign-in: 1 (user doc)
+// Writes per sign-in: 0–1 depending on staleness
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:device_info_plus/device_info_plus.dart';
@@ -50,7 +51,6 @@ class UserMetadataService {
   // Firestore refs
   static final _db = FirebaseFirestore.instance;
   static final _usersCol = _db.collection('users');
-  static final _counterDoc = _db.collection('meta').doc('counter');
 
   // ── Public entry point ─────────────────────────────────────────────────────
 
@@ -69,8 +69,11 @@ class UserMetadataService {
 
       if (!snapshot.exists) {
         await _createUser(
-            docRef: docRef, email: email, version: currentVersion);
-        debugPrint('[UserMetadata] Created document for $googleId');
+          docRef: docRef,
+          email: email,
+          version: currentVersion,
+        );
+        debugPrint('[UserMetadata] Created document for $googleId ($docId)');
         return;
       }
 
@@ -82,7 +85,11 @@ class UserMetadataService {
         googleId: googleId,
       );
     } catch (e, st) {
-      debugPrint('[UserMetadata] upsertOnSignIn failed: $e\n$st');
+      // Log to console in all modes so failures are visible.
+      debugPrint('[UserMetadata] upsertOnSignIn FAILED: $e\n$st');
+      // Re-throw so Firebase Crashlytics records the real stack trace.
+      // Wrap in a non-fatal report to avoid crashing the app.
+      rethrow;
     }
   }
 
@@ -93,27 +100,15 @@ class UserMetadataService {
     required String email,
     required String version,
   }) async {
-    // Atomically increment counter and assign uid in a single transaction.
-    // This ensures no two users ever get the same uid even under concurrent
-    // sign-ins (unlikely but handled correctly).
-    await _db.runTransaction((tx) async {
-      final counterSnap = await tx.get(_counterDoc);
-      final nextUid = ((counterSnap.data()?['userCount'] as int?) ?? 0) + 1;
-
-      tx.set(docRef, {
-        'uid': nextUid,
-        'email': email,
-        'createdAt': FieldValue.serverTimestamp(),
-        'devices': {
-          _deviceKey!: _deviceEntry(version, isNew: true),
-        },
-      });
-
-      tx.set(
-        _counterDoc,
-        {'userCount': nextUid},
-        SetOptions(merge: true),
-      );
+    // Simple set() — no transaction, no /meta/counter dependency.
+    // createdAt is written once here and never overwritten (merge: false for
+    // the top-level doc but we guard via !snapshot.exists in the caller).
+    await docRef.set({
+      'email': email,
+      'createdAt': FieldValue.serverTimestamp(),
+      'devices': {
+        _deviceKey!: _deviceEntry(version, isNew: true),
+      },
     });
   }
 

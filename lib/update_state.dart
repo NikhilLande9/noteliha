@@ -8,7 +8,14 @@
 import 'package:flutter/foundation.dart';
 import 'package:in_app_update/in_app_update.dart';
 
-enum UpdateAvailableState { idle, checking, available, upToDate, downloading, error }
+enum UpdateAvailableState {
+  idle,
+  checking,
+  available,
+  upToDate,
+  downloading,
+  error
+}
 
 class UpdateStateNotifier extends ChangeNotifier {
   UpdateStateNotifier._();
@@ -28,7 +35,9 @@ class UpdateStateNotifier extends ChangeNotifier {
 
   Future<void> checkForUpdate({bool silent = false}) async {
     if (_state == UpdateAvailableState.checking ||
-        _state == UpdateAvailableState.downloading) return;
+        _state == UpdateAvailableState.downloading) {
+      return;
+    }
 
     _state = UpdateAvailableState.checking;
     _errorMessage = null;

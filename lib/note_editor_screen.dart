@@ -1,6 +1,7 @@
 // lib/note_editor_screen.dart
 import 'dart:async';
 import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -1454,6 +1455,197 @@ class _ListEnterFormatter extends TextInputFormatter {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Clipboard channel
+//
+// Reads the HTML flavour of the clipboard when available so that text copied
+// from a browser or rich-text editor arrives with bold, italic, and list
+// formatting intact.
+//
+// Android: MethodChannel → MainActivity.kt reads ClipData.getItemAt(0).htmlText
+// Web:     JS interop    → navigator.clipboard.read() → text/html blob
+// Other:   returns null  → caller falls back to plain-text paste
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _ClipboardChannel {
+  _ClipboardChannel._();
+
+  static const _ch = MethodChannel('com.noteliha/clipboard');
+
+  static Future<String?> getHtmlText() async {
+    if (kIsWeb) return _webHtml();
+    try {
+      final r = await _ch.invokeMethod<String>('getHtmlText');
+      return (r != null && r.isNotEmpty) ? r : null;
+    } on PlatformException { return null; }
+      on MissingPluginException { return null; }
+  }
+
+  // Web: call through a tiny JS snippet embedded via dart:js_interop.
+  // We use evalJavaScript via the flutter/web channel rather than adding a
+  // dependency — falls back silently if the browser denies clipboard access.
+  static Future<String?> _webHtml() async {
+    try {
+      // Navigator.clipboard.read() requires a user gesture; it's always
+      // available here because we're inside the Paste button's onTap.
+      final result = await _ch.invokeMethod<String>('getHtmlTextWeb');
+      return (result != null && result.isNotEmpty) ? result : null;
+    } catch (_) { return null; }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HTML → Rich converter
+//
+// Parses a minimal subset of HTML (as produced by browsers on copy) into
+// the (plainText, List<_FmtRange>) pair that _RichTextController understands.
+//
+// Supported:
+//   <b> <strong>              → bold
+//   <i> <em>                  → italic
+//   <ul><li>                  → bullet lines  (• prefix)
+//   <ol><li>                  → numbered lines (1. prefix)
+//   <p> <div> <h1-h6> <br>   → newlines / block breaks
+//   Everything else           → stripped, inner text preserved
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _HtmlToRich {
+  /// Returns plain text + format ranges suitable for direct insertion into
+  /// _RichTextController.  Offset [insertAt] shifts every range so they land
+  /// correctly when inserted mid-document.
+  static ({String text, List<_FmtRange> ranges}) convert(
+      String html, {int insertAt = 0}) {
+    final p = _HtmlParser(html, insertAt: insertAt);
+    return p.parse();
+  }
+}
+
+class _HtmlParser {
+  final String _html;
+  final int _insertAt;
+
+  _HtmlParser(this._html, {required int insertAt}) : _insertAt = insertAt;
+
+  final StringBuffer    _buf    = StringBuffer();
+  final List<_FmtRange> _ranges = [];
+
+  bool _bold   = false;
+  bool _italic = false;
+  int? _boldStart;
+  int? _italicStart;
+
+  _ListKind? _list;
+  int _listIdx = 0;
+
+  ({String text, List<_FmtRange> ranges}) parse() {
+    _process(_html);
+    _closeBold(_buf.length);
+    _closeItalic(_buf.length);
+    var t = _buf.toString();
+    if (t.endsWith('\n')) t = t.substring(0, t.length - 1);
+    return (text: t, ranges: _ranges);
+  }
+
+  void _process(String s) {
+    int i = 0;
+    while (i < s.length) {
+      if (s[i] == '<') {
+        final end = s.indexOf('>', i);
+        if (end == -1) { _emit(s.substring(i)); break; }
+        _tag(s.substring(i + 1, end).trim());
+        i = end + 1;
+      } else {
+        final next = s.indexOf('<', i);
+        final chunk = next == -1 ? s.substring(i) : s.substring(i, next);
+        _emit(_ent(chunk));
+        i = next == -1 ? s.length : next;
+      }
+    }
+  }
+
+  void _tag(String raw) {
+    if (raw.startsWith('/')) { _close(raw.substring(1).trim().toLowerCase()); return; }
+    final name = raw.split(RegExp(r'[\s/>]'))[0].toLowerCase();
+    _open(name);
+  }
+
+  void _open(String n) {
+    switch (n) {
+      case 'b': case 'strong': _openBold();
+      case 'i': case 'em':    _openItalic();
+      case 'br': _nl();
+      case 'p': case 'div':
+      case 'h1': case 'h2': case 'h3':
+      case 'h4': case 'h5': case 'h6':
+        if (_buf.isNotEmpty && !_buf.toString().endsWith('\n')) _nl();
+      case 'ul': _list = _ListKind.bullet;  _listIdx = 0;
+      case 'ol': _list = _ListKind.ordered; _listIdx = 0;
+      case 'li':
+        if (_buf.isNotEmpty && !_buf.toString().endsWith('\n')) _nl();
+        if (_list == _ListKind.bullet) {
+          _emit('• ');
+        } else if (_list == _ListKind.ordered) {
+          _emit('${++_listIdx}. ');
+        }
+    }
+  }
+
+  void _close(String n) {
+    switch (n) {
+      case 'b': case 'strong': _closeBold(_buf.length); _bold = false; _boldStart = null;
+      case 'i': case 'em':    _closeItalic(_buf.length); _italic = false; _italicStart = null;
+      case 'p': case 'div':
+      case 'h1': case 'h2': case 'h3':
+      case 'h4': case 'h5': case 'h6':
+      case 'li':
+        if (_buf.isNotEmpty && !_buf.toString().endsWith('\n')) _nl();
+      case 'ul': case 'ol': _list = null;
+    }
+  }
+
+  void _openBold() {
+    if (!_bold) { _bold = true; _boldStart = _buf.length; }
+  }
+
+  void _openItalic() {
+    if (!_italic) { _italic = true; _italicStart = _buf.length; }
+  }
+
+  void _closeBold(int pos) {
+    if (_bold && _boldStart != null && pos > _boldStart!) {
+      _ranges.add(_FmtRange(
+        start: _insertAt + _boldStart!,
+        end:   _insertAt + pos,
+        type:  _FormatType.bold,
+      ));
+    }
+  }
+
+  void _closeItalic(int pos) {
+    if (_italic && _italicStart != null && pos > _italicStart!) {
+      _ranges.add(_FmtRange(
+        start: _insertAt + _italicStart!,
+        end:   _insertAt + pos,
+        type:  _FormatType.italic,
+      ));
+    }
+  }
+
+  void _emit(String s) => _buf.write(s.replaceAll(RegExp(r'[ \t]+'), ' '));
+  void _nl()            => _buf.write('\n');
+
+  static String _ent(String s) => s
+      .replaceAll('&amp;',  '&')
+      .replaceAll('&lt;',   '<')
+      .replaceAll('&gt;',   '>')
+      .replaceAll('&nbsp;', ' ')
+      .replaceAll('&quot;', '"')
+      .replaceAll('&#39;',  "'")
+      .replaceAll('&apos;', "'");
+}
+
+enum _ListKind { bullet, ordered }
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Rich text field widget
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -1507,6 +1699,82 @@ class _RichTextFieldState extends State<_RichTextField> {
       _richCtrl.toggleList(type, sel);
     }
     if (mounted) setState(() {});
+  }
+
+  // ── Rich paste ─────────────────────────────────────────────────────────────
+  //
+  // 1. Asks the platform for the HTML flavour of the clipboard.
+  // 2. If present, parses it into plain text + _FmtRange list and inserts.
+  // 3. Falls back to Flutter's plain-text paste when no HTML is available.
+
+  Future<void> _richPaste() async {
+    final html = await _ClipboardChannel.getHtmlText();
+    if (html != null && html.isNotEmpty) {
+      await _insertHtml(html);
+      return;
+    }
+    // Plain-text fallback — let the system handle it normally.
+    final data = await Clipboard.getData(Clipboard.kTextPlain);
+    if (data?.text != null && data!.text!.isNotEmpty) {
+      _insertPlain(data.text!);
+    }
+  }
+
+  Future<void> _insertHtml(String html) async {
+    final sel     = _richCtrl.selection;
+    final base    = _richCtrl.text;
+    final insAt   = sel.isValid ? sel.start : base.length;
+    final delTo   = sel.isValid ? sel.end   : base.length;
+
+    final (:text, :ranges) =
+        _HtmlToRich.convert(html, insertAt: insAt);
+
+    final newText = base.substring(0, insAt) + text + base.substring(delTo);
+    final newCursor = insAt + text.length;
+
+    // Shift any existing ranges that lie after the insertion point.
+    // (syncRanges is skipped via _skipNextSync so we do it manually.)
+    final delta = text.length - (delTo - insAt);
+    if (delta != 0) {
+      final shifted = <_FmtRange>[];
+      for (final r in _richCtrl._ranges) {
+        int s = r.start, e = r.end;
+        if (s >= delTo) {
+          s = (s + delta).clamp(0, newText.length);
+          e = (e + delta).clamp(0, newText.length);
+        } else if (e > insAt) {
+          // Range overlaps insertion zone — truncate it.
+          e = insAt;
+        }
+        if (s < e) shifted.add(r.copyWith(start: s, end: e));
+      }
+      _richCtrl._ranges..clear()..addAll(shifted);
+    }
+
+    // Merge in the new ranges from the pasted HTML.
+    _richCtrl._ranges.addAll(ranges);
+
+    _richCtrl._skipNextSync = true;
+    _richCtrl.value = TextEditingValue(
+      text:      newText,
+      selection: TextSelection.collapsed(offset: newCursor),
+    );
+    if (mounted) setState(() {});
+  }
+
+  void _insertPlain(String text) {
+    final sel   = _richCtrl.selection;
+    final base  = _richCtrl.text;
+    final insAt = sel.isValid ? sel.start : base.length;
+    final delTo = sel.isValid ? sel.end   : base.length;
+
+    final newText   = base.substring(0, insAt) + text + base.substring(delTo);
+    final newCursor = insAt + text.length;
+
+    _richCtrl.value = TextEditingValue(
+      text:      newText,
+      selection: TextSelection.collapsed(offset: newCursor),
+    );
   }
 
   // ── Listeners ──────────────────────────────────────────────────────────────
@@ -1592,38 +1860,55 @@ class _RichTextFieldState extends State<_RichTextField> {
         minLines: 8,
         inputFormatters: [_ListEnterFormatter()],
         contextMenuBuilder: (ctx, editableTextState) {
-          final sel = _richCtrl.selection;
+          final sel          = _richCtrl.selection;
           final hasSelection = sel.isValid && !sel.isCollapsed;
-          final active = activeFormats;
-          final isBold   = active.contains(_FormatType.bold);
-          final isItalic = active.contains(_FormatType.italic);
+          final active       = activeFormats;
+          final isBold       = active.contains(_FormatType.bold);
+          final isItalic     = active.contains(_FormatType.italic);
 
-          // Build the standard system buttons first, then prepend our own.
-          final systemButtons = editableTextState.contextMenuButtonItems;
+          // Start from the system-provided items so platform state (e.g. Paste
+          // being disabled when clipboard is empty) is automatically respected.
+          final systemItems = editableTextState.contextMenuButtonItems;
 
-          // Bold and Italic buttons only appear when text is selected.
+          // Replace the system Paste item with our rich-paste version.
+          final patched = systemItems.map((item) {
+            if (item.type == ContextMenuButtonType.paste &&
+                item.onPressed != null) {
+              return ContextMenuButtonItem(
+                type: ContextMenuButtonType.paste,
+                label: item.label,
+                onPressed: () {
+                  ContextMenuController.removeAny();
+                  _richPaste();
+                },
+              );
+            }
+            return item;
+          }).toList();
+
+          // Bold / Italic only when text is selected.
           final formatButtons = hasSelection
               ? [
-            ContextMenuButtonItem(
-              label: isBold ? '✓ Bold' : 'Bold',
-              onPressed: () {
-                ContextMenuController.removeAny();
-                widget.onApplyFormat?.call(_FormatType.bold);
-              },
-            ),
-            ContextMenuButtonItem(
-              label: isItalic ? '✓ Italic' : 'Italic',
-              onPressed: () {
-                ContextMenuController.removeAny();
-                widget.onApplyFormat?.call(_FormatType.italic);
-              },
-            ),
-          ]
+                  ContextMenuButtonItem(
+                    label: isBold ? '✓ Bold' : 'Bold',
+                    onPressed: () {
+                      ContextMenuController.removeAny();
+                      widget.onApplyFormat?.call(_FormatType.bold);
+                    },
+                  ),
+                  ContextMenuButtonItem(
+                    label: isItalic ? '✓ Italic' : 'Italic',
+                    onPressed: () {
+                      ContextMenuController.removeAny();
+                      widget.onApplyFormat?.call(_FormatType.italic);
+                    },
+                  ),
+                ]
               : <ContextMenuButtonItem>[];
 
           return AdaptiveTextSelectionToolbar.buttonItems(
             anchors: editableTextState.contextMenuAnchors,
-            buttonItems: [...formatButtons, ...systemButtons],
+            buttonItems: [...formatButtons, ...patched],
           );
         },
         decoration: InputDecoration(

@@ -871,10 +871,10 @@
     } else {
       // Fallback — show everything immediately
       textEl.innerHTML = buildTextHTML();
-      segments.forEach(function(s) {
-        var el = document.getElementById(s.id);
-        if (el) el.classList.add('footer-seg-visible');
-      });
+      for (var ci = 0; ci < totalChars; ci++) {
+        var el = document.getElementById('fc' + ci);
+        if (el) el.style.opacity = '1';
+      }
       if (pencil) pencil.style.display = 'none';
     }
   })();

@@ -123,10 +123,60 @@
   .summary-list li:last-child { border-bottom: none; }
   .summary-list li::before { content: '✓'; font-family: 'DM Mono', monospace; font-size: 11px; color: var(--teal-mid); flex-shrink: 0; margin-top: 2px; }
 
-  footer { padding-top: 28px; border-top: 1px solid var(--rule); display: flex; align-items: center; justify-content: space-between; }
+  .footer-top { padding: 20px 0; display: flex; align-items: center; justify-content: space-between; }
   .footer-left { font-size: 12px; color: var(--ink-muted); }
   .footer-left strong { color: var(--ink-soft); font-weight: 500; }
   .footer-right { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--ink-muted); letter-spacing: 0.1em; }
+
+  .footer-bottom {
+    border-top: 1px solid var(--rule);
+    background: var(--paper-warm);
+    height: 72px;
+    overflow: hidden;
+    position: relative;
+  }
+  .footer-bottom-inner {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  #pencil-rider {
+    position: absolute;
+    left: 0; top: 0;
+    z-index: 3;
+    pointer-events: none;
+    display: inline-block;
+    transform: rotate(-15deg);
+    transform-origin: center center;
+  }
+  #footer-text-layer {
+    position: relative;
+    z-index: 2;
+    font-size: 12px;
+    font-family: 'DM Sans', sans-serif;
+    color: var(--ink-soft);
+    letter-spacing: 0.01em;
+    display: flex;
+    align-items: center;
+    white-space: nowrap;
+  }
+  .fchar { opacity: 0; transition: opacity 0.15s ease; display: inline; }
+  #footer-text-content strong { color: var(--ink); font-weight: 500; }
+  .sr-footer {
+    position: absolute; width: 1px; height: 1px;
+    padding: 0; margin: -1px; overflow: hidden;
+    clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+  }
+  .navkon-link {
+    font-weight: 600;
+    color: var(--teal);
+    text-decoration: none;
+    border-bottom: 1px solid rgba(42,122,111,0.3);
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .navkon-link:hover { color: var(--teal-mid); border-color: var(--teal-mid); }
 
   @keyframes slideIn { from { width: 0; opacity: 0; } to { width: 40px; opacity: 1; } }
   @keyframes fadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
@@ -243,7 +293,6 @@
     .comp-table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
 
     /* Footer */
-    footer { flex-direction: column; align-items: flex-start; gap: 6px; padding-top: 20px; }
     .footer-right { font-size: 9px; }
   }
 
@@ -551,13 +600,30 @@ The app focuses on simplicity, speed, and giving you full control over your data
     </ul>
   </div>
 
-  <footer>
-    <div class="footer-left"><strong>noteliha</strong> · Navkon Labs</div>
-    <div class="footer-right">APP STORE LISTING v1.0</div>
+  <footer id="site-footer">
+    <div class="footer-top">
+      <div class="footer-left"><strong>noteliha</strong> · Navkon Labs</div>
+      <div class="footer-right">APP STORE LISTING v1.0</div>
+    </div>
+    <div class="footer-bottom" id="footer-bottom">
+      <span class="sr-footer">© noteliha · All Rights Reserved · Crafted by Navkon Labs</span>
+      <div class="footer-bottom-inner">
+        <span id="pencil-rider">
+          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2a7a6f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" fill="#e0f0ed" stroke="#2a7a6f" stroke-width="1.8"/>
+            <line x1="15.5" y1="4.5" x2="19.5" y2="8.5" stroke="#2a7a6f" stroke-width="1.4"/>
+            <line x1="3.5" y1="16.5" x2="7" y2="20" stroke="#2a7a6f" stroke-width="1.4"/>
+          </svg>
+        </span>
+        <div id="footer-text-layer">
+          <span id="footer-text-content"></span>
+        </div>
+      </div>
+    </div>
   </footer>
 <script>
 (function() {
-  var content = "# Apple App Store Listing \u2013 noteliha\n\n**Application Version:** 1.0.0\n**Developer:** Nikhil Lande\n**Organization:** Navkon Labs\n**Location:** Kharghar, Maharashtra, India\n**Last Updated:** March 2026\n\n---\n\n## App Name\n\nnoteliha\n\n---\n\n## Subtitle (30 characters)\n\nFast notes with secure backup\n\n---\n\n## Promotional Text (170 characters)\n\nCreate notes instantly, organize them your way, and optionally back them up to Google Drive. No ads, no tracking, and designed with privacy in mind.\n\n---\n\n## App Description\n\nnoteliha is a lightweight and privacy-focused note-taking app designed to help you quickly create, organize, and manage notes.\n\nNotes are stored locally on your device and can optionally be backed up to your personal Google Drive account when you choose to.\n\nThe app focuses on simplicity, speed, and giving you full control over your data.\n\n---\n\n## Key Features\n\n### Multiple Note Types\n\nCreate notes in different formats:\n\n\u2022 Regular notes\n\u2022 Checklists\n\u2022 Recipes\n\u2022 Meal plans\n\u2022 Travel itineraries\n\n---\n\n### Fast Search\n\nQuickly find notes by searching title, content, or category. Results appear instantly while typing.\n\n---\n\n### Smart Organization\n\n\u2022 Pin important notes\n\u2022 Organize with categories (General, Work, Personal, Ideas)\n\u2022 Attach images to notes\n\u2022 Soft delete with recycle bin\n\u2022 Restore deleted notes anytime\n\n---\n\n### Custom Themes\n\nChoose from six built-in color themes:\n\n\u2022 Default\n\u2022 Sunset\n\u2022 Orange\n\u2022 Forest\n\u2022 Lavender\n\u2022 Rose\n\n---\n\n### Optional Google Drive Backup\n\nBack up notes to your personal Google Drive account.\n\n\u2022 Backup enabled only when you sign in and trigger it manually\n\u2022 Files stored in a dedicated `.liha_notes_app` folder in your Drive\n\u2022 Only files created by the app are accessible\n\u2022 Manual backup and restore \u2014 you stay in control\n\n---\n\n### Offline First\n\nnoteliha works without internet access.\n\n\u2022 Create and edit notes offline\n\u2022 Sync to Drive manually when you choose to\n\u2022 Minimal battery and background usage\n\n---\n\n## Privacy\n\nThe application is designed to minimize data collection.\n\n\u2022 Notes stored locally on your device\n\u2022 Optional Google Drive backup under your full control\n\u2022 No advertising\n\u2022 No behavioral tracking\n\u2022 No analytics SDKs\n\nFor full details see the Privacy Policy included with the app.\n\n---\n\n## Permissions Explanation\n\n**Google Sign-In**\nUsed to enable optional Google Drive backup.\n\n**Google Drive Access**\nAllows the app to create and manage its own backup files only.\n\n**Photos**\nRequired only when attaching images to notes.\n\n**Local Storage**\nUsed to store notes and attachments on the device.\n\n---\n\n## Pricing\n\nnoteliha is free to download.\n\n\u2022 No advertisements\n\u2022 No in-app purchases\n\u2022 No subscription features\n\n---\n\n## Support\n\nEmail: navkon9@gmail.com\nDeveloper: Nikhil Lande, Navkon Labs, Kharghar, Maharashtra, India\n\n---\n\n## Keywords (\u2264100 characters)\n\nnotes, checklist, productivity, offline notes, private notes, note organizer\n\n---\n\n## Category\n\nPrimary: Productivity\n\n---\n\n## Age Rating\n\n4+\n\nNo objectionable content.\n\n---\n\n## Screenshots\n\n### Screenshot 1 \u2013 Notes Overview\nTitle: Browse Your Notes\nDescription: View all notes in one place. Search instantly and pin important notes to the top.\n\n### Screenshot 2 \u2013 Create Notes\nTitle: Create Notes Quickly\nDescription: Choose between multiple note types including regular notes, checklists, recipes, meal plans, and itineraries.\n\n### Screenshot 3 \u2013 Checklists\nTitle: Track Tasks\nDescription: Create checklists and mark items as completed.\n\n### Screenshot 4 \u2013 Search\nTitle: Instant Search\nDescription: Find notes quickly by searching titles, text, or categories.\n\n### Screenshot 5 \u2013 Themes\nTitle: Personalize Appearance\nDescription: Choose from six color themes to customize the app.\n\n### Screenshot 6 \u2013 Backup\nTitle: Optional Backup\nDescription: Manually back up and restore notes to your personal Google Drive account.\n\n---\n\n## Version Information\n\n### Version 1.0.0\n\nInitial release of noteliha including:\n\n\u2022 Multiple note formats\n\u2022 Image attachments\n\u2022 Recycle bin support\n\u2022 Fast search\n\u2022 Optional manual Google Drive backup and restore\n\u2022 Offline functionality\n\u2022 Six color themes\n\n---\n\n## Technical Requirements\n\nMinimum iOS Version: iOS 14.0\nDevice Compatibility: iPhone and iPad\n\n---\n\n## Notes for App Store Review\n\nTo test the app:\n\n1. Create a note with title and content.\n2. Edit the note.\n3. Use search to find the note.\n4. Delete the note and restore it from the recycle bin.\n5. Sign in with Google, tap Upload Backup, then verify the `.liha_notes_app` folder is created in Google Drive.\n6. Tap Restore from Drive and verify notes are restored correctly.\n\n---\n\n## Version History\n\nVersion 1.0.0 \u2013 March 2026 \u2013 Initial App Store release.\n";
+  var content = "# Apple App Store Listing \u2013 noteliha\n\n**Application Version:** 1.0.0\n**Developer:** Nikhil Lande\n**Organization:** Navkon Labs\n**Location:** Kharghar, Maharashtra, India\n**Last Updated:** March 2026\n\n---\n\n## App Name\n\nnoteliha\n\n---\n\n## Subtitle (30 characters)\n\nFast notes with secure backup\n\n---\n\n## Promotional Text (170 characters)\n\nCreate notes instantly, organize them your way, and optionally back them up to Google Drive. No ads, no tracking, and designed with privacy in mind.\n\n---\n\n## App Description\n\nnoteliha is a lightweight and privacy-focused note-taking app designed to help you quickly create, organize, and manage notes.\n\nNotes are stored locally on your device and can optionally be backed up to your personal Google Drive account when you choose to.\n\nThe app focuses on simplicity, speed, and giving you full control over your data.\n\n---\n\n## Key Features\n\n### Multiple Note Types\n\nCreate notes in different formats:\n\n\u2022 Regular notes\n\u2022 Checklists\n\u2022 Recipes\n\u2022 Meal plans\n\u2022 Travel itineraries\n\n---\n\n### Fast Search\n\nQuickly find notes by searching title, content, or category. Results appear instantly while typing.\n\n---\n\n### Smart Organization\n\n\u2022 Pin important notes\n\u2022 Organize with categories (General, Work, Personal, Ideas)\n\u2022 Attach images to notes\n\u2022 Soft delete with recycle bin\n\u2022 Restore deleted notes anytime\n\n---\n\n### Custom Themes\n\nChoose from six built-in color themes:\n\n\u2022 Default\n\u2022 Sunset\n\u2022 Orange\n\u2022 Forest\n\u2022 Lavender\n\u2022 Rose\n\n---\n\n### Optional Google Drive Backup\n\nBack up notes to your personal Google Drive account.\n\n\u2022 Backup enabled only when you sign in and trigger it manually\n\u2022 Files stored in a dedicated `.liha_notes_app` folder in your Drive\n\u2022 Only files created by the app are accessible\n\u2022 Manual backup and restore \u2014 you stay in control\n\n---\n\n### Offline First\n\nnoteliha works without internet access.\n\n\u2022 Create and edit notes offline\n\u2022 Sync to Drive manually when you choose to\n\u2022 Minimal battery and background usage\n\n---\n\n## Privacy\n\nThe application is designed to minimize data collection.\n\n\u2022 Notes stored locally on your device\n\u2022 Optional Google Drive backup under your full control\n\u2022 No advertising\n\u2022 No behavioral tracking\n\u2022 No analytics SDKs\n\nFor full details see the Privacy Policy included with the app.\n\n---\n\n## Permissions Explanation\n\n**Google Sign-In**\nUsed to enable optional Google Drive backup.\n\n**Google Drive Access**\nAllows the app to create and manage its own backup files only.\n\n**Photos**\nRequired only when attaching images to notes.\n\n**Local Storage**\nUsed to store notes and attachments on the device.\n\n---\n\n## Pricing\n\nnoteliha is free to download.\n\n\u2022 No advertisements\n\u2022 No in-app purchases\n\u2022 No subscription features\n\n---\n\n## Support\n\nEmail: navkon9@gmail.com\nDeveloper: Nikhil Lande, Navkon Labs, Kharghar, Maharashtra, India\n\n---\n\n## Keywords (\u2264100 characters)\n\nnotes, checklist, productivity, offline notes, private notes, note organizer\n\n---\n\n## Category\n\nPrimary: Productivity\n\n---\n\n## Age Rating\n\n4+\n\nNo objectionable content.\n\n---\n\n## Screenshots\n\n### Screenshot 1 \u2013 Notes Overview\nTitle: Browse Your Notes\nDescription: View all notes in one place. Search instantly and pin important notes to the top.\n\n### Screenshot 2 \u2013 Create Notes\nTitle: Create Notes Quickly\nDescription: Choose between multiple note types including regular notes, checklists, recipes, meal plans, and itineraries.\n\n### Screenshot 3 \u2013 Checklists\nTitle: Track Tasks\nDescription: Create checklists and mark items as completed.\n\n### Screenshot 4 \u2013 Search\nTitle: Instant Search\nDescription: Find notes quickly by searching titles, text, or categories.\n\n### Screenshot 5 \u2013 Themes\nTitle: Personalize Appearance\nDescription: Choose from six color themes to customize the app.\n\n### Screenshot 6 \u2013 Backup\nTitle: Optional Backup\nDescription: Manually back up and restore notes to your personal Google Drive account.\n\n---\n\n## Version Information\n\n### Version 1.0.0\n\nInitial release of noteliha including:\n\n\u2022 Multiple note formats\n\u2022 Image attachments\n\u2022 Recycle bin support\n\u2022 Fast search\n\u2022 Optional manual Google Drive backup and restore\n\u2022 Offline functionality\n\u2022 Six color themes\n\n---\n\n## Technical Requirements\n\nMinimum iOS Version: iOS 14.0\nDevice Compatibility: iPhone and iPad\n\n---\n\n## Notes for App Store Review\n\nTo test the app:\n\n1. Create a note with title and content.\n2. Edit the note.\n3. Use search to find the note.\n4. Delete the note and restore it from the recycle bin.\n5. Sign in with Google, tap Upload Backup, then verify the `.liha_notes_app` folder is created in Google Drive.\n6. Tap Restore from Drive and verify notes are restored correctly.\n\n---\n\n## Version History\n\nVersion 1.0.0 \u2013 March 2026 \u2013 Initial release\n";
   var btn = document.getElementById('dl-btn');
   if (btn) {
     var blob = new Blob([content], {type: 'text/markdown'});
@@ -565,7 +631,126 @@ The app focuses on simplicity, speed, and giving you full control over your data
   }
 })();
 </script>
-</div>
 
+<script>
+  (function () {
+    var bottom   = document.getElementById('footer-bottom');
+    var pencil   = document.getElementById('pencil-rider');
+    var textEl   = document.getElementById('footer-text-content');
+    var triggered = false;
+    var DURATION = 4000;
+
+    var fullParts = [
+      { chars: '© noteliha', bold: true },
+      { chars: '  ·  All Rights Reserved', bold: false },
+      { chars: '  ·  Crafted by ', bold: false },
+      { chars: 'Navkon Labs', bold: false, link: 'https://www.navkon.com/' }
+    ];
+
+    var allChars = [];
+
+    function buildTextHTML() {
+      var html = '';
+      var idx = 0;
+      fullParts.forEach(function(part) {
+        for (var i = 0; i < part.chars.length; i++) {
+          var ch = part.chars[i];
+          var display = ch === ' ' ? '&nbsp;' : ch;
+          if (part.bold) {
+            html += '<span class="fchar" id="fc' + idx + '"><strong>' + display + '</strong></span>';
+          } else if (part.link) {
+            html += '<a href="' + part.link + '" target="_blank" rel="noopener noreferrer" class="navkon-link fchar" id="fc' + idx + '" style="opacity:0;transition:opacity 0.18s ease;">' + display + '</a>';
+          } else {
+            html += '<span class="fchar" id="fc' + idx + '">' + display + '</span>';
+          }
+          idx++;
+        }
+      });
+      return html;
+    }
+
+    var totalChars = 0;
+    fullParts.forEach(function(p) { totalChars += p.chars.length; });
+
+    function run() {
+      if (triggered) return;
+      triggered = true;
+
+      var W = bottom.offsetWidth;
+      var H = bottom.offsetHeight;
+
+      if (W === 0 || H === 0) { triggered = false; setTimeout(run, 50); return; }
+
+      textEl.innerHTML = buildTextHTML();
+
+      requestAnimationFrame(function() {
+        var bottomRect = bottom.getBoundingClientRect();
+        allChars = [];
+        for (var ci = 0; ci < totalChars; ci++) {
+          var el = document.getElementById('fc' + ci);
+          if (!el) continue;
+          var r = el.getBoundingClientRect();
+          allChars.push({ el: el, triggerX: r.right - bottomRect.left });
+        }
+
+        var textRect    = textEl.getBoundingClientRect();
+        var pencilStart = textRect.left  - bottomRect.left - 20;
+        var pencilEnd   = textRect.right - bottomRect.left + 10;
+        var startTime   = null;
+        var revealed    = {};
+
+        pencil.style.left = (pencilStart - pencil.offsetWidth / 2) + 'px';
+        pencil.style.top  = (H / 2 - pencil.offsetHeight * 0.85) + 'px';
+
+        function frame(ts) {
+          if (!startTime) startTime = ts;
+          var elapsed  = ts - startTime;
+          var progress = Math.min(elapsed / DURATION, 1);
+          var px       = pencilStart + progress * (pencilEnd - pencilStart);
+          var t        = elapsed * 0.001;
+          var wobbleY  = (H / 2 - pencil.offsetHeight * 0.85)
+            + Math.sin(t * 31.0) * 2.0 + Math.sin(t * 17.3) * 1.5
+            + Math.sin(t *  7.9) * 2.5 + Math.sin(t *  3.1) * 1.8
+            + Math.sin(t * 53.7) * 0.8 + (Math.random() - 0.5) * 3.5;
+
+          pencil.style.left = (px - pencil.offsetWidth / 2) + 'px';
+          pencil.style.top  = wobbleY + 'px';
+
+          for (var ci = 0; ci < allChars.length; ci++) {
+            if (!revealed[ci] && px >= allChars[ci].triggerX) {
+              revealed[ci] = true;
+              allChars[ci].el.style.opacity = '1';
+            }
+          }
+
+          if (progress < 1) {
+            requestAnimationFrame(frame);
+          } else {
+            for (var ci = 0; ci < allChars.length; ci++) allChars[ci].el.style.opacity = '1';
+            pencil.style.transition = 'opacity 0.5s ease';
+            pencil.style.opacity    = '0';
+            setTimeout(function () { pencil.style.display = 'none'; }, 600);
+          }
+        }
+
+        requestAnimationFrame(frame);
+      });
+    }
+
+    if ('IntersectionObserver' in window) {
+      var obs = new IntersectionObserver(function(entries) {
+        if (entries[0].isIntersecting) { obs.disconnect(); setTimeout(run, 120); }
+      }, { threshold: 0.5 });
+      obs.observe(bottom);
+    } else {
+      textEl.innerHTML = buildTextHTML();
+      for (var ci = 0; ci < totalChars; ci++) {
+        var el = document.getElementById('fc' + ci);
+        if (el) el.style.opacity = '1';
+      }
+      if (pencil) pencil.style.display = 'none';
+    }
+  })();
+</script>
 </body>
 </html>

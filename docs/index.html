@@ -339,7 +339,70 @@
       letter-spacing: 0.06em; white-space: nowrap;
     }
 
-    /* ── Animated Footer ── */
+    /* ── Contact Section ── */
+    .contact-section {
+      margin-bottom: 52px;
+    }
+
+    .contact-card {
+      background: #fff;
+      border: 1px solid var(--rule);
+      border-radius: 8px;
+      padding: 28px 28px 24px;
+    }
+
+    .contact-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--rule);
+    }
+
+    .contact-row:last-child { border-bottom: none; padding-bottom: 0; }
+    .contact-row:first-child { padding-top: 0; }
+
+    .contact-row-icon {
+      width: 34px; height: 34px;
+      border-radius: 7px;
+      background: var(--teal-light);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      font-size: 15px;
+    }
+
+    .contact-row-body { flex: 1; min-width: 0; }
+
+    .contact-row-label {
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      font-weight: 500;
+      color: var(--ink-muted);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 2px;
+    }
+
+    .contact-row-value {
+      font-size: 13.5px;
+      color: var(--ink);
+      font-weight: 400;
+    }
+
+    .contact-row-value a {
+      color: var(--teal);
+      text-decoration: none;
+      border-bottom: 1px solid rgba(42,122,111,0.25);
+      transition: border-color 0.15s, color 0.15s;
+      word-break: break-all;
+    }
+
+    .contact-row-value a:hover {
+      color: var(--teal-mid);
+      border-color: var(--teal-mid);
+    }
+
+
     footer {
       margin-top: 64px;
       border-top: 1px solid var(--rule);
@@ -689,6 +752,44 @@
         <div class="github-desc">Available on GitHub</div>
       </div>
       <span class="github-tag">github.com</span>
+    </div>
+  </div>
+
+  <!-- Contact -->
+  <div class="section contact-section">
+    <div class="section-label">
+      <span class="section-label-text">Contact</span>
+      <div class="section-label-line"></div>
+    </div>
+    <div class="contact-card">
+      <div class="contact-row">
+        <div class="contact-row-icon">✉</div>
+        <div class="contact-row-body">
+          <div class="contact-row-label">Support Email</div>
+          <div class="contact-row-value"><a href="mailto:navkon9@gmail.com">navkon9@gmail.com</a></div>
+        </div>
+      </div>
+      <div class="contact-row">
+        <div class="contact-row-icon">👤</div>
+        <div class="contact-row-body">
+          <div class="contact-row-label">Developer</div>
+          <div class="contact-row-value">Nikhil Lande</div>
+        </div>
+      </div>
+      <div class="contact-row">
+        <div class="contact-row-icon">🏢</div>
+        <div class="contact-row-body">
+          <div class="contact-row-label">Organisation</div>
+          <div class="contact-row-value"><a href="https://www.navkon.com/" target="_blank" rel="noopener noreferrer">Navkon Labs</a></div>
+        </div>
+      </div>
+      <div class="contact-row">
+        <div class="contact-row-icon">📍</div>
+        <div class="contact-row-body">
+          <div class="contact-row-label">Location</div>
+          <div class="contact-row-value">Kharghar, Maharashtra, India</div>
+        </div>
+      </div>
     </div>
   </div>
 

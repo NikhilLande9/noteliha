@@ -117,7 +117,7 @@
       --red:        #b84040;
     }
 
-    html { scroll-behavior: smooth; }
+    html { scroll-behavior: smooth; overflow-x: hidden; }
 
     body {
       font-family: 'DM Sans', sans-serif;
@@ -564,39 +564,51 @@
 
     .download-badges {
       display: flex;
+      align-items: center;
       gap: 12px;
       flex-wrap: wrap;
     }
 
-    .store-badge {
+    .gplay-badge {
+      display: inline-flex;
+      text-decoration: none;
+      transition: opacity 0.18s, transform 0.18s;
+      flex-shrink: 0;
+    }
+    .gplay-badge img {
+      height: 60px;
+      width: auto;
+      display: block;
+    }
+    .gplay-badge:hover { opacity: 0.85; transform: translateY(-1px); }
+
+    .store-badge-soon {
       display: inline-flex;
       align-items: center;
-      gap: 12px;
-      padding: 10px 20px 10px 16px;
-      background: var(--ink);
-      border: 1px solid rgba(255,255,255,0.08);
+      gap: 11px;
+      height: 60px;
+      padding: 0 20px 0 16px;
+      background: var(--paper-warm);
+      border: 1px solid var(--rule);
       border-radius: 10px;
-      text-decoration: none;
-      color: #fff;
-      transition: opacity 0.18s, transform 0.18s;
-      min-width: 160px;
+      color: var(--ink-muted);
+      cursor: default;
+      flex-shrink: 0;
     }
-
-    .store-badge:hover { opacity: 0.85; transform: translateY(-1px); }
 
     .store-badge-icon {
       flex-shrink: 0;
-      width: 28px; height: 28px;
+      width: 26px; height: 26px;
       display: flex; align-items: center; justify-content: center;
     }
 
-    .store-badge-text { display: flex; flex-direction: column; }
+    .store-badge-text { display: flex; flex-direction: column; gap: 3px; }
 
     .store-badge-sub {
       font-size: 9px;
       font-weight: 400;
-      color: rgba(255,255,255,0.6);
-      letter-spacing: 0.04em;
+      color: var(--ink-muted);
+      letter-spacing: 0.06em;
       text-transform: uppercase;
       line-height: 1;
     }
@@ -604,30 +616,37 @@
     .store-badge-name {
       font-size: 15px;
       font-weight: 500;
-      color: #fff;
-      line-height: 1.3;
+      color: var(--ink-soft);
+      line-height: 1;
       letter-spacing: -0.2px;
     }
 
-    .store-badge-soon {
-      display: inline-flex;
-      align-items: center;
-      gap: 12px;
-      padding: 10px 20px 10px 16px;
-      background: var(--paper-warm);
-      border: 1px solid var(--rule);
-      border-radius: 10px;
-      color: var(--ink-muted);
-      min-width: 160px;
-      cursor: default;
-    }
-
-    .store-badge-soon .store-badge-sub { color: var(--ink-muted); }
-    .store-badge-soon .store-badge-name { color: var(--ink-soft); font-size: 15px; font-weight: 500; line-height: 1.3; }
-
     @media (max-width: 600px) {
-      .download-badges { flex-direction: column; }
-      .store-badge, .store-badge-soon { width: 100%; }
+      .download-badges {
+        flex-wrap: nowrap;
+        align-items: stretch;
+      }
+
+      .gplay-badge,
+      .store-badge-soon {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .gplay-badge img {
+        width: 100%;
+        height: 54px;
+        object-fit: cover;
+        object-position: center;
+        border-radius: 10px;
+      }
+
+      .store-badge-soon {
+        height: 54px;
+        justify-content: center;
+        padding: 0 10px;
+        gap: 8px;
+      }
     }
 
     @keyframes slideIn { from { width: 0; opacity: 0; } to { width: 40px; opacity: 1; } }
@@ -717,20 +736,12 @@
     </div>
     <div class="download-badges">
       <!-- Google Play -->
-      <a class="store-badge" href="https://play.google.com/store/apps/details?id=com.navkonlab.noteliha" target="_blank" rel="noopener noreferrer" aria-label="Get noteliha on Google Play">
-        <div class="store-badge-icon">
-          <!-- Google Play triangle logo -->
-          <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path d="M3.18 23.76a2 2 0 0 1-.92-1.76V2A2 2 0 0 1 3.18.24l11.9 11.76z" fill="#EA4335"/>
-            <path d="M20.33 10.02 16.6 7.88 13.7 10.7l2.9 2.87 3.73-2.1a1.51 1.51 0 0 0 0-2.62v.07z" fill="#FBBC04"/>
-            <path d="M3.18.24a1.94 1.94 0 0 1 2-.07l11.42 6.4-3.52 3.43z" fill="#4285F4"/>
-            <path d="M3.18 23.76 13.08 13.3l3.52 3.43-11.42 6.4a1.94 1.94 0 0 1-2-.07v.7z" fill="#34A853"/>
-          </svg>
-        </div>
-        <div class="store-badge-text">
-          <span class="store-badge-sub">Get it on</span>
-          <span class="store-badge-name">Google Play</span>
-        </div>
+      <a class="gplay-badge"
+         href="https://play.google.com/store/apps/details?id=com.navkonlab.noteliha"
+         target="_blank" rel="noopener noreferrer"
+         aria-label="Get noteliha on Google Play">
+        <img alt="Android app on Google Play"
+             src="https://developer.android.com/images/brand/en_app_rgb_wo_60.png"/>
       </a>
       <!-- Apple App Store — coming soon -->
       <div class="store-badge-soon" aria-label="Apple App Store — coming soon">
@@ -879,7 +890,7 @@
         <div class="contact-row-icon">✉</div>
         <div class="contact-row-body">
           <div class="contact-row-label">Support Email</div>
-          <div class="contact-row-value"><a href="mailto:navkon9@gmail.com">navkon9@gmail.com</a></div>
+          <div class="contact-row-value"><a href="mailto:navkon9@gmail.com" data-cfemail="">navkon9@gmail.com</a></div>
         </div>
       </div>
       <div class="contact-row">
@@ -936,7 +947,7 @@
     </div>
   </footer>
 
-  <script>
+  <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
   (function () {
     var bottom   = document.getElementById('footer-bottom');
     var pencil   = document.getElementById('pencil-rider');

@@ -418,7 +418,10 @@
     </div>
     <ul class="check-list" data-section="s3">
       <li><div class="cb"></div>OAuth properly implemented</li>
-      <li><div class="cb"></div>No plaintext passwords or tokens stored</li>
+      <li><div class="cb"></div>No plaintext credentials stored outside the secure keychain</li>
+      <li><div class="cb"></div>Master password stored only in Android Keystore / iOS Keychain (never in plaintext storage)</li>
+      <li><div class="cb"></div>Notes encrypted at rest with AES-256-GCM (PBKDF2-SHA256, 100,000 iterations)</li>
+      <li><div class="cb"></div>Encryption salt uploaded to Drive root so key can be re-derived after reinstall</li>
       <li><div class="cb"></div>HTTPS enforced for all API calls</li>
       <li><div class="cb"></div>Exponential backoff implemented for Drive retries</li>
     </ul>
@@ -532,8 +535,8 @@
         <div class="code-label">Terminal</div>
         <code>flutter build appbundle --release
 
-# Output:
-build/app/outputs/bundle/release/app-release.aab</code>
+          # Output:
+          build/app/outputs/bundle/release/app-release.aab</code>
       </div>
     </div>
 
@@ -576,7 +579,7 @@ build/app/outputs/bundle/release/app-release.aab</code>
         <div class="code-label">Terminal</div>
         <code>flutter build ios --release
 
-# Then archive and upload via Xcode</code>
+          # Then archive and upload via Xcode</code>
       </div>
     </div>
 
@@ -615,32 +618,32 @@ build/app/outputs/bundle/release/app-release.aab</code>
     <p>These describe the app's design intent. Formal legal compliance verification should be done by a qualified professional if required.</p>
     <table class="comp-table">
       <thead>
-        <tr>
-          <th>Regulation</th>
-          <th>App Design Approach</th>
-        </tr>
+      <tr>
+        <th>Regulation</th>
+        <th>App Design Approach</th>
+      </tr>
       </thead>
       <tbody>
-        <tr>
-          <td>GDPR</td>
-          <td>Data stored locally or in user's own Drive; user can delete at any time via app or Drive</td>
-        </tr>
-        <tr>
-          <td>CCPA</td>
-          <td>No sale of personal information; user controls all data directly</td>
-        </tr>
-        <tr>
-          <td>COPPA</td>
-          <td>App not directed at children under 13; stated in Privacy Policy</td>
-        </tr>
-        <tr>
-          <td>Play Policies</td>
-          <td><code>drive.file</code> scope only; no prohibited content; no misleading claims</td>
-        </tr>
-        <tr>
-          <td>App Store Guidelines</td>
-          <td>Permissions requested only when needed; no auto-sync without user action</td>
-        </tr>
+      <tr>
+        <td>GDPR</td>
+        <td>Data stored locally or in user's own Drive; user can delete at any time via app or Drive</td>
+      </tr>
+      <tr>
+        <td>CCPA</td>
+        <td>No sale of personal information; user controls all data directly</td>
+      </tr>
+      <tr>
+        <td>COPPA</td>
+        <td>App not directed at children under 13; stated in Privacy Policy</td>
+      </tr>
+      <tr>
+        <td>Play Policies</td>
+        <td><code>drive.file</code> scope only; no prohibited content; no misleading claims</td>
+      </tr>
+      <tr>
+        <td>App Store Guidelines</td>
+        <td>Permissions requested only when needed; no auto-sync without user action</td>
+      </tr>
       </tbody>
     </table>
   </div>
@@ -728,14 +731,14 @@ build/app/outputs/bundle/release/app-release.aab</code>
   updateProgress();
 </script>
 <script>
-(function() {
-  var content = "# noteliha \u2013 Publishing Checklist & Submission Guide\n\n**Status:** Ready for Review\n**Version:** 1.0.0\n**Date:** March 2026\n\n---\n\n## Pre-Submission Checklist\n\n### 1. Legal Documents\n- [ ] Privacy Policy reviewed and accurate\n- [ ] Terms of Service reviewed and accurate\n- [ ] Developer contact information verified\n- [ ] Folder name `.liha_notes_app` consistent across all documents\n- [ ] Privacy policy URL live and accessible\n\n### 2. Code Quality\n- [ ] All features tested on device\n- [ ] No crashes during testing\n- [ ] Offline functionality verified\n- [ ] Backup and restore functionality verified\n- [ ] Search functionality verified\n- [ ] No hardcoded API keys\n- [ ] No debug logging in production build\n- [ ] Error handling in place for Drive operations\n\n### 3. Security\n- [ ] OAuth properly implemented\n- [ ] No plaintext passwords or tokens stored\n- [ ] HTTPS enforced for all API calls\n- [ ] Exponential backoff implemented for Drive retries\n\n### 4. Privacy\n- [ ] Minimal data collection confirmed\n- [ ] No unnecessary permissions requested\n- [ ] No tracking or analytics SDKs included\n- [ ] No third-party SDKs beyond Google\n- [ ] Data deletion mechanism working (recycle bin + Drive folder)\n\n### 5. Functionality\n- [ ] All 5 note types working (normal, checklist, itinerary, mealPlan, recipe)\n- [ ] All 6 color themes working (Default, Sunset, Orange, Forest, Lavender, Rose)\n- [ ] Create, edit, delete notes\n- [ ] Soft delete and restore from recycle bin\n- [ ] Hard delete (empty recycle bin)\n- [ ] Search across notes\n- [ ] Pin notes\n- [ ] Category organization\n- [ ] Image attachment\n- [ ] Google Drive upload (manual)\n- [ ] Google Drive restore (manual)\n- [ ] Conflict detection and resolution\n- [ ] Multi-account support on same device\n- [ ] Offline functionality\n\n### 6. User Interface\n- [ ] Works on all target screen sizes\n- [ ] Portrait and landscape mode\n- [ ] Dark mode and light mode\n- [ ] Readable text and clear icons\n- [ ] No broken layouts\n\n### 7. Testing\n- [ ] Tested on Android (latest version)\n- [ ] Tested on small screen device\n- [ ] Tested on large screen device\n- [ ] Tested with no Google account\n- [ ] Tested with Google account signed in\n- [ ] Tested offline\n- [ ] Tested with slow internet\n- [ ] Tested sign-in with two different Google accounts on same device\n\n### 8. Documentation\n- [ ] Privacy Policy complete\n- [ ] Terms of Service complete\n- [ ] Release notes prepared\n- [ ] Screenshots prepared (all required sizes)\n- [ ] App description ready\n- [ ] Keywords selected\n\n### 9. App Store Compliance\n- [ ] Content rating appropriate (Everyone / 4+)\n- [ ] No prohibited content\n- [ ] Metadata accurate and matches actual app behaviour\n- [ ] Screenshots represent actual app UI\n- [ ] Bundle ID unique\n- [ ] Version number correct (1.0.0)\n\n### 10. Release Preparation\n- [ ] Release build generated\n- [ ] Signing certificates current\n- [ ] App icons generated (all required sizes)\n- [ ] Screenshots captured (all required sizes)\n- [ ] Release notes prepared\n\n---\n\n## Google Play Store Submission Steps\n\n### Step 1 \u2013 Prepare Build\n```bash\n# Build App Bundle (recommended for Play Store)\nflutter build appbundle --release\n\n# Output: build/app/outputs/bundle/release/app-release.aab\n```\n\n### Step 2 \u2013 Create Play Console Account\n1. Go to Google Play Console\n2. Create developer account or sign in\n3. Pay one-time $25 registration fee\n4. Accept terms and conditions\n\n### Step 3 \u2013 Create New App\n1. Click \"Create app\"\n2. Enter app name: noteliha\n3. Select type: App\n4. Default language: English\n5. Complete required declarations\n\n### Step 4 \u2013 Store Listing\n- [ ] Title: noteliha\n- [ ] Short description (from GOOGLE_PLAY_STORE_LISTING.md)\n- [ ] Full description (from GOOGLE_PLAY_STORE_LISTING.md)\n- [ ] Category: Productivity\n- [ ] Contact email\n- [ ] Privacy policy URL\n- [ ] 2\u20138 screenshots (1080\u00d71920 recommended)\n- [ ] Feature graphic (1024\u00d7500)\n- [ ] App icon (512\u00d7512)\n\n### Step 5 \u2013 App Content\n- [ ] Content rating questionnaire completed\n- [ ] Target audience declared (13+)\n- [ ] Privacy policy URL entered\n\n### Step 6 \u2013 Submit Build\n1. Go to Release \u2192 Production\n2. Create new release\n3. Upload app bundle\n4. Add release notes\n5. Submit for review\n\n---\n\n## Apple App Store Submission Steps\n\n### Step 1 \u2013 Prepare Build\n```bash\nflutter build ios --release\n```\n\n### Step 2 \u2013 Apple Developer Account\n1. Enroll in Apple Developer Program ($99/year)\n2. Accept license agreements\n\n### Step 3 \u2013 App Identifier\n1. Create new identifier in Certificates, Identifiers & Profiles\n2. Bundle ID: com.navkonlabs.noteliha (or your chosen ID)\n3. App name: noteliha\n\n### Step 4 \u2013 Certificates and Profiles\n1. Create iOS Distribution Certificate\n2. Create App Store distribution profile\n3. Update project signing settings in Xcode\n\n### Step 5 \u2013 App Store Connect\n1. Go to App Store Connect \u2192 My Apps \u2192 New App\n2. Name: noteliha\n3. Bundle ID: (your bundle ID)\n4. SKU: noteliha-001\n\n### Step 6 \u2013 App Information\n- [ ] Category: Productivity\n- [ ] Privacy policy URL\n- [ ] Support URL\n- [ ] Description (from APPLE_APP_STORE_LISTING.md)\n- [ ] Keywords\n- [ ] Screenshots (5.5-inch, 6.5-inch, iPad Pro 12.9-inch)\n\n### Step 7 \u2013 App Privacy\n- [ ] Complete app privacy questionnaire\n- [ ] Data types: Google account info (name, email) when Drive backup enabled\n- [ ] Data not linked to identity beyond authentication\n\n### Step 8 \u2013 Submit\n1. Upload build via Xcode\n2. Attach build in App Store Connect\n3. Complete all required fields\n4. Submit for review\n\n---\n\n## Post-Launch Monitoring\n\n### What to Monitor\n- [ ] Crash reports\n- [ ] User reviews and ratings\n- [ ] User feedback and bug reports\n- [ ] Drive sync error reports\n\n### Review Responses\n- [ ] Respond to user reviews\n- [ ] Address critical issues in next update\n- [ ] Track common complaints for roadmap\n\n---\n\n## Regulatory Notes\n\nThese items describe the app's design intent. Formal legal compliance verification should be done by a qualified professional before submission if required.\n\n| Regulation | App Design |\n|---|---|\n| GDPR | Data stored locally or in user's own Drive; user can delete at any time |\n| CCPA | No sale of personal information; user controls all data |\n| COPPA | App not directed at children under 13; noted in Privacy Policy |\n| Google Play Policies | drive.file scope only; no prohibited content |\n| Apple App Store Guidelines | Permissions requested only when needed; no misleading claims |\n\n---\n\n## Version History\n\nv1.0.0 \u2013 March 2026 \u2013 Initial checklist for noteliha launch\n";
-  var btn = document.getElementById('dl-btn');
-  if (btn) {
-    var blob = new Blob([content], {type: 'text/markdown'});
-    btn.href = URL.createObjectURL(blob);
-  }
-})();
+  (function() {
+    var content = "# noteliha \u2013 Publishing Checklist & Submission Guide\n\n**Status:** Ready for Review\n**Version:** 1.0.0\n**Date:** March 2026\n\n---\n\n## Pre-Submission Checklist\n\n### 1. Legal Documents\n- [ ] Privacy Policy reviewed and accurate\n- [ ] Terms of Service reviewed and accurate\n- [ ] Developer contact information verified\n- [ ] Folder name `.liha_notes_app` consistent across all documents\n- [ ] Privacy policy URL live and accessible\n\n### 2. Code Quality\n- [ ] All features tested on device\n- [ ] No crashes during testing\n- [ ] Offline functionality verified\n- [ ] Backup and restore functionality verified\n- [ ] Search functionality verified\n- [ ] No hardcoded API keys\n- [ ] No debug logging in production build\n- [ ] Error handling in place for Drive operations\n\n### 3. Security\n- [ ] OAuth properly implemented\n- [ ] No plaintext credentials stored outside the secure keychain\n- [ ] Master password stored only in Android Keystore / iOS Keychain (never in plaintext storage)\n- [ ] Notes encrypted at rest with AES-256-GCM (PBKDF2-SHA256, 100,000 iterations)\n- [ ] Encryption salt uploaded to Drive root so key can be re-derived after reinstall\n- [ ] HTTPS enforced for all API calls\n- [ ] Exponential backoff implemented for Drive retries\n\n### 4. Privacy\n- [ ] Minimal data collection confirmed\n- [ ] No unnecessary permissions requested\n- [ ] No tracking or analytics SDKs included\n- [ ] No third-party SDKs beyond Google\n- [ ] Data deletion mechanism working (recycle bin + Drive folder)\n\n### 5. Functionality\n- [ ] All 5 note types working (normal, checklist, itinerary, mealPlan, recipe)\n- [ ] All 6 color themes working (Default, Sunset, Orange, Forest, Lavender, Rose)\n- [ ] Create, edit, delete notes\n- [ ] Soft delete and restore from recycle bin\n- [ ] Hard delete (empty recycle bin)\n- [ ] Search across notes\n- [ ] Pin notes\n- [ ] Category organization\n- [ ] Image attachment\n- [ ] Google Drive upload (manual)\n- [ ] Google Drive restore (manual)\n- [ ] Conflict detection and resolution\n- [ ] Multi-account support on same device\n- [ ] Offline functionality\n\n### 6. User Interface\n- [ ] Works on all target screen sizes\n- [ ] Portrait and landscape mode\n- [ ] Dark mode and light mode\n- [ ] Readable text and clear icons\n- [ ] No broken layouts\n\n### 7. Testing\n- [ ] Tested on Android (latest version)\n- [ ] Tested on small screen device\n- [ ] Tested on large screen device\n- [ ] Tested with no Google account\n- [ ] Tested with Google account signed in\n- [ ] Tested offline\n- [ ] Tested with slow internet\n- [ ] Tested sign-in with two different Google accounts on same device\n\n### 8. Documentation\n- [ ] Privacy Policy complete\n- [ ] Terms of Service complete\n- [ ] Release notes prepared\n- [ ] Screenshots prepared (all required sizes)\n- [ ] App description ready\n- [ ] Keywords selected\n\n### 9. App Store Compliance\n- [ ] Content rating appropriate (Everyone / 4+)\n- [ ] No prohibited content\n- [ ] Metadata accurate and matches actual app behaviour\n- [ ] Screenshots represent actual app UI\n- [ ] Bundle ID unique\n- [ ] Version number correct (1.0.0)\n\n### 10. Release Preparation\n- [ ] Release build generated\n- [ ] Signing certificates current\n- [ ] App icons generated (all required sizes)\n- [ ] Screenshots captured (all required sizes)\n- [ ] Release notes prepared\n\n---\n\n## Google Play Store Submission Steps\n\n### Step 1 \u2013 Prepare Build\n```bash\n# Build App Bundle (recommended for Play Store)\nflutter build appbundle --release\n\n# Output: build/app/outputs/bundle/release/app-release.aab\n```\n\n### Step 2 \u2013 Create Play Console Account\n1. Go to Google Play Console\n2. Create developer account or sign in\n3. Pay one-time $25 registration fee\n4. Accept terms and conditions\n\n### Step 3 \u2013 Create New App\n1. Click \"Create app\"\n2. Enter app name: noteliha\n3. Select type: App\n4. Default language: English\n5. Complete required declarations\n\n### Step 4 \u2013 Store Listing\n- [ ] Title: noteliha\n- [ ] Short description (from GOOGLE_PLAY_STORE_LISTING.md)\n- [ ] Full description (from GOOGLE_PLAY_STORE_LISTING.md)\n- [ ] Category: Productivity\n- [ ] Contact email\n- [ ] Privacy policy URL\n- [ ] 2\u20138 screenshots (1080\u00d71920 recommended)\n- [ ] Feature graphic (1024\u00d7500)\n- [ ] App icon (512\u00d7512)\n\n### Step 5 \u2013 App Content\n- [ ] Content rating questionnaire completed\n- [ ] Target audience declared (13+)\n- [ ] Privacy policy URL entered\n\n### Step 6 \u2013 Submit Build\n1. Go to Release \u2192 Production\n2. Create new release\n3. Upload app bundle\n4. Add release notes\n5. Submit for review\n\n---\n\n## Apple App Store Submission Steps\n\n### Step 1 \u2013 Prepare Build\n```bash\nflutter build ios --release\n```\n\n### Step 2 \u2013 Apple Developer Account\n1. Enroll in Apple Developer Program ($99/year)\n2. Accept license agreements\n\n### Step 3 \u2013 App Identifier\n1. Create new identifier in Certificates, Identifiers & Profiles\n2. Bundle ID: com.navkonlabs.noteliha (or your chosen ID)\n3. App name: noteliha\n\n### Step 4 \u2013 Certificates and Profiles\n1. Create iOS Distribution Certificate\n2. Create App Store distribution profile\n3. Update project signing settings in Xcode\n\n### Step 5 \u2013 App Store Connect\n1. Go to App Store Connect \u2192 My Apps \u2192 New App\n2. Name: noteliha\n3. Bundle ID: (your bundle ID)\n4. SKU: noteliha-001\n\n### Step 6 \u2013 App Information\n- [ ] Category: Productivity\n- [ ] Privacy policy URL\n- [ ] Support URL\n- [ ] Description (from APPLE_APP_STORE_LISTING.md)\n- [ ] Keywords\n- [ ] Screenshots (5.5-inch, 6.5-inch, iPad Pro 12.9-inch)\n\n### Step 7 \u2013 App Privacy\n- [ ] Complete app privacy questionnaire\n- [ ] Data types: Google account info (name, email) when Drive backup enabled\n- [ ] Data not linked to identity beyond authentication\n\n### Step 8 \u2013 Submit\n1. Upload build via Xcode\n2. Attach build in App Store Connect\n3. Complete all required fields\n4. Submit for review\n\n---\n\n## Post-Launch Monitoring\n\n### What to Monitor\n- [ ] Crash reports\n- [ ] User reviews and ratings\n- [ ] User feedback and bug reports\n- [ ] Drive sync error reports\n\n### Review Responses\n- [ ] Respond to user reviews\n- [ ] Address critical issues in next update\n- [ ] Track common complaints for roadmap\n\n---\n\n## Regulatory Notes\n\nThese items describe the app's design intent. Formal legal compliance verification should be done by a qualified professional before submission if required.\n\n| Regulation | App Design |\n|---|---|\n| GDPR | Data stored locally or in user's own Drive; user can delete at any time |\n| CCPA | No sale of personal information; user controls all data |\n| COPPA | App not directed at children under 13; noted in Privacy Policy |\n| Google Play Policies | drive.file scope only; no prohibited content |\n| Apple App Store Guidelines | Permissions requested only when needed; no misleading claims |\n\n---\n\n## Version History\n\nv1.0.0 \u2013 March 2026 \u2013 Initial checklist for noteliha launch\n";
+    var btn = document.getElementById('dl-btn');
+    if (btn) {
+      var blob = new Blob([content], {type: 'text/markdown'});
+      btn.href = URL.createObjectURL(blob);
+    }
+  })();
 </script>
 
 </body>

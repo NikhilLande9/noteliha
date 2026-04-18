@@ -6,6 +6,7 @@ import 'checklist_item.dart';
 import 'itinerary_item.dart';
 import 'meal_plan_item.dart';
 import 'recipe_data.dart';
+import 'drawing_data.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Main Note Model
@@ -21,6 +22,7 @@ class Note {
   List<ItineraryItem> itineraryItems;
   List<MealPlanItem> mealPlanItems;
   RecipeData? recipeData;
+  DrawingData? drawingData;
   List<String> imageIds;
 
   Note({
@@ -37,6 +39,7 @@ class Note {
     List<ItineraryItem>? itineraryItems,
     List<MealPlanItem>? mealPlanItems,
     this.recipeData,
+    this.drawingData,
     List<String>? imageIds,
   })  : checklistItems = checklistItems ?? [],
         itineraryItems = itineraryItems ?? [],
@@ -44,53 +47,58 @@ class Note {
         imageIds = imageIds ?? [];
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'title': title,
-        'content': content,
-        'updatedAt': updatedAt.toIso8601String(),
-        'deleted': deleted,
-        'category': category,
-        'pinned': pinned,
-        'noteType': noteType.index,
-        'colorTheme': colorTheme.index,
-        'checklistItems': checklistItems.map((i) => i.toJson()).toList(),
-        'itineraryItems': itineraryItems.map((i) => i.toJson()).toList(),
-        'mealPlanItems': mealPlanItems.map((i) => i.toJson()).toList(),
-        'recipeData': recipeData?.toJson(),
-        'imageIds': imageIds,
-      };
+    'id': id,
+    'title': title,
+    'content': content,
+    'updatedAt': updatedAt.toIso8601String(),
+    'deleted': deleted,
+    'category': category,
+    'pinned': pinned,
+    'noteType': noteType.index,
+    'colorTheme': colorTheme.index,
+    'checklistItems': checklistItems.map((i) => i.toJson()).toList(),
+    'itineraryItems': itineraryItems.map((i) => i.toJson()).toList(),
+    'mealPlanItems': mealPlanItems.map((i) => i.toJson()).toList(),
+    'recipeData': recipeData?.toJson(),
+    'drawingData': drawingData?.toJson(),
+    'imageIds': imageIds,
+  };
 
   factory Note.fromJson(Map<String, dynamic> j) => Note(
-        id: j['id'] ?? const Uuid().v4(),
-        title: j['title'] ?? '',
-        content: j['content'] ?? '',
-        updatedAt: DateTime.tryParse(j['updatedAt'] ?? '') ?? DateTime.now(),
-        deleted: j['deleted'] ?? false,
-        category: j['category'] ?? 'General',
-        pinned: j['pinned'] ?? false,
-        noteType: NoteType.values[j['noteType'] ?? 0],
-        colorTheme: ColorTheme.values[j['colorTheme'] ?? 0],
-        checklistItems: (j['checklistItems'] as List?)
-                ?.map((i) =>
-                    ChecklistItem.fromJson(Map<String, dynamic>.from(i as Map)))
-                .toList() ??
-            [],
-        itineraryItems: (j['itineraryItems'] as List?)
-                ?.map((i) =>
-                    ItineraryItem.fromJson(Map<String, dynamic>.from(i as Map)))
-                .toList() ??
-            [],
-        mealPlanItems: (j['mealPlanItems'] as List?)
-                ?.map((i) =>
-                    MealPlanItem.fromJson(Map<String, dynamic>.from(i as Map)))
-                .toList() ??
-            [],
-        recipeData: j['recipeData'] != null
-            ? RecipeData.fromJson(
-                Map<String, dynamic>.from(j['recipeData'] as Map))
-            : null,
-        imageIds: (j['imageIds'] as List?)?.cast<String>() ?? [],
-      );
+    id: j['id'] ?? const Uuid().v4(),
+    title: j['title'] ?? '',
+    content: j['content'] ?? '',
+    updatedAt: DateTime.tryParse(j['updatedAt'] ?? '') ?? DateTime.now(),
+    deleted: j['deleted'] ?? false,
+    category: j['category'] ?? 'General',
+    pinned: j['pinned'] ?? false,
+    noteType: NoteType.values[j['noteType'] ?? 0],
+    colorTheme: ColorTheme.values[j['colorTheme'] ?? 0],
+    checklistItems: (j['checklistItems'] as List?)
+        ?.map((i) =>
+        ChecklistItem.fromJson(Map<String, dynamic>.from(i as Map)))
+        .toList() ??
+        [],
+    itineraryItems: (j['itineraryItems'] as List?)
+        ?.map((i) =>
+        ItineraryItem.fromJson(Map<String, dynamic>.from(i as Map)))
+        .toList() ??
+        [],
+    mealPlanItems: (j['mealPlanItems'] as List?)
+        ?.map((i) =>
+        MealPlanItem.fromJson(Map<String, dynamic>.from(i as Map)))
+        .toList() ??
+        [],
+    recipeData: j['recipeData'] != null
+        ? RecipeData.fromJson(
+        Map<String, dynamic>.from(j['recipeData'] as Map))
+        : null,
+    drawingData: j['drawingData'] != null
+        ? DrawingData.fromJson(
+        Map<String, dynamic>.from(j['drawingData'] as Map))
+        : null,
+    imageIds: (j['imageIds'] as List?)?.cast<String>() ?? [],
+  );
 
   Note copyWith({
     String? id,
@@ -106,6 +114,7 @@ class Note {
     List<ItineraryItem>? itineraryItems,
     List<MealPlanItem>? mealPlanItems,
     RecipeData? recipeData,
+    DrawingData? drawingData,
     List<String>? imageIds,
   }) =>
       Note(
@@ -122,6 +131,7 @@ class Note {
         itineraryItems: itineraryItems ?? List.from(this.itineraryItems),
         mealPlanItems: mealPlanItems ?? List.from(this.mealPlanItems),
         recipeData: recipeData ?? this.recipeData,
+        drawingData: drawingData ?? this.drawingData,
         imageIds: imageIds ?? List.from(this.imageIds),
       );
 }

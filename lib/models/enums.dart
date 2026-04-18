@@ -2,7 +2,7 @@
 // Enums - App-wide constants
 // ─────────────────────────────────────────────────────────────────────────────
 
-enum NoteType { normal, checklist, itinerary, mealPlan, recipe }
+enum NoteType { normal, checklist, itinerary, mealPlan, recipe, drawing }
 
 enum ColorTheme { default_, sunset, orange, forest, lavender, rose }
 

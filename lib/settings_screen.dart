@@ -1,10 +1,14 @@
 // lib/settings_screen.dart
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:share_plus/share_plus.dart';
 
 import 'models.dart';
 import 'theme_helper.dart';
@@ -385,6 +389,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                 const SizedBox(height: 24),
 
+                // ── Share ────────────────────────────────────────────────────
+                _SectionHeader(text: 'Share', isDark: isDark),
+                _ReferralCard(isDark: isDark, accent: accent),
+
+                const SizedBox(height: 24),
+
                 // ── About ────────────────────────────────────────────────────
                 _SectionHeader(text: 'About', isDark: isDark),
                 NeuContainer(
@@ -573,8 +583,43 @@ class _UpdateChecker extends StatelessWidget {
               );
             }
           }
-              : () => UpdateStateNotifier.instance
-              .checkForUpdate(silent: false),
+              : () async {
+            // checkForUpdate now returns the resolved state directly — before
+            // any delayed auto-reset — so we can show the right snackbar
+            // without racing the 3-second timer in UpdateStateNotifier.
+            final result = await UpdateStateNotifier.instance
+                .checkForUpdate(silent: false);
+            if (context.mounted) {
+              if (result == UpdateAvailableState.upToDate) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: const Row(
+                      children: [
+                        Icon(Icons.check_circle_rounded,
+                            color: Colors.white, size: 18),
+                        SizedBox(width: 10),
+                        Text('All up-to-date'),
+                      ],
+                    ),
+                    backgroundColor: Colors.green.shade600,
+                    behavior: SnackBarBehavior.floating,
+                    duration: const Duration(seconds: 3),
+                  ),
+                );
+              } else if (result == UpdateAvailableState.error) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                        UpdateStateNotifier.instance.errorMessage ??
+                            'Could not check for updates'),
+                    backgroundColor: Colors.red.shade600,
+                    behavior: SnackBarBehavior.floating,
+                    duration: const Duration(seconds: 4),
+                  ),
+                );
+              }
+            }
+          },
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Row(
             children: [
@@ -605,6 +650,14 @@ class _UpdateChecker extends StatelessWidget {
                       const SizedBox(height: 2),
                       Text(
                         'Tap to download and install',
+                        style: TextStyle(
+                            fontSize: 12, color: Neu.textSecondary(isDark)),
+                      ),
+                    ],
+                    if (state == UpdateAvailableState.upToDate) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        'You\'re on the latest version',
                         style: TextStyle(
                             fontSize: 12, color: Neu.textSecondary(isDark)),
                       ),
@@ -1037,6 +1090,30 @@ class _LoggedInTile extends StatelessWidget {
         _NeuDivider(isDark: isDark),
 
         _NeuActionTile(
+          icon: Icons.download_for_offline_outlined,
+          title: 'Download Notes JSON',
+          subtitle: 'Save an encrypted local backup file',
+          isDark: isDark,
+          accent: accent,
+          enabled: true,
+          onTap: () => _exportNotesJson(context),
+        ),
+
+        _NeuDivider(isDark: isDark),
+
+        _NeuActionTile(
+          icon: Icons.upload_file_outlined,
+          title: 'Upload Notes JSON',
+          subtitle: 'Restore notes from a local backup file',
+          isDark: isDark,
+          accent: accent,
+          enabled: true,
+          onTap: () => _importNotesJson(context),
+        ),
+
+        _NeuDivider(isDark: isDark),
+
+        _NeuActionTile(
           icon: Icons.logout_rounded,
           title: 'Sign Out',
           isDark: isDark,
@@ -1052,6 +1129,210 @@ class _LoggedInTile extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  // ── Export JSON ────────────────────────────────────────────────────────────
+
+  Future<void> _exportNotesJson(BuildContext context) async {
+    final prov = Provider.of<NotesProvider>(context, listen: false);
+
+    // Show progress
+    _showLoadingSnackbar(context, 'Preparing backup…');
+
+    try {
+      final bytes = await prov.exportNotesJson();
+      final fileName =
+          'noteliha_backup_${DateTime.now().toIso8601String().replaceAll(':', '-').substring(0, 19)}.json';
+
+      if (kIsWeb) {
+        // On web, share_plus handles the download via an anchor-click.
+        await Share.shareXFiles(
+          [XFile.fromData(bytes, name: fileName, mimeType: 'application/json')],
+          subject: 'Noteliha backup',
+        );
+      } else {
+        // On Android/iOS: write to temp directory then share so the user can
+        // choose to save it to Files, send via email, etc.
+        final dir = await getTemporaryDirectory();
+        final file = File('${dir.path}/$fileName');
+        await file.writeAsBytes(bytes);
+        await Share.shareXFiles(
+          [XFile(file.path, mimeType: 'application/json')],
+          subject: 'Noteliha backup',
+        );
+      }
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        _showSuccessSnackbar(context, 'Backup ready — choose where to save it');
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        _showErrorSnackbar(context, 'Export failed: $e');
+      }
+    }
+  }
+
+  // ── Import JSON ────────────────────────────────────────────────────────────
+
+  Future<void> _importNotesJson(BuildContext context) async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final prov = Provider.of<NotesProvider>(context, listen: false);
+
+    // Let the user pick a .json file
+    FilePickerResult? result;
+    try {
+      result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['json'],
+        withData: true,
+      );
+    } catch (e) {
+      if (context.mounted) _showErrorSnackbar(context, 'Could not open file picker: $e');
+      return;
+    }
+
+    if (result == null || result.files.isEmpty) return; // user cancelled
+
+    final pickedFile = result.files.first;
+    final Uint8List? bytes = pickedFile.bytes ??
+        (pickedFile.path != null
+            ? await File(pickedFile.path!).readAsBytes()
+            : null);
+
+    if (bytes == null) {
+      if (context.mounted) _showErrorSnackbar(context, 'Could not read the selected file.');
+      return;
+    }
+
+    // Confirm before overwriting
+    if (!context.mounted) return;
+    final confirmed = await _showImportConfirmDialog(context, isDark);
+    if (!confirmed) return;
+
+    if (context.mounted) _showLoadingSnackbar(context, 'Importing notes…');
+
+    try {
+      final count = await prov.importNotesJson(bytes);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        _showSuccessSnackbar(
+          context,
+          count == 0
+              ? 'Nothing new — all notes are already up to date'
+              : 'Imported $count note${count == 1 ? '' : 's'} successfully',
+        );
+      }
+    } on FormatException catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        _showErrorSnackbar(context, e.message);
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        _showErrorSnackbar(context, 'Import failed: $e');
+      }
+    }
+  }
+
+  Future<bool> _showImportConfirmDialog(
+      BuildContext context, bool isDark) async {
+    final base  = Neu.base(isDark);
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: base,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Container(
+          decoration: BoxDecoration(
+            color: base,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: Neu.raised(isDark),
+          ),
+          padding: const EdgeInsets.all(22),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Import backup?',
+                  style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 17,
+                      color: Neu.textPrimary(isDark))),
+              const SizedBox(height: 8),
+              Text(
+                'Notes in the file that are newer than your local copies will be merged in. '
+                    'Your existing notes will not be deleted.',
+                style: TextStyle(
+                    fontSize: 13, color: Neu.textSecondary(isDark)),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  _NeuDialogBtn(
+                      label: 'Cancel',
+                      isDark: isDark,
+                      onTap: () => Navigator.pop(ctx, false)),
+                  const SizedBox(width: 10),
+                  _NeuDialogBtn(
+                      label: 'Import',
+                      isDark: isDark,
+                      isPrimary: true,
+                      onTap: () => Navigator.pop(ctx, true)),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    ) ?? false;
+    return ok;
+  }
+
+  // ── Snackbar helpers ───────────────────────────────────────────────────────
+
+  void _showLoadingSnackbar(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Row(children: [
+        const SizedBox(
+          width: 16, height: 16,
+          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+        ),
+        const SizedBox(width: 12),
+        Text(message),
+      ]),
+      behavior: SnackBarBehavior.floating,
+      duration: const Duration(seconds: 30),
+    ));
+  }
+
+  void _showSuccessSnackbar(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Row(children: [
+        const Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
+        const SizedBox(width: 10),
+        Expanded(child: Text(message)),
+      ]),
+      backgroundColor: Colors.green.shade600,
+      behavior: SnackBarBehavior.floating,
+      duration: const Duration(seconds: 4),
+    ));
+  }
+
+  void _showErrorSnackbar(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Row(children: [
+        const Icon(Icons.error_outline_rounded, color: Colors.white, size: 18),
+        const SizedBox(width: 10),
+        Expanded(child: Text(message)),
+      ]),
+      backgroundColor: Colors.red.shade600,
+      behavior: SnackBarBehavior.floating,
+      duration: const Duration(seconds: 5),
+    ));
   }
 
   Future<void> _confirmAction(BuildContext context, String title,
@@ -1426,6 +1707,132 @@ class _NeuDialogBtnState extends State<_NeuDialogBtn> {
         child: Text(widget.label,
             style: TextStyle(
                 fontWeight: FontWeight.w600, fontSize: 14, color: labelColor)),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Referral Card
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _ReferralCard extends StatelessWidget {
+  final bool isDark;
+  final Color accent;
+  const _ReferralCard({required this.isDark, required this.accent});
+
+  static const _playStoreUrl =
+      'https://play.google.com/store/apps/details?id=com.navkonlab.noteliha';
+
+  Future<void> _share() async {
+    await Share.share(
+      'I\'ve been using Noteliha for my notes — clean, offline-first, and syncs with Google Drive. Check it out!\n\n$_playStoreUrl',
+      subject: 'Try Noteliha — a minimal notes app',
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return NeuContainer(
+      isDark: isDark,
+      radius: 16,
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                NeuContainer(
+                  isDark: isDark,
+                  radius: 10,
+                  padding: const EdgeInsets.all(8),
+                  child: Icon(Icons.favorite_rounded, size: 18, color: accent),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Enjoying Noteliha?',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                          color: Neu.textPrimary(isDark),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Share it with friends and help the app grow.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Neu.textSecondary(isDark),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: NeuPressable(
+                    isDark: isDark,
+                    radius: 12,
+                    onTap: _share,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.share_rounded, size: 16, color: accent),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Share App',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                            color: accent,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: NeuPressable(
+                    isDark: isDark,
+                    radius: 12,
+                    onTap: () async {
+                      final uri = Uri.parse(_playStoreUrl);
+                      if (await canLaunchUrl(uri)) launchUrl(uri);
+                    },
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.star_rounded,
+                            size: 16, color: Neu.textSecondary(isDark)),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Rate Us',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                            color: Neu.textSecondary(isDark),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

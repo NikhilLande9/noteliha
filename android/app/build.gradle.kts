@@ -3,9 +3,7 @@ import java.io.FileInputStream
 
 plugins {
     id("com.android.application")
-    // START: FlutterFire Configuration
     id("com.google.gms.google-services")
-    // END: FlutterFire Configuration
     id("kotlin-android")
     id("dev.flutter.flutter-gradle-plugin")
 }
@@ -19,7 +17,7 @@ if (keystorePropertiesFile.exists()) {
 
 android {
     namespace = "com.navkonlab.noteliha"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 36  // Change from 35 to 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -34,7 +32,7 @@ android {
     defaultConfig {
         applicationId = "com.navkonlab.noteliha"
         minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
+        targetSdk = 36  // Change from 35 to 36
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }

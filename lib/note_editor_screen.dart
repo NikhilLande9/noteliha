@@ -8,11 +8,13 @@ import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 import 'dart:convert';
-
+import 'exit_save.dart';
 import 'models.dart';
+import 'note_search_bar.dart';
 import 'theme_helper.dart';
 import 'neu_theme.dart';
 import 'notes_provider.dart';
+import 'touch_writing_canvas.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Note Editor Screen
@@ -30,7 +32,7 @@ class NoteEditorScreen extends StatefulWidget {
 }
 
 class _NoteEditorScreenState extends State<NoteEditorScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, ExitSaveMixin {
   late Note _editing;
   late TextEditingController _titleCtrl;
   late TextEditingController _contentCtrl;
@@ -39,6 +41,32 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
 
   // ── Saving indicator ───────────────────────────────────────────────────────
   bool _showSaved = false;
+
+  // ── In-note search ─────────────────────────────────────────────────────────
+  bool _showSearch = false;
+  final _searchKey = GlobalKey<NoteInNoteSearchBarState>();
+
+  // ── Scroll controllers for structured note types ───────────────────────────
+  // These let the search bar scroll to matched items in list-based note types.
+  final _checklistScrollCtrl  = ScrollController();
+  final _itineraryScrollCtrl  = ScrollController();
+  final _mealPlanScrollCtrl   = ScrollController();
+  final _recipeScrollCtrl     = ScrollController();
+
+  // ── Per-item GlobalKeys for accurate scroll-to-match ──────────────────────
+  // Keyed by the item's id string. Built lazily in item builders so the map
+  // always reflects the current list contents without manual bookkeeping.
+  final Map<String, GlobalKey> _checklistItemKeys    = {};
+  final Map<String, GlobalKey> _itineraryItemKeys    = {};
+  final Map<String, GlobalKey> _mealPlanItemKeys     = {};
+  final Map<String, GlobalKey> _recipeIngredientKeys = {};
+  final Map<String, GlobalKey> _recipeStepKeys       = {};
+
+  // ── Active search match tracking ──────────────────────────────────────────
+  // These are passed down to each structured-item builder so it can show an
+  // amber highlight on the matched item.
+  String _searchQuery  = '';
+  String _activeItemId = ''; // item.id of the currently-active structured match
 
   // ── Undo / Redo stack ──────────────────────────────────────────────────────
   final List<_NoteSnapshot> _undoStack = [];
@@ -66,15 +94,27 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
     super.initState();
     _editing = widget.note != null
         ? widget.note!.copyWith(
-      // Deep-copy each ChecklistItem so the editor works on independent
-      // objects. A shallow List.from() keeps the same item references,
-      // meaning direct field mutations (item.checked = v) write straight
-      // through to the Hive-stored note without an explicit save.
-      checklistItems: widget.note!.checklistItems
-          .map((i) => i.copyWith()).toList(),
-      itineraryItems: List.from(widget.note!.itineraryItems),
-      mealPlanItems:  List.from(widget.note!.mealPlanItems),
-      imageIds:       List.from(widget.note!.imageIds),
+      // ── Deep-copy every structured list so the editor always works on
+      // independent objects. Shallow copies (List.from) keep the same
+      // item references, meaning direct field mutations write straight
+      // through to the Hive-stored note before an explicit save.
+
+      // Checklist — copyWith() clones every field.
+      checklistItems:
+      widget.note!.checklistItems.map((i) => i.copyWith()).toList(),
+
+      // Itinerary — copyWith() on each item.
+      itineraryItems:
+      widget.note!.itineraryItems.map((i) => i.copyWith()).toList(),
+
+      // Meal plan — copyWith() deep-copies the meals list too.
+      mealPlanItems:
+      widget.note!.mealPlanItems.map((i) => i.copyWith()).toList(),
+
+      // Recipe — copyWith() clones ingredient rows and steps.
+      recipeData: widget.note!.recipeData?.copyWith(),
+
+      imageIds: List.from(widget.note!.imageIds),
     )
         : Note(
       id: const Uuid().v4(),
@@ -86,7 +126,20 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
     );
 
     _titleCtrl = TextEditingController(text: _editing.title);
-    _contentCtrl = TextEditingController(text: _editing.content);
+
+    // Always display decrypted plain text. NotesProvider.updateNote() re-encrypts
+    // on save, so the controller must never hold the ENC1:… ciphertext.
+    final String initialContent;
+    if (widget.note != null) {
+      initialContent = Provider.of<NotesProvider>(context, listen: false)
+          .getDecryptedContent(_editing);
+      // Keep _editing.content as plain text while in the editor so that
+      // ExitSaveMixin.hasUnsavedChanges() comparisons work correctly.
+      _editing.content = initialContent;
+    } else {
+      initialContent = '';
+    }
+    _contentCtrl = TextEditingController(text: initialContent);
     _titleCtrl.addListener(_pushSnapshot);
     _contentCtrl.addListener(_pushSnapshot);
 
@@ -102,7 +155,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
     _undoDebounce = Timer(const Duration(milliseconds: 600), () {
       if (!mounted) return;
       final snap = _NoteSnapshot(
-        title:   _titleCtrl.text,
+        title: _titleCtrl.text,
         content: _contentCtrl.text,
       );
       if (_undoStack.isNotEmpty && _undoStack.last == snap) return;
@@ -117,7 +170,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
     if (!_canUndo) return;
     _undoDebounce?.cancel();
     _redoStack.add(_NoteSnapshot(
-      title:   _titleCtrl.text,
+      title: _titleCtrl.text,
       content: _contentCtrl.text,
     ));
     _applySnapshot(_undoStack.removeLast());
@@ -127,7 +180,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
     if (!_canRedo) return;
     _undoDebounce?.cancel();
     _undoStack.add(_NoteSnapshot(
-      title:   _titleCtrl.text,
+      title: _titleCtrl.text,
       content: _contentCtrl.text,
     ));
     _applySnapshot(_redoStack.removeLast());
@@ -136,7 +189,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
   void _applySnapshot(_NoteSnapshot snap) {
     _titleCtrl.removeListener(_pushSnapshot);
     _contentCtrl.removeListener(_pushSnapshot);
-    _titleCtrl.value   = TextEditingValue(text: snap.title);
+    _titleCtrl.value = TextEditingValue(text: snap.title);
     _contentCtrl.value = TextEditingValue(text: snap.content);
     _titleCtrl.addListener(_pushSnapshot);
     _contentCtrl.addListener(_pushSnapshot);
@@ -147,11 +200,11 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
     final appTheme =
         Provider.of<AppSettingsProvider>(context, listen: false).appTheme;
     return switch (appTheme) {
-      AppTheme.amber  => ColorTheme.sunset,
-      AppTheme.teal   => ColorTheme.default_,
+      AppTheme.amber => ColorTheme.sunset,
+      AppTheme.teal => ColorTheme.default_,
       AppTheme.indigo => ColorTheme.lavender,
-      AppTheme.rose   => ColorTheme.rose,
-      AppTheme.slate  => ColorTheme.forest,
+      AppTheme.rose => ColorTheme.rose,
+      AppTheme.slate => ColorTheme.forest,
     };
   }
 
@@ -161,11 +214,135 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
     _titleCtrl.dispose();
     _contentCtrl.dispose();
     _fadeCtrl.dispose();
+    _checklistScrollCtrl.dispose();
+    _itineraryScrollCtrl.dispose();
+    _mealPlanScrollCtrl.dispose();
+    _recipeScrollCtrl.dispose();
     for (final fn in _checklistFocusNodes.values) {
       fn.dispose();
     }
     super.dispose();
   }
+
+  // ── ExitSaveMixin overrides ────────────────────────────────────────────────
+  @override
+  bool hasUnsavedChanges() {
+    // For existing notes, always compare regardless of _hasContent() so that
+    // edits to structured note types (checklist items, itinerary, meal plan,
+    // recipe) are detected even when the title/text fields remain empty.
+    // For brand-new notes, _hasContent() guards against showing the prompt on
+    // an empty editor — but we still check structural content directly so a
+    // new checklist/recipe/etc. with data triggers the prompt.
+    final isExistingNote = widget.note != null;
+    if (!isExistingNote && !_hasContent()) return false;
+
+    final savedTitle   = widget.note?.title   ?? '';
+    final savedContent = widget.note?.content ?? '';
+    final currentTitle = _titleCtrl.text.trim();
+    final currentContent = _richFieldKey.currentState?.serialisedContent ??
+        _contentCtrl.text.trim();
+
+    // Title or rich-text content changed.
+    if (currentTitle != savedTitle || currentContent != savedContent) {
+      return true;
+    }
+
+    // ── Checklist ─────────────────────────────────────────────────────────────
+    final savedChecklist = widget.note?.checklistItems ?? [];
+    final editChecklist  = _editing.checklistItems;
+    if (editChecklist.length != savedChecklist.length) return true;
+    for (var i = 0; i < editChecklist.length; i++) {
+      final e = editChecklist[i];
+      final s = savedChecklist[i];
+      if (e.text != s.text || e.checked != s.checked || e.indent != s.indent) {
+        return true;
+      }
+    }
+
+    // ── Itinerary ─────────────────────────────────────────────────────────────
+    final savedItinerary = widget.note?.itineraryItems ?? [];
+    final editItinerary  = _editing.itineraryItems;
+    if (editItinerary.length != savedItinerary.length) return true;
+    for (var i = 0; i < editItinerary.length; i++) {
+      final e = editItinerary[i];
+      final s = savedItinerary[i];
+      if (e.location     != s.location     ||
+          e.date         != s.date         ||
+          e.arrivalTime  != s.arrivalTime  ||
+          e.departureTime != s.departureTime ||
+          e.notes        != s.notes) {
+        return true;
+      }
+    }
+
+    // ── Meal plan ─────────────────────────────────────────────────────────────
+    final savedMeals = widget.note?.mealPlanItems ?? [];
+    final editMeals  = _editing.mealPlanItems;
+    if (editMeals.length != savedMeals.length) return true;
+    for (var i = 0; i < editMeals.length; i++) {
+      final e = editMeals[i];
+      final s = savedMeals[i];
+      if (e.day != s.day || e.meals.toString() != s.meals.toString()) {
+        return true;
+      }
+    }
+
+    // ── Recipe ────────────────────────────────────────────────────────────────
+    final savedRecipe = widget.note?.recipeData;
+    final editRecipe  = _editing.recipeData;
+    if (savedRecipe == null && editRecipe != null) {
+      // A new recipe note with any content counts as a change.
+      if (editRecipe.prepTime.isNotEmpty   ||
+          editRecipe.cookTime.isNotEmpty   ||
+          editRecipe.servings.isNotEmpty   ||
+          editRecipe.ingredientRows.any((r) => r.name.isNotEmpty) ||
+          editRecipe.steps.any((s) => s.text.isNotEmpty)) {
+        return true;
+      }
+    } else if (savedRecipe != null && editRecipe != null) {
+      if (editRecipe.prepTime  != savedRecipe.prepTime  ||
+          editRecipe.cookTime  != savedRecipe.cookTime  ||
+          editRecipe.servings  != savedRecipe.servings) {
+        return true;
+      }
+      if (editRecipe.ingredientRows.length != savedRecipe.ingredientRows.length) {
+        return true;
+      }
+      for (var i = 0; i < editRecipe.ingredientRows.length; i++) {
+        final e = editRecipe.ingredientRows[i];
+        final s = savedRecipe.ingredientRows[i];
+        if (e.name != s.name || e.quantity != s.quantity || e.unit != s.unit) {
+          return true;
+        }
+      }
+      if (editRecipe.steps.length != savedRecipe.steps.length) return true;
+      for (var i = 0; i < editRecipe.steps.length; i++) {
+        if (editRecipe.steps[i].text != savedRecipe.steps[i].text) return true;
+      }
+    }
+
+    return false;
+  }
+
+  @override
+  void performSave() {
+    _editing.title = _titleCtrl.text.trim();
+
+    // ── Drawing notes ─────────────────────────────────────────────────────────
+    // For drawing notes, _editing.content is already updated by
+    // TouchWritingCanvas.onChanged, so we skip the text field serialization.
+    if (_editing.noteType != NoteType.drawing) {
+      final richState = _richFieldKey.currentState;
+      _editing.content = richState != null
+          ? richState.serialisedContent
+          : _contentCtrl.text.trim();
+    }
+
+    Provider.of<NotesProvider>(context, listen: false).updateNote(_editing);
+  }
+
+  @override
+  Note get editingNote => _editing;
 
   Future<void> _pickImage() async {
     try {
@@ -196,16 +373,56 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
   bool _hasContent() {
     final title   = _titleCtrl.text.trim();
     final content = _RichContentCodec.plainText(_contentCtrl.text).trim();
-    return title.isNotEmpty ||
-        content.isNotEmpty ||
-        _editing.checklistItems.any((i) => i.text.isNotEmpty) ||
-        _editing.itineraryItems.any((i) => i.location.isNotEmpty) ||
-        _editing.mealPlanItems.isNotEmpty ||
-        _editing.imageIds.isNotEmpty ||
-        (_editing.recipeData != null &&
-            (_editing.recipeData!.ingredientRows
-                .any((r) => r.name.isNotEmpty) ||
-                _editing.recipeData!.steps.any((s) => s.text.isNotEmpty)));
+    if (title.isNotEmpty || content.isNotEmpty || _editing.imageIds.isNotEmpty) {
+      return true;
+    }
+
+    // Checklist: any item with text counts.
+    if (_editing.checklistItems.any((i) => i.text.isNotEmpty)) return true;
+
+    // Itinerary: any item with ANY field filled in (not just location).
+    if (_editing.itineraryItems.any((i) =>
+    i.location.isNotEmpty      ||
+        i.date.isNotEmpty          ||
+        i.arrivalTime.isNotEmpty   ||
+        i.departureTime.isNotEmpty ||
+        i.notes.isNotEmpty)) {
+      return true;
+    }
+
+// Meal plan: any day exists (day was added by user action) OR any meal
+// value has been entered.
+    if (_editing.mealPlanItems.isNotEmpty) {
+      // Even an empty day card counts — the user intentionally added it.
+      return true;
+    }
+    // Recipe: any field touched.
+    final r = _editing.recipeData;
+
+    if (r != null &&
+        (r.prepTime.isNotEmpty     ||
+            r.cookTime.isNotEmpty     ||
+            r.servings.isNotEmpty     ||
+            r.ingredientRows.any((row) =>
+            row.name.isNotEmpty     ||
+                row.quantity.isNotEmpty ||
+                row.unit.isNotEmpty)   ||
+            r.steps.any((s) => s.text.isNotEmpty))) {
+      return true;
+    }
+
+    // Drawing: any strokes exist.
+    if (_editing.noteType == NoteType.drawing && _editing.content.isNotEmpty) {
+      try {
+        final strokes = strokesFromJson(_editing.content);
+        if (strokes.isNotEmpty) return true;
+      } catch (_) {
+        // Malformed JSON, but content exists
+        if (_editing.content.trim().isNotEmpty) return true;
+      }
+    }
+
+    return false;
   }
 
   void _save() {
@@ -241,131 +458,276 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
     });
   }
 
-  // ── Note type display label ────────────────────────────────────────────────
+  // ── Scroll to the widget identified by [key] ──────────────────────────────
+  // Uses Scrollable.ensureVisible so Flutter reads the real rendered geometry —
+  // no hardcoded item-height estimates needed.  Called inside a
+  // postFrameCallback so the key's BuildContext is valid after setState rebuilds.
+  void _scrollToKey(GlobalKey key, {ScrollController? controller}) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final ctx = key.currentContext;
+      if (ctx == null) return;
+
+      // If a specific ScrollController is provided (CustomScrollView / SingleChildScrollView),
+      // compute the item's offset within that scrollable and animate directly.
+      // This is more reliable than Scrollable.ensureVisible when the scrollable
+      // is inside an Expanded or a nested Column.
+      if (controller != null && controller.hasClients) {
+        final renderObj = ctx.findRenderObject();
+        if (renderObj is RenderBox) {
+          final scrollRenderObj =
+          controller.position.context.storageContext.findRenderObject();
+          if (scrollRenderObj is RenderBox) {
+            final itemOffset =
+            renderObj.localToGlobal(Offset.zero, ancestor: scrollRenderObj);
+            final targetScrollOffset =
+            (controller.offset + itemOffset.dy - 80.0)
+                .clamp(0.0, controller.position.maxScrollExtent);
+            controller.animateTo(
+              targetScrollOffset,
+              duration: const Duration(milliseconds: 280),
+              curve: Curves.easeOut,
+            );
+            return;
+          }
+        }
+      }
+
+      // Fallback: standard ensureVisible (works well for ListView with controller).
+      Scrollable.ensureVisible(
+        ctx,
+        alignment: 0.25,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOut,
+      );
+    });
+  }
+
+  // Lazily allocate a stable GlobalKey for an item id.
+  GlobalKey _keyFor(Map<String, GlobalKey> map, String id) =>
+      map.putIfAbsent(id, () => GlobalKey());
+
+  // ── Build plain-text content for the in-note search bar ───────────────────
+  // Returns the best plain-text representation of the current note body,
+  // regardless of note type. The search bar always gets fresh content because
+  // it calls this on every rebuild triggered by _showSearch state changes.
+  String _buildSearchableContent() {
+    switch (_editing.noteType) {
+      case NoteType.normal:
+      case NoteType.drawing:
+      // Rich text → plain text via codec.
+        return _RichContentCodec.plainText(_contentCtrl.text);
+      case NoteType.checklist:
+      case NoteType.itinerary:
+      case NoteType.mealPlan:
+      case NoteType.recipe:
+      // Structured note types are searched per-item in NoteInNoteSearchBar
+      // using the dedicated item lists (checklistItems, itineraryItems, etc.).
+      // Returning content here would cause every match to be counted twice —
+      // once from the flat concatenated string and once from the per-item scan.
+        return '';
+    }
+  }
+
+
   String _noteTypeLabel(NoteType type) => switch (type) {
-    NoteType.normal    => 'Note',
+    NoteType.normal => 'Note',
     NoteType.checklist => 'Checklist',
     NoteType.itinerary => 'Itinerary',
-    NoteType.mealPlan  => 'Meal Plan',
-    NoteType.recipe    => 'Recipe',
+    NoteType.mealPlan => 'Meal Plan',
+    NoteType.recipe => 'Recipe',
+    NoteType.drawing => 'Drawing',
   };
 
   @override
   Widget build(BuildContext context) {
-    final isDark      = Theme.of(context).brightness == Brightness.dark;
-    final cardBg      = Neu.cardTint(_editing.colorTheme, isDark);
-    final accent      = Neu.accentFromTheme(_editing.colorTheme);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = Neu.cardTint(_editing.colorTheme, isDark);
+    final accent = Neu.accentFromTheme(_editing.colorTheme);
     final textPrimary = Neu.textPrimary(isDark);
-    final textSub     = Neu.textSecondary(isDark);
+    final textSub = Neu.textSecondary(isDark);
 
     final editorTitle =
         '${widget.note == null ? 'New' : 'Edit'} ${_noteTypeLabel(_editing.noteType)}';
 
-    return Scaffold(
-      backgroundColor: cardBg,
-      appBar: AppBar(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (!didPop) await handleBackNavigation();
+      },
+      child: Scaffold(
         backgroundColor: cardBg,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        leading: NeuIconButton(
-          isDark: isDark,
-          icon: Icon(Icons.arrow_back_ios_new_rounded,
-              size: 18, color: textSub),
-          onTap: () => Navigator.pop(context),
-        ),
-        leadingWidth: 56,
-        title: Text(
-          editorTitle,
-          style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: textPrimary),
-        ),
-        actions: [
-          _UndoRedoButtons(
+        appBar: AppBar(
+          backgroundColor: cardBg,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          leading: NeuIconButton(
             isDark: isDark,
-            canUndo: _canUndo,
-            canRedo: _canRedo,
-            onUndo: _undo,
-            onRedo: _redo,
+            icon:
+            Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: textSub),
+            onTap: () => handleBackNavigation(),
           ),
-          if (_isLoading)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(
-                      strokeWidth: 2, color: accent)),
+          leadingWidth: 56,
+          title: Text(
+            editorTitle,
+            style: TextStyle(
+                fontSize: 16, fontWeight: FontWeight.w600, color: textPrimary),
+          ),
+          actions: [
+            _UndoRedoButtons(
+              isDark: isDark,
+              canUndo: _canUndo,
+              canRedo: _canRedo,
+              onUndo: _undo,
+              onRedo: _redo,
             ),
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 200),
-            child: _showSaved
-                ? Padding(
-              key: const ValueKey('saved'),
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 12, vertical: 14),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.check_circle_rounded,
-                      size: 16, color: accent),
-                  const SizedBox(width: 4),
-                  Text('Saved',
-                      style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: accent)),
-                ],
+            NeuIconButton(
+              isDark: isDark,
+              icon: Icon(
+                _showSearch ? Icons.search_off_rounded : Icons.search_rounded,
+                size: 20,
+                color: _showSearch
+                    ? Theme.of(context).colorScheme.primary
+                    : textSub,
               ),
-            )
-                : _NeuSaveButton(
-                key: const ValueKey('save'),
-                isDark: isDark,
-                accent: accent,
-                onTap: _save),
-          ),
-          _MoreMenu(
-            editing: _editing,
-            isDark: isDark,
-            checklistCompact: _checklistCompact,
-            onPinToggle: () =>
-                setState(() => _editing.pinned = !_editing.pinned),
-            onAddImage: _pickImage,
-            onColorChanged: (t) => setState(() => _editing.colorTheme = t),
-            onDelete: widget.note != null ? _showDeleteConfirmation : null,
-            onToggleCompact: _editing.noteType == NoteType.checklist
-                ? () =>
-                setState(() => _checklistCompact = !_checklistCompact)
-                : null,
-          ),
-          const SizedBox(width: 6),
-        ],
-      ),
-      body: FadeTransition(
-        opacity: _fadeAnim,
-        child: SafeArea(
-          child: Column(
-            children: [
-              _buildHeader(isDark, accent, textPrimary, textSub),
-              if (_editing.imageIds.isNotEmpty) _buildImageStrip(isDark),
-              Divider(
-                  height: 1,
-                  thickness: 1,
-                  indent: 16,
-                  endIndent: 16,
-                  color: Neu.textSecondary(isDark).withAlpha(40)),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: _buildBody(isDark),
+              onTap: () => setState(() {
+                _showSearch = !_showSearch;
+              }),
+            ),
+            if (_isLoading)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: SizedBox(
+                    width: 18,
+                    height: 18,
+                    child:
+                    CircularProgressIndicator(strokeWidth: 2, color: accent)),
+              ),
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
+              child: _showSaved
+                  ? Padding(
+                key: const ValueKey('saved'),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 12, vertical: 14),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.check_circle_rounded,
+                        size: 16, color: accent),
+                    const SizedBox(width: 4),
+                    Text('Saved',
+                        style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: accent)),
+                  ],
                 ),
-              ),
-            ],
+              )
+                  : _NeuSaveButton(
+                  key: const ValueKey('save'),
+                  isDark: isDark,
+                  accent: accent,
+                  onTap: _save),
+            ),
+            _MoreMenu(
+              editing: _editing,
+              isDark: isDark,
+              checklistCompact: _checklistCompact,
+              onPinToggle: () =>
+                  setState(() => _editing.pinned = !_editing.pinned),
+              onAddImage: _pickImage,
+              onColorChanged: (t) => setState(() => _editing.colorTheme = t),
+              onDelete: widget.note != null ? _showDeleteConfirmation : null,
+              onToggleCompact: _editing.noteType == NoteType.checklist
+                  ? () => setState(() => _checklistCompact = !_checklistCompact)
+                  : null,
+            ),
+            const SizedBox(width: 6),
+          ],
+        ),
+        body: FadeTransition(
+          opacity: _fadeAnim,
+          child: SafeArea(
+            child: Column(
+              children: [
+                _buildHeader(isDark, accent, textPrimary, textSub),
+                if (_editing.imageIds.isNotEmpty) _buildImageStrip(isDark),
+                Divider(
+                    height: 1,
+                    thickness: 1,
+                    indent: 16,
+                    endIndent: 16,
+                    color: Neu.textSecondary(isDark).withAlpha(40)),
+                if (_showSearch)
+                  NoteInNoteSearchBar(
+                    key: _searchKey,
+                    isDark: isDark,
+                    accent: accent,
+                    noteContent: _buildSearchableContent(),
+                    noteTitle: _titleCtrl.text,
+                    checklistItems: _editing.checklistItems,
+                    itineraryItems: _editing.itineraryItems,
+                    mealPlanItems: _editing.mealPlanItems,
+                    recipeData: _editing.recipeData,
+                    onContentMatch: (offset) {
+                      // Scrolling is handled inside updateSearchHighlight
+                      // via _RichTextFieldState._scrollToMatch.
+                    },
+                    onHighlightChanged: (query, activeOffset) {
+                      // Clear structured-item active highlight when the active
+                      // match moves to content / title / another source.
+                      if (activeOffset >= 0 || query.isEmpty) {
+                        if (_activeItemId.isNotEmpty) {
+                          setState(() => _activeItemId = '');
+                        }
+                      }
+                      setState(() => _searchQuery = query);
+                      _richFieldKey.currentState
+                          ?.updateSearchHighlight(query, activeOffset);
+                    },
+                    onStructuredMatch: (source, itemIndex) {
+                      // Extract the item id from the source tag.
+                      // Tags are like 'checklist:{id}', 'itinerary:{id}',
+                      // 'mealplan:day:{id}', 'recipe:ingredient:{id}', etc.
+                      final id = source.split(':').last;
+                      setState(() {
+                        _searchQuery  = _searchKey.currentState?.query ?? '';
+                        _activeItemId = id;
+                      });
+
+                      // Scroll to the item using its real rendered position.
+                      // Pass the matching scroll controller so the method can
+                      // compute a precise offset within that specific scrollable.
+                      if (source.startsWith('checklist:')) {
+                        _scrollToKey(_keyFor(_checklistItemKeys, id),
+                            controller: _checklistScrollCtrl);
+                      } else if (source.startsWith('itinerary:')) {
+                        _scrollToKey(_keyFor(_itineraryItemKeys, id),
+                            controller: _itineraryScrollCtrl);
+                      } else if (source.startsWith('mealplan:')) {
+                        _scrollToKey(_keyFor(_mealPlanItemKeys, id),
+                            controller: _mealPlanScrollCtrl);
+                      } else if (source.startsWith('recipe:ingredient:')) {
+                        _scrollToKey(_keyFor(_recipeIngredientKeys, id),
+                            controller: _recipeScrollCtrl);
+                      } else if (source.startsWith('recipe:step:')) {
+                        _scrollToKey(_keyFor(_recipeStepKeys, id),
+                            controller: _recipeScrollCtrl);
+                      }
+                    },
+                  ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: _buildBody(isDark),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
-      ),
-    );
+      ), // end Scaffold
+    ); // end PopScope
   }
 
   Widget _buildHeader(
@@ -420,8 +782,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                       return Padding(
                         padding: const EdgeInsets.only(right: 6),
                         child: GestureDetector(
-                          onTap: () =>
-                              setState(() => _editing.category = cat),
+                          onTap: () => setState(() => _editing.category = cat),
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 150),
                             padding: const EdgeInsets.symmetric(
@@ -452,6 +813,18 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                   ),
                 ),
               ),
+              // ── Encryption badge ───────────────────────────────────────
+              // Show a lock if the note's stored content is encrypted (the
+              // raw content on disk starts with the ENC1: cipher prefix).
+              if (widget.note != null &&
+                  widget.note!.content.startsWith('ENC1:'))
+                Tooltip(
+                  message: 'Encrypted',
+                  child: Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: Icon(Icons.lock_rounded, size: 14, color: accent),
+                  ),
+                ),
               AnimatedSwitcher(
                 duration: const Duration(milliseconds: 200),
                 child: _editing.pinned
@@ -479,8 +852,8 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
           itemCount: _editing.imageIds.length,
           itemBuilder: (context, index) {
             final imgId = _editing.imageIds[index];
-            final prov  = Provider.of<NotesProvider>(context);
-            final b64   = prov.getImage(imgId);
+            final prov = Provider.of<NotesProvider>(context);
+            final b64 = prov.getImage(imgId);
 
             return Container(
               margin: const EdgeInsets.only(right: 8),
@@ -510,8 +883,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                         child: GestureDetector(
                           onTap: () async {
                             final imageId = _editing.imageIds[index];
-                            setState(() =>
-                                _editing.imageIds.removeAt(index));
+                            setState(() => _editing.imageIds.removeAt(index));
                             final p = Provider.of<NotesProvider>(context,
                                 listen: false);
                             final referencedByOther = p.notes.any((n) =>
@@ -529,8 +901,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                             ),
                             padding: const EdgeInsets.all(4),
                             child: Icon(Icons.close_rounded,
-                                size: 13,
-                                color: Neu.textSecondary(isDark)),
+                                size: 13, color: Neu.textSecondary(isDark)),
                           ),
                         ),
                       ),
@@ -547,14 +918,13 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
 
   void _showDeleteConfirmation() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final base   = Neu.base(isDark);
+    final base = Neu.base(isDark);
 
     showDialog(
       context: context,
       builder: (ctx) => Dialog(
         backgroundColor: base,
-        shape:
-        RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         child: Container(
           decoration: BoxDecoration(
             color: base,
@@ -574,8 +944,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
               const SizedBox(height: 8),
               Text('This note will be moved to the recycle bin.',
                   style: TextStyle(
-                      fontSize: 14,
-                      color: Neu.textSecondary(isDark))),
+                      fontSize: 14, color: Neu.textSecondary(isDark))),
               const SizedBox(height: 20),
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
@@ -607,18 +976,19 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
   }
 
   Widget _buildBody(bool isDark) => switch (_editing.noteType) {
-    NoteType.normal    => _buildNormal(isDark),
+    NoteType.normal => _buildNormal(isDark),
     NoteType.checklist => _buildChecklist(isDark),
     NoteType.itinerary => _buildItinerary(),
-    NoteType.mealPlan  => _buildMealPlan(),
-    NoteType.recipe    => _buildRecipe(isDark),
+    NoteType.mealPlan => _buildMealPlan(),
+    NoteType.recipe => _buildRecipe(isDark),
+    NoteType.drawing => _buildDrawing(isDark),
   };
 
   // ── Normal note with rich text toolbar ────────────────────────────────────
   Widget _buildNormal(bool isDark) {
-    final accent    = Theme.of(context).colorScheme.primary;
+    final accent = Theme.of(context).colorScheme.primary;
     final textColor = Neu.textPrimary(isDark);
-    final active    = _richFieldKey.currentState?.activeFormats ?? <_FormatType>{};
+    final active = _richFieldKey.currentState?.activeFormats ?? <_FormatType>{};
 
     return Column(
       children: [
@@ -687,9 +1057,9 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
   }
 
   Widget _buildChecklist(bool isDark) {
-    final accent   = Theme.of(context).colorScheme.primary;
-    final total    = _editing.checklistItems.length;
-    final done     = _editing.checklistItems.where((i) => i.checked).length;
+    final accent = Theme.of(context).colorScheme.primary;
+    final total = _editing.checklistItems.length;
+    final done = _editing.checklistItems.where((i) => i.checked).length;
 
     return Column(
       children: [
@@ -726,8 +1096,8 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                         : Icons.unfold_less_rounded,
                     isDark: isDark,
                     accent: accent,
-                    onTap: () => setState(
-                            () => _checklistCompact = !_checklistCompact),
+                    onTap: () =>
+                        setState(() => _checklistCompact = !_checklistCompact),
                   ),
                 ],
               ),
@@ -736,15 +1106,19 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
         ),
         Expanded(
           child: ListView.builder(
+            controller: _checklistScrollCtrl,
             padding: const EdgeInsets.only(top: 4),
             itemCount: _editing.checklistItems.length,
             itemBuilder: (_, i) {
               final item = _editing.checklistItems[i];
               return _ChecklistItemTile(
                 key: ValueKey(item.id),
+                itemKey: _keyFor(_checklistItemKeys, item.id),
                 item: item,
                 isDark: isDark,
                 compact: _checklistCompact,
+                searchQuery: _searchQuery,
+                isActiveMatch: item.id == _activeItemId,
                 focusNode: _focusForItem(item.id),
                 onChanged: (v) => setState(() {
                   // Replace with copyWith so the original Hive object
@@ -753,8 +1127,8 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                       _editing.checklistItems[i].copyWith(checked: v);
                 }),
                 onDelete: () {
-                  final focusIndex = (i - 1)
-                      .clamp(0, _editing.checklistItems.length - 1);
+                  final focusIndex =
+                  (i - 1).clamp(0, _editing.checklistItems.length - 1);
                   final prevId = _editing.checklistItems.length > 1
                       ? _editing.checklistItems[focusIndex].id
                       : null;
@@ -790,18 +1164,24 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
   }
 
   Widget _buildItinerary() => ModernItineraryBuilder(
+    scrollController: _itineraryScrollCtrl,
     items: _editing.itineraryItems,
-    onDelete: (i) =>
-        setState(() => _editing.itineraryItems.removeAt(i)),
-    onAddItem: () => setState(() => _editing.itineraryItems
-        .add(ItineraryItem(id: const Uuid().v4()))),
+    searchQuery: _searchQuery,
+    activeItemId: _activeItemId,
+    itemKeys: _itineraryItemKeys,
+    onDelete: (i) => setState(() => _editing.itineraryItems.removeAt(i)),
+    onAddItem: () => setState(() =>
+        _editing.itineraryItems.add(ItineraryItem(id: const Uuid().v4()))),
     onChanged: () => setState(() {}),
   );
 
   Widget _buildMealPlan() => ModernMealPlanBuilder(
+    scrollController: _mealPlanScrollCtrl,
     items: _editing.mealPlanItems,
-    onDelete: (i) =>
-        setState(() => _editing.mealPlanItems.removeAt(i)),
+    searchQuery: _searchQuery,
+    activeItemId: _activeItemId,
+    itemKeys: _mealPlanItemKeys,
+    onDelete: (i) => setState(() => _editing.mealPlanItems.removeAt(i)),
     onAddItem: () => setState(() =>
         _editing.mealPlanItems.add(MealPlanItem(id: const Uuid().v4()))),
     onChanged: () => setState(() {}),
@@ -810,9 +1190,24 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
   Widget _buildRecipe(bool isDark) {
     _editing.recipeData ??= RecipeData();
     return _RecipeCard(
+        scrollController: _recipeScrollCtrl,
         data: _editing.recipeData!,
         isDark: isDark,
+        searchQuery: _searchQuery,
+        activeItemId: _activeItemId,
+        ingredientKeys: _recipeIngredientKeys,
+        stepKeys: _recipeStepKeys,
         onChanged: () => setState(() {}));
+  }
+
+  Widget _buildDrawing(bool isDark) {
+    // TouchWritingCanvas stores strokes as a flat JSON array in note.content.
+    // No drawingData model is involved — content IS the canvas state.
+    return TouchWritingCanvas(
+      isDark: isDark,
+      initialJson: _editing.content,
+      onChanged: (json) => setState(() => _editing.content = json),
+    );
   }
 }
 
@@ -829,7 +1224,7 @@ class _NoteSnapshot {
   @override
   bool operator ==(Object other) =>
       other is _NoteSnapshot &&
-          title   == other.title &&
+          title == other.title &&
           content == other.content;
 
   @override
@@ -857,7 +1252,7 @@ class _UndoRedoButtons extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final active   = Neu.textSecondary(isDark);
+    final active = Neu.textSecondary(isDark);
     final inactive = Neu.textTertiary(isDark).withAlpha(80);
 
     return Row(
@@ -913,8 +1308,7 @@ class _UndoBtnState extends State<_UndoBtn> {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTapDown:
-      widget.enabled ? (_) => setState(() => _pressed = true) : null,
+      onTapDown: widget.enabled ? (_) => setState(() => _pressed = true) : null,
       onTapUp: widget.enabled
           ? (_) {
         setState(() => _pressed = false);
@@ -936,8 +1330,7 @@ class _UndoBtnState extends State<_UndoBtn> {
         child: Icon(
           widget.icon,
           size: 17,
-          color:
-          widget.enabled ? widget.activeColor : widget.inactiveColor,
+          color: widget.enabled ? widget.activeColor : widget.inactiveColor,
         ),
       ),
     );
@@ -949,6 +1342,7 @@ class _UndoBtnState extends State<_UndoBtn> {
 // ─────────────────────────────────────────────────────────────────────────────
 
 enum _FormatType { bold, italic, bullet, numbered }
+
 // Public alias so note_list_screen.dart can use it via the FormatType name
 typedef FormatType = _FormatType;
 
@@ -988,8 +1382,8 @@ class RichContentCodec {
           final arr = e as List;
           return _FmtRange(
             start: arr[0] as int,
-            end:   arr[1] as int,
-            type:  _FormatType.values[arr[2] as int],
+            end: arr[1] as int,
+            type: _FormatType.values[arr[2] as int],
           );
         }).toList();
         return (text: t, ranges: r);
@@ -1042,6 +1436,14 @@ class _RichTextController extends TextEditingController {
   final Color baseColor;
   final List<_FmtRange> _ranges = [];
 
+  /// Current in-note search query — set by _RichTextFieldState when the
+  /// search bar is active. Empty string = no highlight.
+  String searchQuery = '';
+
+  /// Character offset of the active match within this controller's plain text.
+  /// -1 = no active match.
+  int activeMatchOffset = -1;
+
   /// Set to true before programmatic text changes (toggleList, toggleInline)
   /// so _onRichChanged skips syncRanges for that notification.
   bool _skipNextSync = false;
@@ -1053,6 +1455,10 @@ class _RichTextController extends TextEditingController {
   }) : super(text: initialText ?? '') {
     if (initialRanges != null) _ranges.addAll(initialRanges);
   }
+
+  /// Trigger a repaint without changing the text value — called by
+  /// [_RichTextFieldState.updateSearchHighlight] to refresh search highlights.
+  void markDirty() => notifyListeners();
 
   // ── Base style ─────────────────────────────────────────────────────────────
 
@@ -1078,9 +1484,9 @@ class _RichTextController extends TextEditingController {
   Set<_FormatType> listFormatsAt(int offset) {
     final t = text;
     if (t.isEmpty) return {};
-    final ls       = _lineStart(t, offset);
+    final ls = _lineStart(t, offset);
     final lineText = _lineAt(t, ls);
-    final result   = <_FormatType>{};
+    final result = <_FormatType>{};
     if (lineText.startsWith('• ')) result.add(_FormatType.bullet);
     if (RegExp(r'^\d+\. ').hasMatch(lineText)) result.add(_FormatType.numbered);
     return result;
@@ -1090,7 +1496,9 @@ class _RichTextController extends TextEditingController {
 
   void toggleInline(_FormatType type, TextSelection sel) {
     assert(type == _FormatType.bold || type == _FormatType.italic);
-    if (sel.isCollapsed) return;
+    if (sel.isCollapsed) {
+      return;
+    }
     final s = sel.start;
     final e = sel.end;
 
@@ -1101,8 +1509,10 @@ class _RichTextController extends TextEditingController {
     if (covering.isNotEmpty) {
       for (final r in covering) {
         _ranges.remove(r);
-        if (r.start < s) _ranges.add(_FmtRange(start: r.start, end: s, type: type));
-        if (r.end > e)   _ranges.add(_FmtRange(start: e, end: r.end, type: type));
+        if (r.start < s) {
+          _ranges.add(_FmtRange(start: r.start, end: s, type: type));
+        }
+        if (r.end > e) { _ranges.add(_FmtRange(start: e, end: r.end, type: type)); }
       }
     } else {
       _ranges.removeWhere((r) => r.type == type && r.overlaps(s, e));
@@ -1120,7 +1530,7 @@ class _RichTextController extends TextEditingController {
     if (t.isEmpty) return;
 
     final lineStarts = _lineStartsInSel(t, sel);
-    final alreadyOn  = lineStarts.every((ls) {
+    final alreadyOn = lineStarts.every((ls) {
       final lt = _lineAt(t, ls);
       return type == _FormatType.bullet
           ? lt.startsWith('• ')
@@ -1138,13 +1548,13 @@ class _RichTextController extends TextEditingController {
       }
     }
 
-    final buf    = StringBuffer();
-    int   offset = 0;
+    final buf = StringBuffer();
+    int offset = 0;
     while (offset <= t.length) {
-      final nl      = t.indexOf('\n', offset);
+      final nl = t.indexOf('\n', offset);
       final lineEnd = nl == -1 ? t.length : nl;
-      final line    = t.substring(offset, lineEnd);
-      final inSel   = lineStarts.contains(offset);
+      final line = t.substring(offset, lineEnd);
+      final inSel = lineStarts.contains(offset);
 
       String out = line;
       if (inSel) {
@@ -1164,7 +1574,7 @@ class _RichTextController extends TextEditingController {
     }
 
     final newText = buf.toString();
-    final delta   = newText.length - t.length;
+    final delta = newText.length - t.length;
     _shiftRangesAfter(lineStarts.isEmpty ? 0 : lineStarts.first, delta);
 
     final newSelEnd = (sel.end + delta).clamp(0, newText.length);
@@ -1206,7 +1616,8 @@ class _RichTextController extends TextEditingController {
     } else {
       // Fallback: find first differing character.
       editPoint = 0;
-      final minLen = oldText.length < newText.length ? oldText.length : newText.length;
+      final minLen =
+      oldText.length < newText.length ? oldText.length : newText.length;
       while (editPoint < minLen && oldText[editPoint] == newText[editPoint]) {
         editPoint++;
       }
@@ -1226,7 +1637,9 @@ class _RichTextController extends TextEditingController {
       // Drop zero-length ranges.
       if (s < e) updated.add(r.copyWith(start: s, end: e));
     }
-    _ranges..clear()..addAll(updated);
+    _ranges
+      ..clear()
+      ..addAll(updated);
   }
 
   void _shiftRangesAfter(int point, int delta) {
@@ -1242,7 +1655,9 @@ class _RichTextController extends TextEditingController {
       }
       if (s < e) updated.add(r.copyWith(start: s, end: e));
     }
-    _ranges..clear()..addAll(updated);
+    _ranges
+      ..clear()
+      ..addAll(updated);
   }
 
   // ── buildTextSpan ──────────────────────────────────────────────────────────
@@ -1256,15 +1671,19 @@ class _RichTextController extends TextEditingController {
     final t = value.text;
     if (t.isEmpty) return TextSpan(text: '', style: _base);
 
-    final len    = t.length;
-    final bold   = List<bool>.filled(len, false);
+    final len = t.length;
+    final bold = List<bool>.filled(len, false);
     final italic = List<bool>.filled(len, false);
 
     for (final r in _ranges) {
       if (r.type == _FormatType.bold) {
-        for (int i = r.start; i < r.end && i < len; i++) { bold[i] = true; }
+        for (int i = r.start; i < r.end && i < len; i++) {
+          bold[i] = true;
+        }
       } else {
-        for (int i = r.start; i < r.end && i < len; i++) { italic[i] = true; }
+        for (int i = r.start; i < r.end && i < len; i++) {
+          italic[i] = true;
+        }
       }
     }
 
@@ -1275,23 +1694,23 @@ class _RichTextController extends TextEditingController {
       final m = RegExp(r'^(• |\d+\. )').firstMatch(line);
       if (m != null) {
         for (int i = lineOff; i < lineOff + m.end && i < len; i++) {
-          bold[i]   = true;
+          bold[i] = true;
           italic[i] = false;
         }
       }
       lineOff += line.length + 1;
     }
 
-    final spans  = <InlineSpan>[];
-    final lines  = t.split('\n');
-    int   offset = 0;
+    final spans = <InlineSpan>[];
+    final lines = t.split('\n');
+    int offset = 0;
 
     for (int li = 0; li < lines.length; li++) {
       final line = lines[li];
       int i = 0;
       while (i < line.length) {
-        final co       = offset + i;
-        final isBold   = co < len && bold[co];
+        final co = offset + i;
+        final isBold = co < len && bold[co];
         final isItalic = co < len && italic[co];
         int j = i + 1;
         while (j < line.length) {
@@ -1303,8 +1722,8 @@ class _RichTextController extends TextEditingController {
         spans.add(TextSpan(
           text: line.substring(i, j),
           style: _base.copyWith(
-            fontWeight: isBold   ? FontWeight.w800 : FontWeight.w400,
-            fontStyle:  isItalic ? FontStyle.italic : FontStyle.normal,
+            fontWeight: isBold ? FontWeight.w800 : FontWeight.w400,
+            fontStyle: isItalic ? FontStyle.italic : FontStyle.normal,
           ),
         ));
         i = j;
@@ -1318,7 +1737,11 @@ class _RichTextController extends TextEditingController {
 
     return spans.isEmpty
         ? TextSpan(text: t, style: _base)
-        : TextSpan(children: spans);
+        : TextSpan(children: searchQuery.isEmpty
+        ? spans
+        : overlaySearchHighlights(
+        spans, t, searchQuery,
+        activeOffset: activeMatchOffset));
   }
 
   // ── Helpers ────────────────────────────────────────────────────────────────
@@ -1336,11 +1759,11 @@ class _RichTextController extends TextEditingController {
 
   static List<int> _lineStartsInSel(String text, TextSelection sel) {
     final starts = <int>[];
-    final first  = _lineStart(text, sel.start);
+    final first = _lineStart(text, sel.start);
     // For a collapsed selection (cursor only), treat the cursor's line as the
     // selected range so bullet/numbered toggling works without a text selection.
     final effectiveEnd = sel.isCollapsed ? sel.start + 1 : sel.end;
-    var   pos    = first;
+    var pos = first;
     while (pos <= text.length) {
       starts.add(pos);
       final nl = text.indexOf('\n', pos);
@@ -1360,29 +1783,35 @@ Widget renderMarkdown(String stored, TextStyle base) {
   final (:text, :ranges) = _RichContentCodec.decode(stored);
   if (ranges.isEmpty) return Text(text, style: base);
 
-  final len    = text.length;
-  final bold   = List<bool>.filled(len, false);
+  final len = text.length;
+  final bold = List<bool>.filled(len, false);
   final italic = List<bool>.filled(len, false);
   for (final r in ranges) {
     if (r.type == _FormatType.bold) {
-      for (int i = r.start; i < r.end && i < len; i++) { bold[i] = true; }
+      for (int i = r.start; i < r.end && i < len; i++) {
+        bold[i] = true;
+      }
     } else {
-      for (int i = r.start; i < r.end && i < len; i++) { italic[i] = true; }
+      for (int i = r.start; i < r.end && i < len; i++) {
+        italic[i] = true;
+      }
     }
   }
 
   final spans = <InlineSpan>[];
   int i = 0;
   while (i < len) {
-    final isBold   = bold[i];
+    final isBold = bold[i];
     final isItalic = italic[i];
     int j = i + 1;
-    while (j < len && bold[j] == isBold && italic[j] == isItalic) { j++; }
+    while (j < len && bold[j] == isBold && italic[j] == isItalic) {
+      j++;
+    }
     spans.add(TextSpan(
       text: text.substring(i, j),
       style: base.copyWith(
-        fontWeight: isBold   ? FontWeight.w800 : FontWeight.w400,
-        fontStyle:  isItalic ? FontStyle.italic : FontStyle.normal,
+        fontWeight: isBold ? FontWeight.w800 : FontWeight.w400,
+        fontStyle: isItalic ? FontStyle.italic : FontStyle.normal,
       ),
     ));
     i = j;
@@ -1395,7 +1824,7 @@ Widget renderMarkdown(String stored, TextStyle base) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _ListEnterFormatter extends TextInputFormatter {
-  static final _bulletRe   = RegExp(r'^• ');
+  static final _bulletRe = RegExp(r'^• ');
   static final _numberedRe = RegExp(r'^(\d+)\. ');
 
   @override
@@ -1405,19 +1834,19 @@ class _ListEnterFormatter extends TextInputFormatter {
     final cursor = newValue.selection.baseOffset;
     if (cursor <= 0 || newValue.text[cursor - 1] != '\n') return newValue;
 
-    final old    = oldValue.text;
+    final old = oldValue.text;
     final oldCur = oldValue.selection.baseOffset;
-    final ls     = _lineStart(old, oldCur);
+    final ls = _lineStart(old, oldCur);
     final lineText = _lineAt(old, ls);
 
     if (!_bulletRe.hasMatch(lineText) && !_numberedRe.hasMatch(lineText)) {
       return newValue;
     }
 
-    final numMatch  = _numberedRe.firstMatch(lineText);
-    final isBullet  = _bulletRe.hasMatch(lineText);
+    final numMatch = _numberedRe.firstMatch(lineText);
+    final isBullet = _bulletRe.hasMatch(lineText);
     final prefixLen = isBullet ? 2 : numMatch!.end;
-    final content   = lineText.substring(prefixLen);
+    final content = lineText.substring(prefixLen);
 
     if (content.isEmpty) {
       // Empty list line → exit list
@@ -1428,12 +1857,11 @@ class _ListEnterFormatter extends TextInputFormatter {
       );
     }
 
-    final nextPrefix = isBullet
-        ? '• '
-        : '${int.parse(numMatch!.group(1)!) + 1}. ';
+    final nextPrefix =
+    isBullet ? '• ' : '${int.parse(numMatch!.group(1)!) + 1}. ';
 
     final before = newValue.text.substring(0, cursor);
-    final after  = newValue.text.substring(cursor);
+    final after = newValue.text.substring(cursor);
     final result = '$before$nextPrefix$after';
 
     return TextEditingValue(
@@ -1476,8 +1904,11 @@ class _ClipboardChannel {
     try {
       final r = await _ch.invokeMethod<String>('getHtmlText');
       return (r != null && r.isNotEmpty) ? r : null;
-    } on PlatformException { return null; }
-      on MissingPluginException { return null; }
+    } on PlatformException {
+      return null;
+    } on MissingPluginException {
+      return null;
+    }
   }
 
   // Web: call through a tiny JS snippet embedded via dart:js_interop.
@@ -1489,7 +1920,9 @@ class _ClipboardChannel {
       // available here because we're inside the Paste button's onTap.
       final result = await _ch.invokeMethod<String>('getHtmlTextWeb');
       return (result != null && result.isNotEmpty) ? result : null;
-    } catch (_) { return null; }
+    } catch (_) {
+      return null;
+    }
   }
 }
 
@@ -1512,8 +1945,8 @@ class _HtmlToRich {
   /// Returns plain text + format ranges suitable for direct insertion into
   /// _RichTextController.  Offset [insertAt] shifts every range so they land
   /// correctly when inserted mid-document.
-  static ({String text, List<_FmtRange> ranges}) convert(
-      String html, {int insertAt = 0}) {
+  static ({String text, List<_FmtRange> ranges}) convert(String html,
+      {int insertAt = 0}) {
     final p = _HtmlParser(html, insertAt: insertAt);
     return p.parse();
   }
@@ -1525,10 +1958,10 @@ class _HtmlParser {
 
   _HtmlParser(this._html, {required int insertAt}) : _insertAt = insertAt;
 
-  final StringBuffer    _buf    = StringBuffer();
+  final StringBuffer _buf = StringBuffer();
   final List<_FmtRange> _ranges = [];
 
-  bool _bold   = false;
+  bool _bold = false;
   bool _italic = false;
   int? _boldStart;
   int? _italicStart;
@@ -1550,7 +1983,10 @@ class _HtmlParser {
     while (i < s.length) {
       if (s[i] == '<') {
         final end = s.indexOf('>', i);
-        if (end == -1) { _emit(s.substring(i)); break; }
+        if (end == -1) {
+          _emit(s.substring(i));
+          break;
+        }
         _tag(s.substring(i + 1, end).trim());
         i = end + 1;
       } else {
@@ -1563,22 +1999,39 @@ class _HtmlParser {
   }
 
   void _tag(String raw) {
-    if (raw.startsWith('/')) { _close(raw.substring(1).trim().toLowerCase()); return; }
+    if (raw.startsWith('/')) {
+      _close(raw.substring(1).trim().toLowerCase());
+      return;
+    }
     final name = raw.split(RegExp(r'[\s/>]'))[0].toLowerCase();
     _open(name);
   }
 
   void _open(String n) {
     switch (n) {
-      case 'b': case 'strong': _openBold();
-      case 'i': case 'em':    _openItalic();
-      case 'br': _nl();
-      case 'p': case 'div':
-      case 'h1': case 'h2': case 'h3':
-      case 'h4': case 'h5': case 'h6':
+      case 'b':
+      case 'strong':
+        _openBold();
+      case 'i':
+      case 'em':
+        _openItalic();
+      case 'br':
+        _nl();
+      case 'p':
+      case 'div':
+      case 'h1':
+      case 'h2':
+      case 'h3':
+      case 'h4':
+      case 'h5':
+      case 'h6':
         if (_buf.isNotEmpty && !_buf.toString().endsWith('\n')) _nl();
-      case 'ul': _list = _ListKind.bullet;  _listIdx = 0;
-      case 'ol': _list = _ListKind.ordered; _listIdx = 0;
+      case 'ul':
+        _list = _ListKind.bullet;
+        _listIdx = 0;
+      case 'ol':
+        _list = _ListKind.ordered;
+        _listIdx = 0;
       case 'li':
         if (_buf.isNotEmpty && !_buf.toString().endsWith('\n')) _nl();
         if (_list == _ListKind.bullet) {
@@ -1591,31 +2044,52 @@ class _HtmlParser {
 
   void _close(String n) {
     switch (n) {
-      case 'b': case 'strong': _closeBold(_buf.length); _bold = false; _boldStart = null;
-      case 'i': case 'em':    _closeItalic(_buf.length); _italic = false; _italicStart = null;
-      case 'p': case 'div':
-      case 'h1': case 'h2': case 'h3':
-      case 'h4': case 'h5': case 'h6':
+      case 'b':
+      case 'strong':
+        _closeBold(_buf.length);
+        _bold = false;
+        _boldStart = null;
+      case 'i':
+      case 'em':
+        _closeItalic(_buf.length);
+        _italic = false;
+        _italicStart = null;
+      case 'p':
+      case 'div':
+      case 'h1':
+      case 'h2':
+      case 'h3':
+      case 'h4':
+      case 'h5':
+      case 'h6':
       case 'li':
         if (_buf.isNotEmpty && !_buf.toString().endsWith('\n')) _nl();
-      case 'ul': case 'ol': _list = null;
+      case 'ul':
+      case 'ol':
+        _list = null;
     }
   }
 
   void _openBold() {
-    if (!_bold) { _bold = true; _boldStart = _buf.length; }
+    if (!_bold) {
+      _bold = true;
+      _boldStart = _buf.length;
+    }
   }
 
   void _openItalic() {
-    if (!_italic) { _italic = true; _italicStart = _buf.length; }
+    if (!_italic) {
+      _italic = true;
+      _italicStart = _buf.length;
+    }
   }
 
   void _closeBold(int pos) {
     if (_bold && _boldStart != null && pos > _boldStart!) {
       _ranges.add(_FmtRange(
         start: _insertAt + _boldStart!,
-        end:   _insertAt + pos,
-        type:  _FormatType.bold,
+        end: _insertAt + pos,
+        type: _FormatType.bold,
       ));
     }
   }
@@ -1624,22 +2098,22 @@ class _HtmlParser {
     if (_italic && _italicStart != null && pos > _italicStart!) {
       _ranges.add(_FmtRange(
         start: _insertAt + _italicStart!,
-        end:   _insertAt + pos,
-        type:  _FormatType.italic,
+        end: _insertAt + pos,
+        type: _FormatType.italic,
       ));
     }
   }
 
   void _emit(String s) => _buf.write(s.replaceAll(RegExp(r'[ \t]+'), ' '));
-  void _nl()            => _buf.write('\n');
+  void _nl() => _buf.write('\n');
 
   static String _ent(String s) => s
-      .replaceAll('&amp;',  '&')
-      .replaceAll('&lt;',   '<')
-      .replaceAll('&gt;',   '>')
+      .replaceAll('&amp;', '&')
+      .replaceAll('&lt;', '<')
+      .replaceAll('&gt;', '>')
       .replaceAll('&nbsp;', ' ')
       .replaceAll('&quot;', '"')
-      .replaceAll('&#39;',  "'")
+      .replaceAll('&#39;', "'")
       .replaceAll('&apos;', "'");
 }
 
@@ -1672,10 +2146,53 @@ class _RichTextField extends StatefulWidget {
 class _RichTextFieldState extends State<_RichTextField> {
   late _RichTextController _richCtrl;
   String _prevPlainText = '';
+  final ScrollController _scrollCtrl = ScrollController();
 
   // ── Serialised content — call this from _save() ───────────────────────────
   String get serialisedContent =>
       _RichContentCodec.encode(_richCtrl.text.trim(), _richCtrl._ranges);
+
+  // ── Search highlight control (called by parent NoteEditorScreen) ───────────
+
+  void updateSearchHighlight(String query, int activeOffset) {
+    if (_richCtrl.searchQuery == query &&
+        _richCtrl.activeMatchOffset == activeOffset) {return;}
+    _richCtrl.searchQuery = query;
+    _richCtrl.activeMatchOffset = activeOffset;
+    _richCtrl.markDirty(); // triggers buildTextSpan repaint
+    if (activeOffset >= 0) {
+      WidgetsBinding.instance
+          .addPostFrameCallback((_) => _scrollToMatch(activeOffset));
+    }
+  }
+
+  // Scrolls the TextField to make the character at [charOffset] visible.
+  // Estimates Y position from line count × line-height, then centres the
+  // matched line in the viewport using the attached ScrollController.
+  void _scrollToMatch(int charOffset) {
+    if (!_scrollCtrl.hasClients) return;
+    final text = _richCtrl.text;
+    if (charOffset < 0 || charOffset >= text.length) return;
+
+    // Count newlines before the offset to determine the line number (0-based).
+    final linesBefore = text.substring(0, charOffset).split('\n').length - 1;
+
+    // Line height matches _RichTextController._base: fontSize 15.5 × height 1.6
+    const lineHeight = 15.5 * 1.6;
+    const verticalPadding = 12.0; // contentPadding.vertical / 2
+    final estimatedY = verticalPadding + linesBefore * lineHeight;
+
+    final maxScroll = _scrollCtrl.position.maxScrollExtent;
+    final viewportHeight = _scrollCtrl.position.viewportDimension;
+    final target =
+    (estimatedY - viewportHeight / 2).clamp(0.0, maxScroll);
+
+    _scrollCtrl.animateTo(
+      target,
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeOut,
+    );
+  }
 
   // ── Active formats (read by toolbar via GlobalKey) ─────────────────────────
 
@@ -1721,13 +2238,12 @@ class _RichTextFieldState extends State<_RichTextField> {
   }
 
   Future<void> _insertHtml(String html) async {
-    final sel     = _richCtrl.selection;
-    final base    = _richCtrl.text;
-    final insAt   = sel.isValid ? sel.start : base.length;
-    final delTo   = sel.isValid ? sel.end   : base.length;
+    final sel = _richCtrl.selection;
+    final base = _richCtrl.text;
+    final insAt = sel.isValid ? sel.start : base.length;
+    final delTo = sel.isValid ? sel.end : base.length;
 
-    final (:text, :ranges) =
-        _HtmlToRich.convert(html, insertAt: insAt);
+    final (:text, :ranges) = _HtmlToRich.convert(html, insertAt: insAt);
 
     final newText = base.substring(0, insAt) + text + base.substring(delTo);
     final newCursor = insAt + text.length;
@@ -1748,7 +2264,9 @@ class _RichTextFieldState extends State<_RichTextField> {
         }
         if (s < e) shifted.add(r.copyWith(start: s, end: e));
       }
-      _richCtrl._ranges..clear()..addAll(shifted);
+      _richCtrl._ranges
+        ..clear()
+        ..addAll(shifted);
     }
 
     // Merge in the new ranges from the pasted HTML.
@@ -1756,23 +2274,23 @@ class _RichTextFieldState extends State<_RichTextField> {
 
     _richCtrl._skipNextSync = true;
     _richCtrl.value = TextEditingValue(
-      text:      newText,
+      text: newText,
       selection: TextSelection.collapsed(offset: newCursor),
     );
     if (mounted) setState(() {});
   }
 
   void _insertPlain(String text) {
-    final sel   = _richCtrl.selection;
-    final base  = _richCtrl.text;
+    final sel = _richCtrl.selection;
+    final base = _richCtrl.text;
     final insAt = sel.isValid ? sel.start : base.length;
-    final delTo = sel.isValid ? sel.end   : base.length;
+    final delTo = sel.isValid ? sel.end : base.length;
 
-    final newText   = base.substring(0, insAt) + text + base.substring(delTo);
+    final newText = base.substring(0, insAt) + text + base.substring(delTo);
     final newCursor = insAt + text.length;
 
     _richCtrl.value = TextEditingValue(
-      text:      newText,
+      text: newText,
       selection: TextSelection.collapsed(offset: newCursor),
     );
   }
@@ -1806,7 +2324,7 @@ class _RichTextFieldState extends State<_RichTextField> {
       // Skip syncRanges in _onRichChanged — we just loaded authoritative ranges.
       _richCtrl._skipNextSync = true;
       _richCtrl.value = TextEditingValue(text: text);
-      _prevPlainText  = text;
+      _prevPlainText = text;
     }
   }
 
@@ -1820,9 +2338,9 @@ class _RichTextFieldState extends State<_RichTextField> {
     // Decode stored content (may be plain text or JSON envelope)
     final (:text, :ranges) = _RichContentCodec.decode(widget.controller.text);
     _richCtrl = _RichTextController(
-      baseColor:      widget.baseColor,
-      initialText:    text,
-      initialRanges:  ranges,
+      baseColor: widget.baseColor,
+      initialText: text,
+      initialRanges: ranges,
     );
     _prevPlainText = text;
     _richCtrl.addListener(_onRichChanged);
@@ -1836,6 +2354,7 @@ class _RichTextFieldState extends State<_RichTextField> {
     _richCtrl.removeListener(_onSelectionChanged);
     widget.controller.removeListener(_onParentChanged);
     _richCtrl.dispose();
+    _scrollCtrl.dispose();
     super.dispose();
   }
 
@@ -1844,7 +2363,7 @@ class _RichTextFieldState extends State<_RichTextField> {
   @override
   Widget build(BuildContext context) {
     final isDark = widget.isDark;
-    final bs     = Neu.fieldBorderStyle(isDark);
+    final bs = Neu.fieldBorderStyle(isDark);
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 150),
@@ -1856,15 +2375,22 @@ class _RichTextFieldState extends State<_RichTextField> {
       ),
       child: TextField(
         controller: _richCtrl,
+        scrollController: _scrollCtrl,
         maxLines: null,
         minLines: 8,
         inputFormatters: [_ListEnterFormatter()],
         contextMenuBuilder: (ctx, editableTextState) {
-          final sel          = _richCtrl.selection;
+          final sel = _richCtrl.selection;
           final hasSelection = sel.isValid && !sel.isCollapsed;
-          final active       = activeFormats;
-          final isBold       = active.contains(_FormatType.bold);
-          final isItalic     = active.contains(_FormatType.italic);
+
+          // IMPORTANT FIX: Don't show any toolbar when there's no text selection
+          if (!hasSelection) {
+            return const SizedBox.shrink();
+          }
+
+          final active = activeFormats;
+          final isBold = active.contains(_FormatType.bold);
+          final isItalic = active.contains(_FormatType.italic);
 
           // Start from the system-provided items so platform state (e.g. Paste
           // being disabled when clipboard is empty) is automatically respected.
@@ -1887,24 +2413,22 @@ class _RichTextFieldState extends State<_RichTextField> {
           }).toList();
 
           // Bold / Italic only when text is selected.
-          final formatButtons = hasSelection
-              ? [
-                  ContextMenuButtonItem(
-                    label: isBold ? '✓ Bold' : 'Bold',
-                    onPressed: () {
-                      ContextMenuController.removeAny();
-                      widget.onApplyFormat?.call(_FormatType.bold);
-                    },
-                  ),
-                  ContextMenuButtonItem(
-                    label: isItalic ? '✓ Italic' : 'Italic',
-                    onPressed: () {
-                      ContextMenuController.removeAny();
-                      widget.onApplyFormat?.call(_FormatType.italic);
-                    },
-                  ),
-                ]
-              : <ContextMenuButtonItem>[];
+          final formatButtons = [
+            ContextMenuButtonItem(
+              label: isBold ? '✓ Bold' : 'Bold',
+              onPressed: () {
+                ContextMenuController.removeAny();
+                widget.onApplyFormat?.call(_FormatType.bold);
+              },
+            ),
+            ContextMenuButtonItem(
+              label: isItalic ? '✓ Italic' : 'Italic',
+              onPressed: () {
+                ContextMenuController.removeAny();
+                widget.onApplyFormat?.call(_FormatType.italic);
+              },
+            ),
+          ];
 
           return AdaptiveTextSelectionToolbar.buttonItems(
             anchors: editableTextState.contextMenuAnchors,
@@ -1930,7 +2454,6 @@ class _RichTextFieldState extends State<_RichTextField> {
     );
   }
 }
-
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Icon format button (bullet / numbered list)
@@ -2046,18 +2569,16 @@ class _SteppedProgressBarState extends State<_SteppedProgressBar>
 
   @override
   Widget build(BuildContext context) {
-    final total    = widget.total;
-    final done     = widget.done;
-    final accent   = widget.accent;
-    final isDark   = widget.isDark;
-    final allDone  = total > 0 && done == total;
+    final total = widget.total;
+    final done = widget.done;
+    final accent = widget.accent;
+    final isDark = widget.isDark;
+    final allDone = total > 0 && done == total;
     final progress = total > 0 ? done / total : 0.0;
 
-    final trackColor = isDark
-        ? accent.withAlpha(30)
-        : accent.withAlpha(22);
-    final fillColor  = allDone ? accent : accent;
-    final textColor  = allDone ? accent : Neu.textSecondary(isDark);
+    final trackColor = isDark ? accent.withAlpha(30) : accent.withAlpha(22);
+    final fillColor = allDone ? accent : accent;
+    final textColor = allDone ? accent : Neu.textSecondary(isDark);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -2094,9 +2615,7 @@ class _SteppedProgressBarState extends State<_SteppedProgressBar>
                   color: textColor,
                 ),
                 child: Text(
-                  total == 0
-                      ? 'No items yet'
-                      : '$done / $total completed',
+                  total == 0 ? 'No items yet' : '$done / $total completed',
                 ),
               ),
               if (allDone) ...[
@@ -2165,9 +2684,9 @@ class _SteppedProgressBarState extends State<_SteppedProgressBar>
           // Segmented bar — one slot per task.
             LayoutBuilder(
               builder: (ctx, constraints) {
-                const gap     = 3.0;
-                final barW    = constraints.maxWidth;
-                final segW    = (barW - gap * (total - 1)) / total;
+                const gap = 3.0;
+                final barW = constraints.maxWidth;
+                final segW = (barW - gap * (total - 1)) / total;
 
                 return Row(
                   children: List.generate(total, (i) {
@@ -2203,11 +2722,11 @@ class _SteppedProgressBarState extends State<_SteppedProgressBar>
 
 class _AnimatedSegment extends StatefulWidget {
   final double width;
-  final bool   filled;
-  final bool   bounce;
-  final Color  fillColor;
-  final Color  trackColor;
-  final bool   isDark;
+  final bool filled;
+  final bool bounce;
+  final Color fillColor;
+  final Color trackColor;
+  final bool isDark;
 
   const _AnimatedSegment({
     super.key,
@@ -2226,8 +2745,8 @@ class _AnimatedSegment extends StatefulWidget {
 class _AnimatedSegmentState extends State<_AnimatedSegment>
     with SingleTickerProviderStateMixin {
   late AnimationController _ctrl;
-  late Animation<double>   _fillAnim;
-  late Animation<double>   _scaleAnim;
+  late Animation<double> _fillAnim;
+  late Animation<double> _scaleAnim;
 
   @override
   void initState() {
@@ -2239,7 +2758,7 @@ class _AnimatedSegmentState extends State<_AnimatedSegment>
 
     _fillAnim = CurvedAnimation(
       parent: _ctrl,
-      curve:  Curves.easeOutCubic,
+      curve: Curves.easeOutCubic,
     );
 
     // The "bounce" overshoot on the fill height.
@@ -2282,8 +2801,8 @@ class _AnimatedSegmentState extends State<_AnimatedSegment>
     return AnimatedBuilder(
       animation: _ctrl,
       builder: (_, __) {
-        const h      = 6.0;
-        final scale  = widget.bounce ? _scaleAnim.value : 1.0;
+        const h = 6.0;
+        final scale = widget.bounce ? _scaleAnim.value : 1.0;
         const radius = BorderRadius.all(Radius.circular(3));
 
         return SizedBox(
@@ -2297,18 +2816,18 @@ class _AnimatedSegmentState extends State<_AnimatedSegment>
                 children: [
                   // Track
                   Container(
-                    width:  widget.width,
+                    width: widget.width,
                     height: h,
-                    color:  widget.trackColor,
+                    color: widget.trackColor,
                   ),
                   // Fill — grows left→right via FractionallySizedBox
                   FractionallySizedBox(
-                    widthFactor:  _fillAnim.value,
+                    widthFactor: _fillAnim.value,
                     heightFactor: scale,
-                    alignment:    Alignment.centerLeft,
+                    alignment: Alignment.centerLeft,
                     child: Container(
                       decoration: BoxDecoration(
-                        color:        widget.fillColor,
+                        color: widget.fillColor,
                         borderRadius: radius,
                       ),
                     ),
@@ -2360,9 +2879,7 @@ class _ChecklistToolbarButton extends StatelessWidget {
             const SizedBox(width: 4),
             Text(label,
                 style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: accent)),
+                    fontSize: 11, fontWeight: FontWeight.w600, color: accent)),
           ],
         ),
       ),
@@ -2510,8 +3027,7 @@ class _MoreMenu extends StatelessWidget {
               style: TextStyle(fontSize: 11, color: Colors.black45)),
         ),
         ...ColorTheme.values.map((theme) {
-          final color =
-          ThemeHelper.getThemeColor(theme, isDarkMode: isDark);
+          final color = ThemeHelper.getThemeColor(theme, isDarkMode: isDark);
           final selected = theme == editing.colorTheme;
           return PopupMenuItem(
             value: theme,
@@ -2539,11 +3055,9 @@ class _MoreMenu extends StatelessWidget {
           PopupMenuItem(
             value: 'delete',
             child: Row(children: [
-              Icon(Icons.delete_outline_rounded,
-                  color: Colors.red.shade400),
+              Icon(Icons.delete_outline_rounded, color: Colors.red.shade400),
               const SizedBox(width: 10),
-              Text('Delete',
-                  style: TextStyle(color: Colors.red.shade400)),
+              Text('Delete', style: TextStyle(color: Colors.red.shade400)),
             ]),
           ),
         ],
@@ -2595,15 +3109,12 @@ class _NeuDialogButtonState extends State<_NeuDialogButton> {
         decoration: BoxDecoration(
           color: Neu.base(widget.isDark),
           borderRadius: BorderRadius.circular(12),
-          boxShadow: _pressed
-              ? Neu.inset(widget.isDark)
-              : Neu.raisedSm(widget.isDark),
+          boxShadow:
+          _pressed ? Neu.inset(widget.isDark) : Neu.raisedSm(widget.isDark),
         ),
         child: Text(widget.label,
             style: TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: 14,
-                color: labelColor)),
+                fontWeight: FontWeight.w600, fontSize: 14, color: labelColor)),
       ),
     );
   }
@@ -2633,8 +3144,7 @@ class _NeuAddRowButton extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.add_rounded,
-                size: 18, color: Neu.textSecondary(isDark)),
+            Icon(Icons.add_rounded, size: 18, color: Neu.textSecondary(isDark)),
             const SizedBox(width: 6),
             Text(label,
                 style: TextStyle(
@@ -2662,6 +3172,11 @@ class _ChecklistItemTile extends StatefulWidget {
   final Function(String) onTextChanged;
   final VoidCallback onSubmitted;
 
+  // ── Search highlight props ─────────────────────────────────────────────────
+  final GlobalKey itemKey;
+  final String searchQuery;
+  final bool isActiveMatch;
+
   const _ChecklistItemTile({
     super.key,
     required this.item,
@@ -2671,6 +3186,9 @@ class _ChecklistItemTile extends StatefulWidget {
     required this.onDelete,
     required this.onTextChanged,
     required this.onSubmitted,
+    required this.itemKey,
+    this.searchQuery = '',
+    this.isActiveMatch = false,
     this.compact = false,
   });
 
@@ -2690,8 +3208,7 @@ class _ChecklistItemTileState extends State<_ChecklistItemTile>
     _ctrl = TextEditingController(text: widget.item.text);
     _strikeCtrl = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 200));
-    _strikeAnim =
-        CurvedAnimation(parent: _strikeCtrl, curve: Curves.easeInOut);
+    _strikeAnim = CurvedAnimation(parent: _strikeCtrl, curve: Curves.easeInOut);
     if (widget.item.checked) _strikeCtrl.value = 1.0;
   }
 
@@ -2704,95 +3221,188 @@ class _ChecklistItemTileState extends State<_ChecklistItemTile>
 
   @override
   Widget build(BuildContext context) {
-    final isDark    = widget.isDark;
-    final accent    = Theme.of(context).colorScheme.primary;
+    final isDark = widget.isDark;
+    final accent = Theme.of(context).colorScheme.primary;
     final textColor = Neu.textPrimary(isDark);
-    final subColor  = Neu.textSecondary(isDark);
-    final vertPad   = widget.compact ? 1.0 : 2.0;
+    final subColor = Neu.textSecondary(isDark);
+    final vertPad = widget.compact ? 1.0 : 2.0;
 
-    return Dismissible(
-      key: ValueKey(widget.item.id),
-      direction: DismissDirection.endToStart,
-      background: Container(
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: 16),
-        child: Icon(Icons.delete_sweep_outlined,
-            color: Colors.red.shade400, size: 22),
-      ),
-      onDismissed: (_) => widget.onDelete(),
-      child: Padding(
-        padding: EdgeInsets.symmetric(vertical: vertPad),
-        child: Row(
-          children: [
-            GestureDetector(
-              onTap: () {
-                final next = !widget.item.checked;
-                widget.onChanged(next);
-                if (next) {
-                  _strikeCtrl.forward();
-                } else {
-                  _strikeCtrl.reverse();
-                }
-              },
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                width: widget.compact ? 20 : 22,
-                height: widget.compact ? 20 : 22,
-                margin: const EdgeInsets.only(right: 10),
-                decoration: BoxDecoration(
-                  color: Neu.base(isDark),
-                  border: Border.all(
-                    color: widget.item.checked ? accent : subColor,
-                    width: 1.5,
-                  ),
-                  borderRadius:
-                  BorderRadius.circular(widget.compact ? 5 : 6),
-                  boxShadow: widget.item.checked
-                      ? Neu.inset(isDark)
-                      : Neu.raisedSm(isDark),
-                ),
-                child: widget.item.checked
-                    ? Icon(Icons.check_rounded,
-                    size: widget.compact ? 12 : 14, color: accent)
-                    : null,
-              ),
-            ),
-            Expanded(
-              child: FadeTransition(
-                opacity: Tween<double>(begin: 1.0, end: 0.45)
-                    .animate(_strikeAnim),
-                child: KeyboardListener(
-                  focusNode: FocusNode(skipTraversal: true),
-                  onKeyEvent: (event) {
-                    if (event is KeyDownEvent &&
-                        event.logicalKey.keyLabel == 'Backspace' &&
-                        _ctrl.text.isEmpty) {
-                      widget.onDelete();
-                    }
-                  },
-                  child: NeuField(
-                    isDark: isDark,
-                    controller: _ctrl,
-                    focusNode: widget.focusNode,
-                    hint: 'New item…',
-                    textInputAction: TextInputAction.newline,
-                    maxLines: null,
-                    minLines: 1,
-                    onChanged: widget.onTextChanged,
-                    style: TextStyle(
-                      fontSize: widget.compact ? 13.5 : 15,
-                      decoration: widget.item.checked
-                          ? TextDecoration.lineThrough
-                          : TextDecoration.none,
-                      color: widget.item.checked ? subColor : textColor,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
+    return Container(
+      key: widget.itemKey,
+      decoration: widget.isActiveMatch && widget.searchQuery.isNotEmpty
+          ? BoxDecoration(
+        color: const Color(0xFFFFD600).withAlpha(45),
+        borderRadius: BorderRadius.circular(10),
+      )
+          : null,
+      child: Dismissible(
+        key: ValueKey(widget.item.id),
+        direction: DismissDirection.endToStart,
+        background: Container(
+          alignment: Alignment.centerRight,
+          padding: const EdgeInsets.only(right: 16),
+          child: Icon(Icons.delete_sweep_outlined,
+              color: Colors.red.shade400, size: 22),
         ),
-      ),
+        onDismissed: (_) => widget.onDelete(),
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: vertPad),
+          child: Row(
+            children: [
+              GestureDetector(
+                onTap: () {
+                  final next = !widget.item.checked;
+                  widget.onChanged(next);
+                  if (next) {
+                    _strikeCtrl.forward();
+                  } else {
+                    _strikeCtrl.reverse();
+                  }
+                },
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  width: widget.compact ? 20 : 22,
+                  height: widget.compact ? 20 : 22,
+                  margin: const EdgeInsets.only(right: 10),
+                  decoration: BoxDecoration(
+                    color: Neu.base(isDark),
+                    border: Border.all(
+                      color: widget.item.checked ? accent : subColor,
+                      width: 1.5,
+                    ),
+                    borderRadius: BorderRadius.circular(widget.compact ? 5 : 6),
+                    boxShadow: widget.item.checked
+                        ? Neu.inset(isDark)
+                        : Neu.raisedSm(isDark),
+                  ),
+                  child: widget.item.checked
+                      ? Icon(Icons.check_rounded,
+                      size: widget.compact ? 12 : 14, color: accent)
+                      : null,
+                ),
+              ),
+              Expanded(
+                child: FadeTransition(
+                  opacity:
+                  Tween<double>(begin: 1.0, end: 0.45).animate(_strikeAnim),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      KeyboardListener(
+                        focusNode: FocusNode(skipTraversal: true),
+                        onKeyEvent: (event) {
+                          if (event is KeyDownEvent &&
+                              event.logicalKey.keyLabel == 'Backspace' &&
+                              _ctrl.text.isEmpty) {
+                            widget.onDelete();
+                          }
+                        },
+                        child: NeuField(
+                          isDark: isDark,
+                          controller: _ctrl,
+                          focusNode: widget.focusNode,
+                          hint: 'New item…',
+                          textInputAction: TextInputAction.newline,
+                          maxLines: null,
+                          minLines: 1,
+                          onChanged: widget.onTextChanged,
+                          style: TextStyle(
+                            fontSize: widget.compact ? 13.5 : 15,
+                            decoration: widget.item.checked
+                                ? TextDecoration.lineThrough
+                                : TextDecoration.none,
+                            color: widget.item.checked ? subColor : textColor,
+                          ),
+                        ),
+                      ),
+                      // ── Inline match highlight ─────────────────────────────
+                      // Shown beneath the field when the search query appears
+                      // in this item's text, so the user sees exactly which
+                      // characters matched without losing the editable field.
+                      if (widget.searchQuery.isNotEmpty &&
+                          widget.item.text.toLowerCase().contains(
+                              widget.searchQuery.toLowerCase())) ...[
+                        const SizedBox(height: 2),
+                        Padding(
+                          padding: const EdgeInsets.only(left: 12, bottom: 2),
+                          child: _HighlightedText(
+                            text: widget.item.text,
+                            query: widget.searchQuery,
+                            baseStyle: TextStyle(
+                              fontSize: widget.compact ? 11.5 : 12.5,
+                              color: subColor,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ), // end Dismissible
+    ); // end Container
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Highlighted text — renders matched query spans with an amber background.
+// Used in checklist tiles and recipe rows to show character-level matches.
+// Falls back to a plain Text when the query is empty or no match exists.
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _HighlightedText extends StatelessWidget {
+  final String text;
+  final String query;
+  final TextStyle baseStyle;
+  final int? maxLines;
+  final TextOverflow? overflow;
+
+  const _HighlightedText({
+    required this.text,
+    required this.query,
+    required this.baseStyle,
+    this.maxLines,
+    this.overflow,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (query.isEmpty) {
+      return Text(text,
+          style: baseStyle, maxLines: maxLines, overflow: overflow);
+    }
+    final lower  = text.toLowerCase();
+    final qLower = query.toLowerCase();
+    final spans  = <TextSpan>[];
+    int start = 0;
+    while (start < text.length) {
+      final idx = lower.indexOf(qLower, start);
+      if (idx == -1) {
+        spans.add(TextSpan(text: text.substring(start)));
+        break;
+      }
+      if (idx > start) {
+        spans.add(TextSpan(text: text.substring(start, idx)));
+      }
+      spans.add(TextSpan(
+        text: text.substring(idx, idx + query.length),
+        style: const TextStyle(
+          backgroundColor: Color(0xFFFFD600),
+          color: Colors.black,
+          fontWeight: FontWeight.w700,
+        ),
+      ));
+      start = idx + query.length;
+    }
+    return RichText(
+      text: TextSpan(style: baseStyle, children: spans),
+      maxLines: maxLines,
+      overflow: overflow ?? TextOverflow.clip,
     );
   }
 }
@@ -2835,9 +3445,25 @@ class _RecipeCard extends StatefulWidget {
   final RecipeData data;
   final bool isDark;
   final VoidCallback onChanged;
+  final ScrollController? scrollController;
 
-  const _RecipeCard(
-      {required this.data, required this.isDark, required this.onChanged});
+  // ── Search highlight props ─────────────────────────────────────────────────
+  final String searchQuery;
+  final String activeItemId;
+  final Map<String, GlobalKey> ingredientKeys;
+  final Map<String, GlobalKey> stepKeys;
+
+  const _RecipeCard({
+    required this.data,
+    required this.isDark,
+    required this.onChanged,
+    this.scrollController,
+    this.searchQuery = '',
+    this.activeItemId = '',
+    Map<String, GlobalKey>? ingredientKeys,
+    Map<String, GlobalKey>? stepKeys,
+  })  : ingredientKeys = ingredientKeys ?? const {},
+        stepKeys = stepKeys ?? const {};
 
   @override
   State<_RecipeCard> createState() => _RecipeCardState();
@@ -2847,11 +3473,11 @@ class _RecipeCardState extends State<_RecipeCard> {
   late TextEditingController _prep, _cook, _serv;
 
   final Map<String, TextEditingController> _nameCtrl = {};
-  final Map<String, TextEditingController> _qtyCtrl  = {};
+  final Map<String, TextEditingController> _qtyCtrl = {};
   final Map<String, TextEditingController> _unitCtrl = {};
 
-  final Map<String, TextEditingController> _stepCtrl  = {};
-  final Map<String, FocusNode>             _stepFocus = {};
+  final Map<String, TextEditingController> _stepCtrl = {};
+  final Map<String, FocusNode> _stepFocus = {};
 
   @override
   void initState() {
@@ -2866,14 +3492,14 @@ class _RecipeCardState extends State<_RecipeCard> {
   void _initIngredientControllers() {
     for (final row in widget.data.ingredientRows) {
       _nameCtrl[row.id] = TextEditingController(text: row.name);
-      _qtyCtrl[row.id]  = TextEditingController(text: row.quantity);
+      _qtyCtrl[row.id] = TextEditingController(text: row.quantity);
       _unitCtrl[row.id] = TextEditingController(text: row.unit);
     }
   }
 
   void _initStepControllers() {
     for (final step in widget.data.steps) {
-      _stepCtrl[step.id]  = TextEditingController(text: step.text);
+      _stepCtrl[step.id] = TextEditingController(text: step.text);
       _stepFocus[step.id] = FocusNode();
     }
   }
@@ -2883,11 +3509,21 @@ class _RecipeCardState extends State<_RecipeCard> {
     _prep.dispose();
     _cook.dispose();
     _serv.dispose();
-    for (final c in _nameCtrl.values) { c.dispose(); }
-    for (final c in _qtyCtrl.values)  { c.dispose(); }
-    for (final c in _unitCtrl.values) { c.dispose(); }
-    for (final c in _stepCtrl.values) { c.dispose(); }
-    for (final f in _stepFocus.values) { f.dispose(); }
+    for (final c in _nameCtrl.values) {
+      c.dispose();
+    }
+    for (final c in _qtyCtrl.values) {
+      c.dispose();
+    }
+    for (final c in _unitCtrl.values) {
+      c.dispose();
+    }
+    for (final c in _stepCtrl.values) {
+      c.dispose();
+    }
+    for (final f in _stepFocus.values) {
+      f.dispose();
+    }
     super.dispose();
   }
 
@@ -2896,7 +3532,7 @@ class _RecipeCardState extends State<_RecipeCard> {
     setState(() {
       widget.data.ingredientRows.add(row);
       _nameCtrl[row.id] = TextEditingController();
-      _qtyCtrl[row.id]  = TextEditingController();
+      _qtyCtrl[row.id] = TextEditingController();
       _unitCtrl[row.id] = TextEditingController();
       widget.onChanged();
     });
@@ -2918,13 +3554,12 @@ class _RecipeCardState extends State<_RecipeCard> {
   void _addStep({int? afterIndex}) {
     final step = RecipeStep();
     setState(() {
-      if (afterIndex != null &&
-          afterIndex < widget.data.steps.length - 1) {
+      if (afterIndex != null && afterIndex < widget.data.steps.length - 1) {
         widget.data.steps.insert(afterIndex + 1, step);
       } else {
         widget.data.steps.add(step);
       }
-      _stepCtrl[step.id]  = TextEditingController();
+      _stepCtrl[step.id] = TextEditingController();
       _stepFocus[step.id] = FocusNode();
       widget.onChanged();
     });
@@ -2954,44 +3589,43 @@ class _RecipeCardState extends State<_RecipeCard> {
   Widget build(BuildContext context) {
     final isDark = widget.isDark;
     final accent = Theme.of(context).colorScheme.primary;
-    final ter    = Neu.textTertiary(isDark);
+    final ter = Neu.textTertiary(isDark);
 
     return SingleChildScrollView(
+      controller: widget.scrollController,
       padding: const EdgeInsets.only(top: 12, bottom: 32),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(children: [
             Expanded(
-                child: _timeField(_prep, 'Prep', Icons.timer_outlined,
-                    isDark, (v) {
+                child: _timeField(_prep, 'Prep', Icons.timer_outlined, isDark,
+                        (v) {
                       widget.data.prepTime = v;
                       widget.onChanged();
                     })),
             const SizedBox(width: 8),
             Expanded(
-                child: _timeField(_cook, 'Cook',
-                    Icons.local_fire_department_outlined, isDark, (v) {
+                child: _timeField(
+                    _cook, 'Cook', Icons.local_fire_department_outlined, isDark,
+                        (v) {
                       widget.data.cookTime = v;
                       widget.onChanged();
                     })),
             const SizedBox(width: 8),
             Expanded(
-                child: _timeField(_serv, 'Serves',
-                    Icons.people_outline_rounded, isDark, (v) {
-                      widget.data.servings = v;
-                      widget.onChanged();
-                    })),
+                child: _timeField(
+                    _serv, 'Serves', Icons.people_outline_rounded, isDark, (v) {
+                  widget.data.servings = v;
+                  widget.onChanged();
+                })),
           ]),
-
           const SizedBox(height: 24),
-
           _SectionLabel(
               text: 'INGREDIENTS',
               icon: Icons.kitchen_outlined,
               isDark: isDark),
           const SizedBox(height: 8),
-
           Padding(
             padding: const EdgeInsets.only(bottom: 4),
             child: Row(children: [
@@ -3035,76 +3669,107 @@ class _RecipeCardState extends State<_RecipeCard> {
               const SizedBox(width: 32),
             ]),
           ),
-
           ...widget.data.ingredientRows.asMap().entries.map((entry) {
-            final i   = entry.key;
+            final i = entry.key;
             final row = entry.value;
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 6),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  SizedBox(
-                    width: 28,
-                    child: NeuContainer(
-                      isDark: isDark,
-                      radius: 8,
-                      inset: true,
-                      padding:
-                      const EdgeInsets.symmetric(vertical: 10),
-                      child: Text('${i + 1}',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              color: accent)),
+            final rowKey = widget.ingredientKeys
+                .putIfAbsent(row.id, () => GlobalKey());
+            final isActive = row.id == widget.activeItemId &&
+                widget.searchQuery.isNotEmpty;
+            return Container(
+              key: rowKey,
+              decoration: isActive
+                  ? BoxDecoration(
+                color: const Color(0xFFFFD600).withAlpha(45),
+                borderRadius: BorderRadius.circular(10),
+              )
+                  : null,
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        SizedBox(
+                          width: 28,
+                          child: NeuContainer(
+                            isDark: isDark,
+                            radius: 8,
+                            inset: true,
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            child: Text('${i + 1}',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: accent)),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          flex: 4,
+                          child: _tableField(_nameCtrl[row.id]!, isDark, 'e.g. Flour',
+                              onChanged: (v) {
+                                row.name = v;
+                                widget.onChanged();
+                              }),
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          flex: 2,
+                          child: _tableField(_qtyCtrl[row.id]!, isDark, '200',
+                              onChanged: (v) {
+                                row.quantity = v;
+                                widget.onChanged();
+                              }),
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          flex: 2,
+                          child: _tableField(_unitCtrl[row.id]!, isDark, 'g',
+                              onChanged: (v) {
+                                row.unit = v;
+                                widget.onChanged();
+                              }),
+                        ),
+                        const SizedBox(width: 6),
+                        GestureDetector(
+                          onTap: widget.data.ingredientRows.length > 1
+                              ? () => _removeIngredientRow(row.id)
+                              : null,
+                          child: Icon(Icons.remove_circle_outline_rounded,
+                              size: 18,
+                              color: widget.data.ingredientRows.length > 1
+                                  ? Colors.red.shade400
+                                  : ter),
+                        ),
+                      ],
                     ),
-                  ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    flex: 4,
-                    child: _tableField(_nameCtrl[row.id]!, isDark,
-                        'e.g. Flour',
-                        onChanged: (v) {
-                          row.name = v;
-                          widget.onChanged();
-                        }),
-                  ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    flex: 2,
-                    child: _tableField(_qtyCtrl[row.id]!, isDark, '200',
-                        onChanged: (v) {
-                          row.quantity = v;
-                          widget.onChanged();
-                        }),
-                  ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    flex: 2,
-                    child: _tableField(_unitCtrl[row.id]!, isDark, 'g',
-                        onChanged: (v) {
-                          row.unit = v;
-                          widget.onChanged();
-                        }),
-                  ),
-                  const SizedBox(width: 6),
-                  GestureDetector(
-                    onTap: widget.data.ingredientRows.length > 1
-                        ? () => _removeIngredientRow(row.id)
-                        : null,
-                    child: Icon(
-                        Icons.remove_circle_outline_rounded,
-                        size: 18,
-                        color: widget.data.ingredientRows.length > 1
-                            ? Colors.red.shade400
-                            : ter),
-                  ),
-                ],
+                    // ── Inline match highlight ─────────────────────────────────
+                    if (isActive && row.name.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Padding(
+                        padding: const EdgeInsets.only(left: 34, bottom: 2),
+                        child: _HighlightedText(
+                          text: '${row.quantity.isNotEmpty ? "${row.quantity} " : ''}'
+                              '${row.unit.isNotEmpty ? "${row.unit} " : ''}'
+                              '${row.name}',
+                          query: widget.searchQuery,
+                          baseStyle: TextStyle(
+                              fontSize: 11.5,
+                              color: Neu.textSecondary(isDark)),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
               ),
             );
           }),
-
           const SizedBox(height: 4),
           NeuPressable(
             isDark: isDark,
@@ -3124,74 +3789,103 @@ class _RecipeCardState extends State<_RecipeCard> {
               ],
             ),
           ),
-
           const SizedBox(height: 24),
-
           _SectionLabel(
               text: 'INSTRUCTIONS',
               icon: Icons.format_list_numbered_rounded,
               isDark: isDark),
           const SizedBox(height: 8),
-
           ...widget.data.steps.asMap().entries.map((entry) {
-            final i    = entry.key;
+            final i = entry.key;
             final step = entry.value;
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(top: 10),
-                    child: NeuContainer(
-                      isDark: isDark,
-                      radius: 14,
-                      inset: true,
-                      padding: const EdgeInsets.all(6),
-                      child: Text('${i + 1}',
-                          style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w800,
-                              color: accent)),
+            final stepKey = widget.stepKeys
+                .putIfAbsent(step.id, () => GlobalKey());
+            final isActive = step.id == widget.activeItemId &&
+                widget.searchQuery.isNotEmpty;
+            return Container(
+              key: stepKey,
+              decoration: isActive
+                  ? BoxDecoration(
+                color: const Color(0xFFFFD600).withAlpha(45),
+                borderRadius: BorderRadius.circular(10),
+              )
+                  : null,
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(top: 10),
+                          child: NeuContainer(
+                            isDark: isDark,
+                            radius: 14,
+                            inset: true,
+                            padding: const EdgeInsets.all(6),
+                            child: Text('${i + 1}',
+                                style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w800,
+                                    color: accent)),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: NeuField(
+                            isDark: isDark,
+                            controller: _stepCtrl[step.id]!,
+                            focusNode: _stepFocus[step.id],
+                            hint: 'Describe step ${i + 1}…',
+                            maxLines: null,
+                            minLines: 1,
+                            textInputAction: TextInputAction.next,
+                            onChanged: (v) {
+                              step.text = v;
+                              widget.onChanged();
+                            },
+                            onSubmitted: () => _addStep(afterIndex: i),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: GestureDetector(
+                            onTap: widget.data.steps.length > 1
+                                ? () => _removeStep(step.id)
+                                : null,
+                            child: Icon(Icons.remove_circle_outline_rounded,
+                                size: 18,
+                                color: widget.data.steps.length > 1
+                                    ? Colors.red.shade400
+                                    : ter),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: NeuField(
-                      isDark: isDark,
-                      controller: _stepCtrl[step.id]!,
-                      focusNode: _stepFocus[step.id],
-                      hint: 'Describe step ${i + 1}…',
-                      maxLines: null,
-                      minLines: 1,
-                      textInputAction: TextInputAction.next,
-                      onChanged: (v) {
-                        step.text = v;
-                        widget.onChanged();
-                      },
-                      onSubmitted: () => _addStep(afterIndex: i),
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: GestureDetector(
-                      onTap: widget.data.steps.length > 1
-                          ? () => _removeStep(step.id)
-                          : null,
-                      child: Icon(
-                          Icons.remove_circle_outline_rounded,
-                          size: 18,
-                          color: widget.data.steps.length > 1
-                              ? Colors.red.shade400
-                              : ter),
-                    ),
-                  ),
-                ],
+                    // ── Inline match highlight ─────────────────────────────────
+                    if (isActive && step.text.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Padding(
+                        padding: const EdgeInsets.only(left: 36, bottom: 2),
+                        child: _HighlightedText(
+                          text: step.text,
+                          query: widget.searchQuery,
+                          baseStyle: TextStyle(
+                              fontSize: 11.5,
+                              color: Neu.textSecondary(isDark)),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
               ),
             );
           }),
-
           const SizedBox(height: 4),
           NeuPressable(
             isDark: isDark,
@@ -3216,8 +3910,8 @@ class _RecipeCardState extends State<_RecipeCard> {
     );
   }
 
-  Widget _timeField(TextEditingController ctrl, String label,
-      IconData icon, bool isDark, Function(String) onChanged) {
+  Widget _timeField(TextEditingController ctrl, String label, IconData icon,
+      bool isDark, Function(String) onChanged) {
     return NeuField(
       isDark: isDark,
       controller: ctrl,
@@ -3227,8 +3921,7 @@ class _RecipeCardState extends State<_RecipeCard> {
     );
   }
 
-  Widget _tableField(
-      TextEditingController ctrl, bool isDark, String hint,
+  Widget _tableField(TextEditingController ctrl, bool isDark, String hint,
       {required Function(String) onChanged}) {
     return NeuField(
       isDark: isDark,

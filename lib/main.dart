@@ -4,13 +4,14 @@ import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
-
+import 'app_lock_gate.dart';
 import 'firebase_options.dart';
 import 'models.dart';
 import 'theme_helper.dart';
 import 'neu_theme.dart';
 import 'notes_provider.dart';
 import 'note_list_screen.dart';
+import 'encryption_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -33,6 +34,9 @@ void main() async {
 
   await Hive.initFlutter();
   Hive.registerAdapter(NoteAdapter());
+
+  // Initialize encryption service
+  await EncryptionService.instance.init();
 
   runApp(
     MultiProvider(
@@ -121,7 +125,7 @@ class MyApp extends StatelessWidget {
         ),
       ),
       themeMode: settings.isDarkMode ? ThemeMode.dark : ThemeMode.light,
-      home: const NoteListScreen(),
+      home: const AppLockGate(child: NoteListScreen()),
     );
   }
 }

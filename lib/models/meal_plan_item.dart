@@ -13,14 +13,24 @@ class ModernMealPlanBuilder extends StatefulWidget {
   final Function(int) onDelete;
   final VoidCallback onAddItem;
   final Function() onChanged;
+  final ScrollController? scrollController;
+
+  // ── Search highlight props ─────────────────────────────────────────────────
+  final String searchQuery;
+  final String activeItemId;
+  final Map<String, GlobalKey> itemKeys;
 
   const ModernMealPlanBuilder({
     required this.items,
     required this.onDelete,
     required this.onAddItem,
     required this.onChanged,
+    this.scrollController,
+    this.searchQuery = '',
+    this.activeItemId = '',
+    Map<String, GlobalKey>? itemKeys,
     super.key,
-  });
+  }) : itemKeys = itemKeys ?? const {};
 
   @override
   State<ModernMealPlanBuilder> createState() => _ModernMealPlanBuilderState();
@@ -50,6 +60,7 @@ class _ModernMealPlanBuilderState extends State<ModernMealPlanBuilder> {
           child: widget.items.isEmpty
               ? _buildEmptyState(isDark)
               : CustomScrollView(
+            controller: widget.scrollController,
             slivers: [
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
@@ -59,19 +70,33 @@ class _ModernMealPlanBuilderState extends State<ModernMealPlanBuilder> {
                     final item = widget.items[index];
                     final isLast = index == widget.items.length - 1;
                     final isExpanded = _expandedItems[item.id] ?? false;
-                    return _MealPlanTimelineItem(
-                      key: ValueKey(item.id),
-                      item: item,
-                      index: index,
-                      isLast: isLast,
-                      isExpanded: isExpanded,
-                      isDark: isDark,
-                      onToggleExpanded: () => _toggleExpanded(item.id),
-                      onDelete: () {
-                        widget.onDelete(index);
-                        setState(() => _expandedItems.remove(item.id));
-                      },
-                      onChanged: widget.onChanged,
+                    final itemKey = widget.itemKeys.putIfAbsent(
+                        item.id, () => GlobalKey());
+                    final isActive = item.id == widget.activeItemId &&
+                        widget.searchQuery.isNotEmpty;
+                    return Container(
+                      key: itemKey,
+                      decoration: isActive
+                          ? BoxDecoration(
+                        color: const Color(0xFFFFD600).withAlpha(45),
+                        borderRadius: BorderRadius.circular(14),
+                      )
+                          : null,
+                      child: _MealPlanTimelineItem(
+                        key: ValueKey(item.id),
+                        item: item,
+                        index: index,
+                        isLast: isLast,
+                        isExpanded: isExpanded,
+                        isDark: isDark,
+                        searchQuery: widget.searchQuery,
+                        onToggleExpanded: () => _toggleExpanded(item.id),
+                        onDelete: () {
+                          widget.onDelete(index);
+                          setState(() => _expandedItems.remove(item.id));
+                        },
+                        onChanged: widget.onChanged,
+                      ),
                     );
                   },
                 ),
@@ -132,6 +157,7 @@ class _MealPlanTimelineItem extends StatefulWidget {
   final bool isLast;
   final bool isExpanded;
   final bool isDark;
+  final String searchQuery;
   final VoidCallback onToggleExpanded;
   final VoidCallback onDelete;
   final VoidCallback onChanged;
@@ -145,6 +171,7 @@ class _MealPlanTimelineItem extends StatefulWidget {
     required this.onToggleExpanded,
     required this.onDelete,
     required this.onChanged,
+    this.searchQuery = '',
     super.key,
   });
 
@@ -304,6 +331,7 @@ class _MealPlanTimelineItemState extends State<_MealPlanTimelineItem>
                       item: widget.item,
                       isExpanded: widget.isExpanded,
                       isDark: isDark,
+                      searchQuery: widget.searchQuery,
                       onTap: widget.onToggleExpanded,
                       onDelete: widget.onDelete,
                       onDateChanged: (newDate) {
@@ -345,6 +373,7 @@ class _MealPlanItemHeader extends StatelessWidget {
   final MealPlanItem item;
   final bool isExpanded;
   final bool isDark;
+  final String searchQuery;
   final VoidCallback onTap;
   final VoidCallback onDelete;
   final Function(String) onDateChanged;
@@ -356,6 +385,7 @@ class _MealPlanItemHeader extends StatelessWidget {
     required this.onTap,
     required this.onDelete,
     required this.onDateChanged,
+    this.searchQuery = '',
   });
 
   @override
@@ -400,9 +430,10 @@ class _MealPlanItemHeader extends StatelessWidget {
               Icon(Icons.dining_rounded, size: 12, color: subColor),
               const SizedBox(width: 5),
               Expanded(
-                child: Text(
-                  _mealPreview(),
-                  style: TextStyle(fontSize: 12, color: subColor),
+                child: _HighlightedText(
+                  text: _mealPreview(),
+                  query: searchQuery,
+                  baseStyle: TextStyle(fontSize: 12, color: subColor),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -864,6 +895,61 @@ class _AddMealDayButton extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Highlighted text — wraps matched query spans in amber background
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _HighlightedText extends StatelessWidget {
+  final String text;
+  final String query;
+  final TextStyle baseStyle;
+  final int? maxLines;
+  final TextOverflow? overflow;
+
+  const _HighlightedText({
+    required this.text,
+    required this.query,
+    required this.baseStyle,
+    this.maxLines,
+    this.overflow,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (query.isEmpty) {
+      return Text(text, style: baseStyle, maxLines: maxLines, overflow: overflow);
+    }
+    final lower  = text.toLowerCase();
+    final qLower = query.toLowerCase();
+    final spans  = <TextSpan>[];
+    int start = 0;
+    while (start < text.length) {
+      final idx = lower.indexOf(qLower, start);
+      if (idx == -1) {
+        spans.add(TextSpan(text: text.substring(start)));
+        break;
+      }
+      if (idx > start) {
+        spans.add(TextSpan(text: text.substring(start, idx)));
+      }
+      spans.add(TextSpan(
+        text: text.substring(idx, idx + query.length),
+        style: const TextStyle(
+          backgroundColor: Color(0xFFFFD600),
+          color: Colors.black,
+          fontWeight: FontWeight.w700,
+        ),
+      ));
+      start = idx + query.length;
+    }
+    return RichText(
+      text: TextSpan(style: baseStyle, children: spans),
+      maxLines: maxLines,
+      overflow: overflow ?? TextOverflow.clip,
     );
   }
 }

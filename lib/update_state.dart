@@ -33,48 +33,106 @@ class UpdateStateNotifier extends ChangeNotifier {
 
   // ── Check ──────────────────────────────────────────────────────────────────
 
-  Future<void> checkForUpdate({bool silent = false}) async {
+  // Returns the resolved UpdateAvailableState *before* any delayed reset,
+  // so callers (e.g. a SnackBar in SettingsScreen) can act on the result
+  // without racing the 3-second auto-reset.
+  Future<UpdateAvailableState> checkForUpdate({bool silent = false}) async {
     if (_state == UpdateAvailableState.checking ||
         _state == UpdateAvailableState.downloading) {
-      return;
+      return _state;
+    }
+
+    // In-app updates are only supported on Android via Google Play.
+    // On web, iOS, or non-Play Android builds the API always throws, so we
+    // short-circuit here and report "up-to-date" instead of surfacing a
+    // confusing error banner.
+    if (kIsWeb || !_isAndroid()) {
+      _state = UpdateAvailableState.upToDate;
+      notifyListeners();
+      if (!silent) {
+        Future.delayed(const Duration(seconds: 3), () {
+          if (_state == UpdateAvailableState.upToDate) {
+            _state = UpdateAvailableState.idle;
+            notifyListeners();
+          }
+        });
+      } else {
+        _state = UpdateAvailableState.idle;
+        notifyListeners();
+      }
+      return UpdateAvailableState.upToDate;
     }
 
     _state = UpdateAvailableState.checking;
     _errorMessage = null;
     notifyListeners();
 
+    UpdateAvailableState resolved;
+
     try {
       final info = await InAppUpdate.checkForUpdate();
       if (info.updateAvailability == UpdateAvailability.updateAvailable) {
-        _state = UpdateAvailableState.available;
+        resolved = UpdateAvailableState.available;
+        _state = resolved;
         _updateInfo = info;
+        notifyListeners();
       } else {
-        _state = UpdateAvailableState.upToDate;
-        // Reset to idle after 3s for the manual-check UI only
-        if (!silent) {
-          await Future.delayed(const Duration(seconds: 3));
-          if (_state == UpdateAvailableState.upToDate) {
-            _state = UpdateAvailableState.idle;
-          }
-        } else {
+        resolved = UpdateAvailableState.upToDate;
+        _state = resolved;
+        notifyListeners(); // render "All Up-to-date" in the tile immediately
+
+        if (silent) {
           _state = UpdateAvailableState.idle;
+          notifyListeners();
+        } else {
+          // Hold the upToDate state so the tile shows it, then quietly reset.
+          Future.delayed(const Duration(seconds: 3), () {
+            if (_state == UpdateAvailableState.upToDate) {
+              _state = UpdateAvailableState.idle;
+              notifyListeners();
+            }
+          });
         }
       }
     } catch (e) {
-      if (silent) {
-        // Silent startup check — swallow the error, reset to idle
-        _state = UpdateAvailableState.idle;
-      } else {
-        _errorMessage = 'Could not check for updates. Try again later.';
-        _state = UpdateAvailableState.error;
-        await Future.delayed(const Duration(seconds: 3));
-        if (_state == UpdateAvailableState.error) {
+      // Play Core can throw PlatformException on sideloaded APKs, emulators,
+      // and devices without Google Play Services. Treat these as "up-to-date"
+      // rather than surfacing a scary red error tile to the user.
+      final isPlayCoreUnsupported = e.toString().contains('in_app_update') ||
+          e.toString().contains('INSTALL_UNAVAILABLE') ||
+          e.toString().contains('PlatformException') ||
+          e.toString().contains('not available');
+
+      if (silent || isPlayCoreUnsupported) {
+        resolved = UpdateAvailableState.upToDate;
+        _state = resolved;
+        notifyListeners();
+        if (!silent) {
+          Future.delayed(const Duration(seconds: 3), () {
+            if (_state == UpdateAvailableState.upToDate) {
+              _state = UpdateAvailableState.idle;
+              notifyListeners();
+            }
+          });
+        } else {
           _state = UpdateAvailableState.idle;
+          notifyListeners();
         }
+      } else {
+        resolved = UpdateAvailableState.error;
+        _errorMessage = 'Could not check for updates. Try again later.';
+        _state = resolved;
+        notifyListeners();
+        Future.delayed(const Duration(seconds: 3), () {
+          if (_state == UpdateAvailableState.error) {
+            _state = UpdateAvailableState.idle;
+            notifyListeners();
+          }
+        });
       }
     }
 
-    notifyListeners();
+    return resolved;
   }
 
   // ── Download ───────────────────────────────────────────────────────────────
@@ -97,4 +155,15 @@ class UpdateStateNotifier extends ChangeNotifier {
   }
 
   static Future<void> completeUpdate() => InAppUpdate.completeFlexibleUpdate();
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+
+  static bool _isAndroid() {
+    try {
+      // defaultTargetPlatform is available without dart:io
+      return defaultTargetPlatform == TargetPlatform.android;
+    } catch (_) {
+      return false;
+    }
+  }
 }

@@ -13,14 +13,24 @@ class ModernItineraryBuilder extends StatefulWidget {
   final Function(int) onDelete;
   final VoidCallback onAddItem;
   final Function() onChanged;
+  final ScrollController? scrollController;
+
+  // ── Search highlight props ─────────────────────────────────────────────────
+  final String searchQuery;
+  final String activeItemId;
+  final Map<String, GlobalKey> itemKeys;
 
   const ModernItineraryBuilder({
     required this.items,
     required this.onDelete,
     required this.onAddItem,
     required this.onChanged,
+    this.scrollController,
+    this.searchQuery = '',
+    this.activeItemId = '',
+    Map<String, GlobalKey>? itemKeys,
     super.key,
-  });
+  }) : itemKeys = itemKeys ?? const {};
 
   @override
   State<ModernItineraryBuilder> createState() => _ModernItineraryBuilderState();
@@ -50,6 +60,7 @@ class _ModernItineraryBuilderState extends State<ModernItineraryBuilder> {
           child: widget.items.isEmpty
               ? _buildEmptyState(isDark)
               : CustomScrollView(
+            controller: widget.scrollController,
             slivers: [
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
@@ -59,19 +70,33 @@ class _ModernItineraryBuilderState extends State<ModernItineraryBuilder> {
                     final item = widget.items[index];
                     final isLast = index == widget.items.length - 1;
                     final isExpanded = _expandedItems[item.id] ?? false;
-                    return _ItineraryTimelineItem(
-                      key: ValueKey(item.id),
-                      item: item,
-                      index: index,
-                      isLast: isLast,
-                      isExpanded: isExpanded,
-                      isDark: isDark,
-                      onToggleExpanded: () => _toggleExpanded(item.id),
-                      onDelete: () {
-                        widget.onDelete(index);
-                        setState(() => _expandedItems.remove(item.id));
-                      },
-                      onChanged: widget.onChanged,
+                    final itemKey = widget.itemKeys.putIfAbsent(
+                        item.id, () => GlobalKey());
+                    final isActive = item.id == widget.activeItemId &&
+                        widget.searchQuery.isNotEmpty;
+                    return Container(
+                      key: itemKey,
+                      decoration: isActive
+                          ? BoxDecoration(
+                        color: const Color(0xFFFFD600).withAlpha(45),
+                        borderRadius: BorderRadius.circular(14),
+                      )
+                          : null,
+                      child: _ItineraryTimelineItem(
+                        key: ValueKey(item.id),
+                        item: item,
+                        index: index,
+                        isLast: isLast,
+                        isExpanded: isExpanded,
+                        isDark: isDark,
+                        searchQuery: widget.searchQuery,
+                        onToggleExpanded: () => _toggleExpanded(item.id),
+                        onDelete: () {
+                          widget.onDelete(index);
+                          setState(() => _expandedItems.remove(item.id));
+                        },
+                        onChanged: widget.onChanged,
+                      ),
                     );
                   },
                 ),
@@ -132,6 +157,7 @@ class _ItineraryTimelineItem extends StatefulWidget {
   final bool isLast;
   final bool isExpanded;
   final bool isDark;
+  final String searchQuery;
   final VoidCallback onToggleExpanded;
   final VoidCallback onDelete;
   final VoidCallback onChanged;
@@ -145,6 +171,7 @@ class _ItineraryTimelineItem extends StatefulWidget {
     required this.onToggleExpanded,
     required this.onDelete,
     required this.onChanged,
+    this.searchQuery = '',
     super.key,
   });
 
@@ -265,6 +292,7 @@ class _ItineraryTimelineItemState extends State<_ItineraryTimelineItem>
                       item: widget.item,
                       isExpanded: widget.isExpanded,
                       isDark: isDark,
+                      searchQuery: widget.searchQuery,
                       onTap: widget.onToggleExpanded,
                       onDelete: widget.onDelete,
                     ),
@@ -299,6 +327,7 @@ class _TimelineItemHeader extends StatelessWidget {
   final ItineraryItem item;
   final bool isExpanded;
   final bool isDark;
+  final String searchQuery;
   final VoidCallback onTap;
   final VoidCallback onDelete;
 
@@ -308,6 +337,7 @@ class _TimelineItemHeader extends StatelessWidget {
     required this.isDark,
     required this.onTap,
     required this.onDelete,
+    this.searchQuery = '',
   });
 
   @override
@@ -326,9 +356,10 @@ class _TimelineItemHeader extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: Text(
-                  item.location.isNotEmpty ? item.location : 'Destination',
-                  style: TextStyle(
+                child: _HighlightedText(
+                  text: item.location.isNotEmpty ? item.location : 'Destination',
+                  query: searchQuery,
+                  baseStyle: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
                     color: textColor,
@@ -737,6 +768,61 @@ class _AddDestinationButton extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Highlighted text — wraps matched query spans in amber background
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _HighlightedText extends StatelessWidget {
+  final String text;
+  final String query;
+  final TextStyle baseStyle;
+  final int? maxLines;
+  final TextOverflow? overflow;
+
+  const _HighlightedText({
+    required this.text,
+    required this.query,
+    required this.baseStyle,
+    this.maxLines,
+    this.overflow,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (query.isEmpty) {
+      return Text(text, style: baseStyle, maxLines: maxLines, overflow: overflow);
+    }
+    final lower = text.toLowerCase();
+    final qLower = query.toLowerCase();
+    final spans = <TextSpan>[];
+    int start = 0;
+    while (start < text.length) {
+      final idx = lower.indexOf(qLower, start);
+      if (idx == -1) {
+        spans.add(TextSpan(text: text.substring(start)));
+        break;
+      }
+      if (idx > start) {
+        spans.add(TextSpan(text: text.substring(start, idx)));
+      }
+      spans.add(TextSpan(
+        text: text.substring(idx, idx + query.length),
+        style: const TextStyle(
+          backgroundColor: Color(0xFFFFD600),
+          color: Colors.black,
+          fontWeight: FontWeight.w700,
+        ),
+      ));
+      start = idx + query.length;
+    }
+    return RichText(
+      text: TextSpan(style: baseStyle, children: spans),
+      maxLines: maxLines,
+      overflow: overflow ?? TextOverflow.clip,
     );
   }
 }

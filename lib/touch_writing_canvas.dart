@@ -39,20 +39,20 @@ class Stroke {
   bool get isEraser => tool == DrawTool.eraser;
 
   Map<String, dynamic> toJson() => {
-        'points': points.map((p) => p.toJson()).toList(),
-        'color': color.toARGB32(),
-        'width': width,
-        'tool': tool.index,
-      };
+    'points': points.map((p) => p.toJson()).toList(),
+    'color': color.toARGB32(),
+    'width': width,
+    'tool': tool.index,
+  };
 
   factory Stroke.fromJson(Map<String, dynamic> j) => Stroke(
-        points: (j['points'] as List)
-            .map((p) => DrawPoint.fromJson(p as Map))
-            .toList(),
-        color: Color(j['color'] as int),
-        width: (j['width'] as num).toDouble(),
-        tool: DrawTool.values[j['tool'] as int? ?? 0],
-      );
+    points: (j['points'] as List)
+        .map((p) => DrawPoint.fromJson(p as Map))
+        .toList(),
+    color: Color(j['color'] as int),
+    width: (j['width'] as num).toDouble(),
+    tool: DrawTool.values[j['tool'] as int? ?? 0],
+  );
 }
 
 // Canvas data serialisation
@@ -150,8 +150,8 @@ class _CanvasPainter extends CustomPainter {
   @override
   bool shouldRepaint(_CanvasPainter old) =>
       old.strokes.length != strokes.length ||
-      old.activeStroke != activeStroke ||
-      old.bgColor != bgColor;
+          old.activeStroke != activeStroke ||
+          old.bgColor != bgColor;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -210,8 +210,8 @@ class TouchWritingCanvasState extends State<TouchWritingCanvas> {
     final color = _tool == DrawTool.eraser
         ? _bgColor
         : (_tool == DrawTool.highlighter
-            ? _penColor.withAlpha(120)
-            : _penColor);
+        ? _penColor.withAlpha(120)
+        : _penColor);
     _active = Stroke(
       points: [DrawPoint(e.localPosition.dx, e.localPosition.dy, _pressure(e))],
       color: color,
@@ -259,14 +259,16 @@ class TouchWritingCanvasState extends State<TouchWritingCanvas> {
   }
 
   void clear() {
+    // Save strokes to undo buffer before wiping.
+    _undoBuffer
+      ..clear()
+      ..addAll(_strokes.reversed);
+    // Clear inside setState so Flutter schedules a repaint in the same frame.
+    // _CanvasPainter.shouldRepaint() checks length, so going from N→0 triggers
+    // a redraw immediately without waiting for the next pointer event.
     setState(() {
-      // Save all strokes to undo buffer (in reverse order for redo)
-      _undoBuffer.clear();
-      _undoBuffer.addAll(_strokes.reversed);
-      // Create a new empty list instead of clearing the old one
-      // so shouldRepaint() detects the change (old.strokes != strokes)
       _strokes.clear();
-      _active = null; // Clear any active stroke as well
+      _active = null;
     });
     _notify();
   }
@@ -276,7 +278,7 @@ class TouchWritingCanvasState extends State<TouchWritingCanvas> {
   Future<Uint8List?> exportPng() async {
     try {
       final boundary = _repaintKey.currentContext!.findRenderObject()!
-          as RenderRepaintBoundary;
+      as RenderRepaintBoundary;
       final image = await boundary.toImage(pixelRatio: 2.0);
       final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
       return byteData?.buffer.asUint8List();
@@ -492,9 +494,9 @@ class _Toolbar extends StatelessWidget {
               child: SliderTheme(
                 data: SliderTheme.of(context).copyWith(
                   thumbShape:
-                      const RoundSliderThumbShape(enabledThumbRadius: 6),
+                  const RoundSliderThumbShape(enabledThumbRadius: 6),
                   overlayShape:
-                      const RoundSliderOverlayShape(overlayRadius: 12),
+                  const RoundSliderOverlayShape(overlayRadius: 12),
                   trackHeight: 2,
                 ),
                 child: Slider(
@@ -567,7 +569,7 @@ class _Toolbar extends StatelessWidget {
                 ),
                 child: isSelected
                     ? const Icon(Icons.check_rounded,
-                        color: Colors.blue, size: 20)
+                    color: Colors.blue, size: 20)
                     : null,
               ),
             );

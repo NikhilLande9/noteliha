@@ -111,36 +111,36 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
     super.initState();
     _editing = widget.note != null
         ? widget.note!.copyWith(
-            // ── Deep-copy every structured list so the editor always works on
-            // independent objects. Shallow copies (List.from) keep the same
-            // item references, meaning direct field mutations write straight
-            // through to the Hive-stored note before an explicit save.
+      // ── Deep-copy every structured list so the editor always works on
+      // independent objects. Shallow copies (List.from) keep the same
+      // item references, meaning direct field mutations write straight
+      // through to the Hive-stored note before an explicit save.
 
-            // Checklist — copyWith() clones every field.
-            checklistItems:
-                widget.note!.checklistItems.map((i) => i.copyWith()).toList(),
+      // Checklist — copyWith() clones every field.
+      checklistItems:
+      widget.note!.checklistItems.map((i) => i.copyWith()).toList(),
 
-            // Itinerary — copyWith() on each item.
-            itineraryItems:
-                widget.note!.itineraryItems.map((i) => i.copyWith()).toList(),
+      // Itinerary — copyWith() on each item.
+      itineraryItems:
+      widget.note!.itineraryItems.map((i) => i.copyWith()).toList(),
 
-            // Meal plan — copyWith() deep-copies the meals list too.
-            mealPlanItems:
-                widget.note!.mealPlanItems.map((i) => i.copyWith()).toList(),
+      // Meal plan — copyWith() deep-copies the meals list too.
+      mealPlanItems:
+      widget.note!.mealPlanItems.map((i) => i.copyWith()).toList(),
 
-            // Recipe — copyWith() clones ingredient rows and steps.
-            recipeData: widget.note!.recipeData?.copyWith(),
+      // Recipe — copyWith() clones ingredient rows and steps.
+      recipeData: widget.note!.recipeData?.copyWith(),
 
-            imageIds: List.from(widget.note!.imageIds),
-          )
+      imageIds: List.from(widget.note!.imageIds),
+    )
         : Note(
-            id: const Uuid().v4(),
-            title: '',
-            content: '',
-            updatedAt: DateTime.now(),
-            noteType: widget.noteType,
-            colorTheme: _defaultColorForTheme(),
-          );
+      id: const Uuid().v4(),
+      title: '',
+      content: '',
+      updatedAt: DateTime.now(),
+      noteType: widget.noteType,
+      colorTheme: _defaultColorForTheme(),
+    );
 
     _titleCtrl = TextEditingController(text: _editing.title);
 
@@ -411,7 +411,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
 
     // Itinerary: any item with ANY field filled in (not just location).
     if (_editing.itineraryItems.any((i) =>
-        i.location.isNotEmpty ||
+    i.location.isNotEmpty ||
         i.date.isNotEmpty ||
         i.arrivalTime.isNotEmpty ||
         i.departureTime.isNotEmpty ||
@@ -433,7 +433,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
             r.cookTime.isNotEmpty ||
             r.servings.isNotEmpty ||
             r.ingredientRows.any((row) =>
-                row.name.isNotEmpty ||
+            row.name.isNotEmpty ||
                 row.quantity.isNotEmpty ||
                 row.unit.isNotEmpty) ||
             r.steps.any((s) => s.text.isNotEmpty))) {
@@ -508,13 +508,13 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
         final renderObj = ctx.findRenderObject();
         if (renderObj is RenderBox) {
           final scrollRenderObj =
-              controller.position.context.storageContext.findRenderObject();
+          controller.position.context.storageContext.findRenderObject();
           if (scrollRenderObj is RenderBox) {
             final itemOffset =
-                renderObj.localToGlobal(Offset.zero, ancestor: scrollRenderObj);
+            renderObj.localToGlobal(Offset.zero, ancestor: scrollRenderObj);
             final targetScrollOffset =
-                (controller.offset + itemOffset.dy - 80.0)
-                    .clamp(0.0, controller.position.maxScrollExtent);
+            (controller.offset + itemOffset.dy - 80.0)
+                .clamp(0.0, controller.position.maxScrollExtent);
             controller.animateTo(
               targetScrollOffset,
               duration: const Duration(milliseconds: 280),
@@ -547,28 +547,28 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
     switch (_editing.noteType) {
       case NoteType.normal:
       case NoteType.drawing:
-        // Rich text → plain text via codec.
+      // Rich text → plain text via codec.
         return _RichContentCodec.plainText(_contentCtrl.text);
       case NoteType.checklist:
       case NoteType.itinerary:
       case NoteType.mealPlan:
       case NoteType.recipe:
-        // Structured note types are searched per-item in NoteInNoteSearchBar
-        // using the dedicated item lists (checklistItems, itineraryItems, etc.).
-        // Returning content here would cause every match to be counted twice —
-        // once from the flat concatenated string and once from the per-item scan.
+      // Structured note types are searched per-item in NoteInNoteSearchBar
+      // using the dedicated item lists (checklistItems, itineraryItems, etc.).
+      // Returning content here would cause every match to be counted twice —
+      // once from the flat concatenated string and once from the per-item scan.
         return '';
     }
   }
 
   String _noteTypeLabel(NoteType type) => switch (type) {
-        NoteType.normal => AppTranslations.translate('note'),
-        NoteType.checklist => AppTranslations.translate('checklist'),
-        NoteType.itinerary => AppTranslations.translate('itinerary'),
-        NoteType.mealPlan => AppTranslations.translate('meal_plan'),
-        NoteType.recipe => AppTranslations.translate('recipe'),
-        NoteType.drawing => AppTranslations.translate('drawing'),
-      };
+    NoteType.normal => AppTranslations.translate('note'),
+    NoteType.checklist => AppTranslations.translate('checklist'),
+    NoteType.itinerary => AppTranslations.translate('itinerary'),
+    NoteType.mealPlan => AppTranslations.translate('meal_plan'),
+    NoteType.recipe => AppTranslations.translate('recipe'),
+    NoteType.drawing => AppTranslations.translate('drawing'),
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -641,28 +641,28 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
               duration: const Duration(milliseconds: 200),
               child: _showSaved
                   ? Padding(
-                      key: const ValueKey('saved'),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 14),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.check_circle_rounded,
-                              size: 16, color: accent),
-                          const SizedBox(width: 4),
-                          Text(context.tr('saved'),
-                              style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  color: accent)),
-                        ],
-                      ),
-                    )
+                key: const ValueKey('saved'),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 12, vertical: 14),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.check_circle_rounded,
+                        size: 16, color: accent),
+                    const SizedBox(width: 4),
+                    Text(context.tr('saved'),
+                        style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: accent)),
+                  ],
+                ),
+              )
                   : _NeuSaveButton(
-                      key: const ValueKey('save'),
-                      isDark: isDark,
-                      accent: accent,
-                      onTap: _save),
+                  key: const ValueKey('save'),
+                  isDark: isDark,
+                  accent: accent,
+                  onTap: _save),
             ),
             _MoreMenu(
               editing: _editing,
@@ -864,10 +864,10 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                 duration: const Duration(milliseconds: 200),
                 child: _editing.pinned
                     ? Tooltip(
-                        message: context.tr('pinned'),
-                        child: Icon(Icons.push_pin_rounded,
-                            size: 18, color: accent),
-                      )
+                  message: context.tr('pinned'),
+                  child: Icon(Icons.push_pin_rounded,
+                      size: 18, color: accent),
+                )
                     : const SizedBox.shrink(),
               ),
             ],
@@ -920,8 +920,8 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                             imageIds: _editing.imageIds,
                             initialIndex: index,
                             getImage: (id) => Provider.of<NotesProvider>(
-                                    context,
-                                    listen: false)
+                                context,
+                                listen: false)
                                 .getImage(id),
                           );
                         },
@@ -929,17 +929,17 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                           tag: 'note_image_$imgId',
                           child: bytes == null
                               ? SizedBox(
-                                  width: 100,
-                                  height: 110,
-                                  child: Icon(Icons.broken_image_outlined,
-                                      color: Neu.textSecondary(isDark)),
-                                )
+                            width: 100,
+                            height: 110,
+                            child: Icon(Icons.broken_image_outlined,
+                                color: Neu.textSecondary(isDark)),
+                          )
                               : Image.memory(
-                                  bytes,
-                                  width: 100,
-                                  height: 110,
-                                  fit: BoxFit.cover,
-                                ),
+                            bytes,
+                            width: 100,
+                            height: 110,
+                            fit: BoxFit.cover,
+                          ),
                         ),
                       ),
                       // ── Delete button ─────────────────────────────────────
@@ -956,7 +956,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                             final p = Provider.of<NotesProvider>(context,
                                 listen: false);
                             final referencedByOther = p.notes.any((n) =>
-                                n.id != _editing.id &&
+                            n.id != _editing.id &&
                                 n.imageIds.contains(imageId));
                             if (!referencedByOther) {
                               await p.deleteImage(imageId);
@@ -1045,13 +1045,13 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
   }
 
   Widget _buildBody(bool isDark) => switch (_editing.noteType) {
-        NoteType.normal => _buildNormal(isDark),
-        NoteType.checklist => _buildChecklist(isDark),
-        NoteType.itinerary => _buildItinerary(),
-        NoteType.mealPlan => _buildMealPlan(),
-        NoteType.recipe => _buildRecipe(isDark),
-        NoteType.drawing => _buildDrawing(isDark),
-      };
+    NoteType.normal => _buildNormal(isDark),
+    NoteType.checklist => _buildChecklist(isDark),
+    NoteType.itinerary => _buildItinerary(),
+    NoteType.mealPlan => _buildMealPlan(),
+    NoteType.recipe => _buildRecipe(isDark),
+    NoteType.drawing => _buildDrawing(isDark),
+  };
 
   // ── Normal note with rich text toolbar ────────────────────────────────────
   Widget _buildNormal(bool isDark) {
@@ -1122,6 +1122,8 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
     setState(() => _editing.checklistItems.insert(index + 1, newItem));
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _focusForItem(newItem.id).requestFocus();
+      _scrollToKey(_keyFor(_checklistItemKeys, newItem.id),
+          controller: _checklistScrollCtrl);
     });
   }
 
@@ -1228,7 +1230,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
                 }),
                 onDelete: () {
                   final focusIndex =
-                      (i - 1).clamp(0, _editing.checklistItems.length - 1);
+                  (i - 1).clamp(0, _editing.checklistItems.length - 1);
                   final prevId = _editing.checklistItems.length > 1
                       ? _editing.checklistItems[focusIndex].id
                       : null;
@@ -1256,6 +1258,8 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
             setState(() => _editing.checklistItems.add(newItem));
             WidgetsBinding.instance.addPostFrameCallback((_) {
               _focusForItem(newItem.id).requestFocus();
+              _scrollToKey(_keyFor(_checklistItemKeys, newItem.id),
+                  controller: _checklistScrollCtrl);
             });
           },
         ),
@@ -1264,28 +1268,36 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
   }
 
   Widget _buildItinerary() => ModernItineraryBuilder(
-        scrollController: _itineraryScrollCtrl,
-        items: _editing.itineraryItems,
-        searchQuery: _searchQuery,
-        activeItemId: _activeItemId,
-        itemKeys: _itineraryItemKeys,
-        onDelete: (i) => setState(() => _editing.itineraryItems.removeAt(i)),
-        onAddItem: () => setState(() =>
-            _editing.itineraryItems.add(ItineraryItem(id: const Uuid().v4()))),
-        onChanged: () => setState(() {}),
-      );
+    scrollController: _itineraryScrollCtrl,
+    items: _editing.itineraryItems,
+    searchQuery: _searchQuery,
+    activeItemId: _activeItemId,
+    itemKeys: _itineraryItemKeys,
+    onDelete: (i) => setState(() => _editing.itineraryItems.removeAt(i)),
+    onAddItem: () {
+      final newItem = ItineraryItem(id: const Uuid().v4());
+      setState(() => _editing.itineraryItems.add(newItem));
+      _scrollToKey(_keyFor(_itineraryItemKeys, newItem.id),
+          controller: _itineraryScrollCtrl);
+    },
+    onChanged: () => setState(() {}),
+  );
 
   Widget _buildMealPlan() => ModernMealPlanBuilder(
-        scrollController: _mealPlanScrollCtrl,
-        items: _editing.mealPlanItems,
-        searchQuery: _searchQuery,
-        activeItemId: _activeItemId,
-        itemKeys: _mealPlanItemKeys,
-        onDelete: (i) => setState(() => _editing.mealPlanItems.removeAt(i)),
-        onAddItem: () => setState(() =>
-            _editing.mealPlanItems.add(MealPlanItem(id: const Uuid().v4()))),
-        onChanged: () => setState(() {}),
-      );
+    scrollController: _mealPlanScrollCtrl,
+    items: _editing.mealPlanItems,
+    searchQuery: _searchQuery,
+    activeItemId: _activeItemId,
+    itemKeys: _mealPlanItemKeys,
+    onDelete: (i) => setState(() => _editing.mealPlanItems.removeAt(i)),
+    onAddItem: () {
+      final newItem = MealPlanItem(id: const Uuid().v4());
+      setState(() => _editing.mealPlanItems.add(newItem));
+      _scrollToKey(_keyFor(_mealPlanItemKeys, newItem.id),
+          controller: _mealPlanScrollCtrl);
+    },
+    onChanged: () => setState(() {}),
+  );
 
   Widget _buildRecipe(bool isDark) {
     _editing.recipeData ??= RecipeData();
@@ -1324,8 +1336,8 @@ class _NoteSnapshot {
   @override
   bool operator ==(Object other) =>
       other is _NoteSnapshot &&
-      title == other.title &&
-      content == other.content;
+          title == other.title &&
+          content == other.content;
 
   @override
   int get hashCode => Object.hash(title, content);
@@ -1411,9 +1423,9 @@ class _UndoBtnState extends State<_UndoBtn> {
       onTapDown: widget.enabled ? (_) => setState(() => _pressed = true) : null,
       onTapUp: widget.enabled
           ? (_) {
-              setState(() => _pressed = false);
-              widget.onTap?.call();
-            }
+        setState(() => _pressed = false);
+        widget.onTap?.call();
+      }
           : null,
       onTapCancel: () => setState(() => _pressed = false),
       child: AnimatedContainer(
@@ -1563,13 +1575,13 @@ class _RichTextController extends TextEditingController {
   // ── Base style ─────────────────────────────────────────────────────────────
 
   TextStyle get _base => TextStyle(
-        fontSize: 15.5,
-        height: 1.6,
-        color: baseColor,
-        fontWeight: FontWeight.w400,
-        fontStyle: FontStyle.normal,
-        decoration: TextDecoration.none,
-      );
+    fontSize: 15.5,
+    height: 1.6,
+    color: baseColor,
+    fontWeight: FontWeight.w400,
+    fontStyle: FontStyle.normal,
+    decoration: TextDecoration.none,
+  );
 
   // ── Query ──────────────────────────────────────────────────────────────────
 
@@ -1719,7 +1731,7 @@ class _RichTextController extends TextEditingController {
       // Fallback: find first differing character.
       editPoint = 0;
       final minLen =
-          oldText.length < newText.length ? oldText.length : newText.length;
+      oldText.length < newText.length ? oldText.length : newText.length;
       while (editPoint < minLen && oldText[editPoint] == newText[editPoint]) {
         editPoint++;
       }
@@ -1840,10 +1852,10 @@ class _RichTextController extends TextEditingController {
     return spans.isEmpty
         ? TextSpan(text: t, style: _base)
         : TextSpan(
-            children: searchQuery.isEmpty
-                ? spans
-                : overlaySearchHighlights(spans, t, searchQuery,
-                    activeOffset: activeMatchOffset));
+        children: searchQuery.isEmpty
+            ? spans
+            : overlaySearchHighlights(spans, t, searchQuery,
+            activeOffset: activeMatchOffset));
   }
 
   // ── Helpers ────────────────────────────────────────────────────────────────
@@ -1960,7 +1972,7 @@ class _ListEnterFormatter extends TextInputFormatter {
     }
 
     final nextPrefix =
-        isBullet ? '• ' : '${int.parse(numMatch!.group(1)!) + 1}. ';
+    isBullet ? '• ' : '${int.parse(numMatch!.group(1)!) + 1}. ';
 
     final before = newValue.text.substring(0, cursor);
     final after = newValue.text.substring(cursor);
@@ -2414,6 +2426,14 @@ class _RichTextFieldState extends State<_RichTextField> {
     if (widget.controller.text != newPlain) {
       widget.controller.value = _richCtrl.value;
     }
+    // Scroll to keep the cursor visible after every keystroke.
+    // Without this the TextField sits inside an Expanded and never auto-scrolls
+    // to the cursor — the user loses sight of what they are typing.
+    final cursor = _richCtrl.selection.baseOffset;
+    if (cursor >= 0) {
+      WidgetsBinding.instance
+          .addPostFrameCallback((_) => _scrollToMatch(cursor));
+    }
   }
 
   void _onParentChanged() {
@@ -2547,7 +2567,7 @@ class _RichTextFieldState extends State<_RichTextField> {
           ),
           filled: false,
           contentPadding:
-              const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           border: InputBorder.none,
           enabledBorder: InputBorder.none,
           focusedBorder: InputBorder.none,
@@ -2750,7 +2770,7 @@ class _SteppedProgressBarState extends State<_SteppedProgressBar>
 
           // ── Bar ─────────────────────────────────────────────────────────────
           if (total == 0)
-            // Empty state: thin ghost track.
+          // Empty state: thin ghost track.
             Container(
               height: 6,
               decoration: BoxDecoration(
@@ -2759,7 +2779,7 @@ class _SteppedProgressBarState extends State<_SteppedProgressBar>
               ),
             )
           else if (total > _kMaxSegments)
-            // Continuous animated fill for long lists.
+          // Continuous animated fill for long lists.
             ClipRRect(
               borderRadius: BorderRadius.circular(3),
               child: Stack(
@@ -2786,13 +2806,13 @@ class _SteppedProgressBarState extends State<_SteppedProgressBar>
               ),
             )
           else
-            // Segmented bar — one slot per task.
+          // Segmented bar — one slot per task.
             LayoutBuilder(
               builder: (ctx, constraints) {
                 const gap = 3.0;
                 final barW = constraints.maxWidth;
                 final segW =
-                    ((barW - gap * (total - 1)) / total).clamp(0.0, barW);
+                ((barW - gap * (total - 1)) / total).clamp(0.0, barW);
 
                 return Row(
                   children: List.generate(total, (i) {
@@ -3057,12 +3077,12 @@ class _ChecklistSortMenuButton extends StatelessWidget {
         padding: const EdgeInsets.all(6),
         decoration: BoxDecoration(
           color:
-              isActive ? accent.withAlpha(isDark ? 40 : 30) : Neu.base(isDark),
+          isActive ? accent.withAlpha(isDark ? 40 : 30) : Neu.base(isDark),
           borderRadius: BorderRadius.circular(8),
           boxShadow: isActive ? Neu.inset(isDark) : Neu.raisedSm(isDark),
           border: isActive
               ? Border.all(
-                  color: accent.withAlpha(isDark ? 120 : 100), width: 1)
+              color: accent.withAlpha(isDark ? 120 : 100), width: 1)
               : null,
         ),
         child: Icon(Icons.sort_rounded, size: 16, color: accent),
@@ -3071,11 +3091,11 @@ class _ChecklistSortMenuButton extends StatelessWidget {
   }
 
   PopupMenuItem<_ChecklistSortMode> _sortMenuItem(
-    BuildContext context, {
-    required _ChecklistSortMode value,
-    required IconData icon,
-    required String label,
-  }) {
+      BuildContext context, {
+        required _ChecklistSortMode value,
+        required IconData icon,
+        required String label,
+      }) {
     final isSelected = sortMode == value;
     return PopupMenuItem<_ChecklistSortMode>(
       value: value,
@@ -3334,7 +3354,7 @@ class _NeuDialogButtonState extends State<_NeuDialogButton> {
           color: Neu.base(widget.isDark),
           borderRadius: BorderRadius.circular(12),
           boxShadow:
-              _pressed ? Neu.inset(widget.isDark) : Neu.raisedSm(widget.isDark),
+          _pressed ? Neu.inset(widget.isDark) : Neu.raisedSm(widget.isDark),
         ),
         child: Text(widget.label,
             style: TextStyle(
@@ -3455,9 +3475,9 @@ class _ChecklistItemTileState extends State<_ChecklistItemTile>
       key: widget.itemKey,
       decoration: widget.isActiveMatch && widget.searchQuery.isNotEmpty
           ? BoxDecoration(
-              color: const Color(0xFFFFD600).withAlpha(45),
-              borderRadius: BorderRadius.circular(10),
-            )
+        color: const Color(0xFFFFD600).withAlpha(45),
+        borderRadius: BorderRadius.circular(10),
+      )
           : null,
       child: Dismissible(
         key: ValueKey(widget.item.id),
@@ -3501,14 +3521,14 @@ class _ChecklistItemTileState extends State<_ChecklistItemTile>
                   ),
                   child: widget.item.checked
                       ? Icon(Icons.check_rounded,
-                          size: widget.compact ? 12 : 14, color: accent)
+                      size: widget.compact ? 12 : 14, color: accent)
                       : null,
                 ),
               ),
               Expanded(
                 child: FadeTransition(
                   opacity:
-                      Tween<double>(begin: 1.0, end: 0.45).animate(_strikeAnim),
+                  Tween<double>(begin: 1.0, end: 0.45).animate(_strikeAnim),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -3522,48 +3542,48 @@ class _ChecklistItemTileState extends State<_ChecklistItemTile>
                           }
                         },
                         child: widget.compact
-                            // ── Compact: single line, TextField scrolls
-                            // horizontally on its own when maxLines == 1 ────────
+                        // ── Compact: single line, TextField scrolls
+                        // horizontally on its own when maxLines == 1 ────────
                             ? NeuField(
-                                isDark: isDark,
-                                controller: _ctrl,
-                                focusNode: widget.focusNode,
-                                hint: AppTranslations.translate('new_item'),
-                                textInputAction: TextInputAction.done,
-                                maxLines: 1,
-                                minLines: 1,
-                                onChanged: widget.onTextChanged,
-                                onSubmitted: widget.onSubmitted,
-                                style: TextStyle(
-                                  fontSize: 13.5,
-                                  decoration: widget.item.checked
-                                      ? TextDecoration.lineThrough
-                                      : TextDecoration.none,
-                                  color: widget.item.checked
-                                      ? subColor
-                                      : textColor,
-                                ),
-                              )
-                            // ── Expand: wrap to new lines naturally ────────────
+                          isDark: isDark,
+                          controller: _ctrl,
+                          focusNode: widget.focusNode,
+                          hint: AppTranslations.translate('new_item'),
+                          textInputAction: TextInputAction.done,
+                          maxLines: 1,
+                          minLines: 1,
+                          onChanged: widget.onTextChanged,
+                          onSubmitted: widget.onSubmitted,
+                          style: TextStyle(
+                            fontSize: 13.5,
+                            decoration: widget.item.checked
+                                ? TextDecoration.lineThrough
+                                : TextDecoration.none,
+                            color: widget.item.checked
+                                ? subColor
+                                : textColor,
+                          ),
+                        )
+                        // ── Expand: wrap to new lines naturally ────────────
                             : NeuField(
-                                isDark: isDark,
-                                controller: _ctrl,
-                                focusNode: widget.focusNode,
-                                hint: AppTranslations.translate('new_item'),
-                                textInputAction: TextInputAction.newline,
-                                maxLines: null,
-                                minLines: 1,
-                                onChanged: widget.onTextChanged,
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  decoration: widget.item.checked
-                                      ? TextDecoration.lineThrough
-                                      : TextDecoration.none,
-                                  color: widget.item.checked
-                                      ? subColor
-                                      : textColor,
-                                ),
-                              ),
+                          isDark: isDark,
+                          controller: _ctrl,
+                          focusNode: widget.focusNode,
+                          hint: AppTranslations.translate('new_item'),
+                          textInputAction: TextInputAction.newline,
+                          maxLines: null,
+                          minLines: 1,
+                          onChanged: widget.onTextChanged,
+                          style: TextStyle(
+                            fontSize: 15,
+                            decoration: widget.item.checked
+                                ? TextDecoration.lineThrough
+                                : TextDecoration.none,
+                            color: widget.item.checked
+                                ? subColor
+                                : textColor,
+                          ),
+                        ),
                       ),
                       // ── Inline match highlight ─────────────────────────────
                       // Shown beneath the field when the search query appears
@@ -3672,20 +3692,20 @@ class _SectionLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(bottom: 10),
-        child: Row(
-          children: [
-            Icon(icon, size: 15, color: Neu.textSecondary(isDark)),
-            const SizedBox(width: 6),
-            Text(text,
-                style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: Neu.textSecondary(isDark),
-                    letterSpacing: 0.5)),
-          ],
-        ),
-      );
+    padding: const EdgeInsets.only(bottom: 10),
+    child: Row(
+      children: [
+        Icon(icon, size: 15, color: Neu.textSecondary(isDark)),
+        const SizedBox(width: 6),
+        Text(text,
+            style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: Neu.textSecondary(isDark),
+                letterSpacing: 0.5)),
+      ],
+    ),
+  );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -3852,23 +3872,23 @@ class _RecipeCardState extends State<_RecipeCard> {
             Expanded(
                 child: _timeField(_prep, AppTranslations.translate('prep_time'),
                     Icons.timer_outlined, isDark, (v) {
-              widget.data.prepTime = v;
-              widget.onChanged();
-            })),
+                      widget.data.prepTime = v;
+                      widget.onChanged();
+                    })),
             const SizedBox(width: 8),
             Expanded(
                 child: _timeField(_cook, AppTranslations.translate('cook_time'),
                     Icons.local_fire_department_outlined, isDark, (v) {
-              widget.data.cookTime = v;
-              widget.onChanged();
-            })),
+                      widget.data.cookTime = v;
+                      widget.onChanged();
+                    })),
             const SizedBox(width: 8),
             Expanded(
                 child: _timeField(_serv, AppTranslations.translate('servings'),
                     Icons.people_outline_rounded, isDark, (v) {
-              widget.data.servings = v;
-              widget.onChanged();
-            })),
+                      widget.data.servings = v;
+                      widget.onChanged();
+                    })),
           ]),
           const SizedBox(height: 24),
           _SectionLabel(
@@ -3923,16 +3943,16 @@ class _RecipeCardState extends State<_RecipeCard> {
             final i = entry.key;
             final row = entry.value;
             final rowKey =
-                widget.ingredientKeys.putIfAbsent(row.id, () => GlobalKey());
+            widget.ingredientKeys.putIfAbsent(row.id, () => GlobalKey());
             final isActive =
                 row.id == widget.activeItemId && widget.searchQuery.isNotEmpty;
             return Container(
               key: rowKey,
               decoration: isActive
                   ? BoxDecoration(
-                      color: const Color(0xFFFFD600).withAlpha(45),
-                      borderRadius: BorderRadius.circular(10),
-                    )
+                color: const Color(0xFFFFD600).withAlpha(45),
+                borderRadius: BorderRadius.circular(10),
+              )
                   : null,
               child: Padding(
                 padding: const EdgeInsets.only(bottom: 6),
@@ -3963,27 +3983,27 @@ class _RecipeCardState extends State<_RecipeCard> {
                           child: _tableField(
                               _nameCtrl[row.id]!, isDark, 'e.g. Flour',
                               onChanged: (v) {
-                            row.name = v;
-                            widget.onChanged();
-                          }),
+                                row.name = v;
+                                widget.onChanged();
+                              }),
                         ),
                         const SizedBox(width: 6),
                         Expanded(
                           flex: 2,
                           child: _tableField(_qtyCtrl[row.id]!, isDark, '200',
                               onChanged: (v) {
-                            row.quantity = v;
-                            widget.onChanged();
-                          }),
+                                row.quantity = v;
+                                widget.onChanged();
+                              }),
                         ),
                         const SizedBox(width: 6),
                         Expanded(
                           flex: 2,
                           child: _tableField(_unitCtrl[row.id]!, isDark, 'g',
                               onChanged: (v) {
-                            row.unit = v;
-                            widget.onChanged();
-                          }),
+                                row.unit = v;
+                                widget.onChanged();
+                              }),
                         ),
                         const SizedBox(width: 6),
                         GestureDetector(
@@ -4005,7 +4025,7 @@ class _RecipeCardState extends State<_RecipeCard> {
                         padding: const EdgeInsets.only(left: 34, bottom: 2),
                         child: _HighlightedText(
                           text:
-                              '${row.quantity.isNotEmpty ? "${row.quantity} " : ''}'
+                          '${row.quantity.isNotEmpty ? "${row.quantity} " : ''}'
                               '${row.unit.isNotEmpty ? "${row.unit} " : ''}'
                               '${row.name}',
                           query: widget.searchQuery,
@@ -4050,16 +4070,16 @@ class _RecipeCardState extends State<_RecipeCard> {
             final i = entry.key;
             final step = entry.value;
             final stepKey =
-                widget.stepKeys.putIfAbsent(step.id, () => GlobalKey());
+            widget.stepKeys.putIfAbsent(step.id, () => GlobalKey());
             final isActive =
                 step.id == widget.activeItemId && widget.searchQuery.isNotEmpty;
             return Container(
               key: stepKey,
               decoration: isActive
                   ? BoxDecoration(
-                      color: const Color(0xFFFFD600).withAlpha(45),
-                      borderRadius: BorderRadius.circular(10),
-                    )
+                color: const Color(0xFFFFD600).withAlpha(45),
+                borderRadius: BorderRadius.circular(10),
+              )
                   : null,
               child: Padding(
                 padding: const EdgeInsets.only(bottom: 8),
@@ -4090,7 +4110,7 @@ class _RecipeCardState extends State<_RecipeCard> {
                             controller: _stepCtrl[step.id]!,
                             focusNode: _stepFocus[step.id],
                             hint:
-                                '${AppTranslations.translate('describe_step')} ${i + 1}…',
+                            '${AppTranslations.translate('describe_step')} ${i + 1}…',
                             maxLines: null,
                             minLines: 1,
                             textInputAction: TextInputAction.next,

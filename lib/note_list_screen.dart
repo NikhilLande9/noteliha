@@ -9,7 +9,9 @@ import 'neu_theme.dart';
 import 'notes_provider.dart';
 import 'note_editor_screen.dart';
 import 'note_search_bar.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'settings_screen.dart';
+import 'help_screen.dart';
 import 'language.dart';
 import 'update_state.dart';
 import 'touch_writing_canvas.dart';
@@ -28,36 +30,36 @@ class NoteCard extends StatelessWidget {
 
   const NoteCard(
       {required this.note,
-      required this.decryptedContent,
-      this.searchQuery = '',
-      this.isSelected = false,
-      this.onLongPress,
-      this.onTap,
-      super.key});
+        required this.decryptedContent,
+        this.searchQuery = '',
+        this.isSelected = false,
+        this.onLongPress,
+        this.onTap,
+        super.key});
 
   // Returns a plain-text string for non-normal note types (checklist etc.)
   // and null for normal notes (which use _buildNormalPreview for rich text).
   String? _previewText() => switch (note.noteType) {
-        NoteType.normal => null, // handled by _buildNormalPreview
-        NoteType.checklist => () {
-            final total = note.checklistItems.length;
-            final done = note.checklistItems.where((i) => i.checked).length;
-            final itemWord = total == 1
-                ? AppTranslations.translate('item')
-                : AppTranslations.translate('items');
-            final doneWord = AppTranslations.translate('done');
-            return '$total $itemWord · $done $doneWord';
-          }(),
-        NoteType.itinerary =>
-          '${note.itineraryItems.length} ${AppTranslations.translate("destinations")}',
-        NoteType.mealPlan =>
-          '${note.mealPlanItems.length} ${AppTranslations.translate("days_planned")}',
-        NoteType.recipe => note.recipeData?.ingredients ??
-            (decryptedContent == NotesProvider.kUndecryptablePlaceholder
-                ? '🔒 Encrypted'
-                : RichContentCodec.plainText(decryptedContent)),
-        NoteType.drawing => null, // handled by _buildDrawingPreview on the card
-      };
+    NoteType.normal => null, // handled by _buildNormalPreview
+    NoteType.checklist => () {
+      final total = note.checklistItems.length;
+      final done = note.checklistItems.where((i) => i.checked).length;
+      final itemWord = total == 1
+          ? AppTranslations.translate('item')
+          : AppTranslations.translate('items');
+      final doneWord = AppTranslations.translate('done');
+      return '$total $itemWord · $done $doneWord';
+    }(),
+    NoteType.itinerary =>
+    '${note.itineraryItems.length} ${AppTranslations.translate("destinations")}',
+    NoteType.mealPlan =>
+    '${note.mealPlanItems.length} ${AppTranslations.translate("days_planned")}',
+    NoteType.recipe => note.recipeData?.ingredients ??
+        (decryptedContent == NotesProvider.kUndecryptablePlaceholder
+            ? '🔒 Encrypted'
+            : RichContentCodec.plainText(decryptedContent)),
+    NoteType.drawing => null, // handled by _buildDrawingPreview on the card
+  };
 
   // Builds a rich-text preview for normal notes, respecting bold/italic ranges.
   Widget _buildNormalPreview(Color subColor) {
@@ -170,8 +172,8 @@ class NoteCard extends StatelessWidget {
       duration: const Duration(milliseconds: 150),
       decoration: isSelected
           ? Neu.cardDecoration(note.colorTheme, isDark).copyWith(
-              border: Border.all(color: accent, width: 2),
-            )
+        border: Border.all(color: accent, width: 2),
+      )
           : Neu.cardDecoration(note.colorTheme, isDark),
       child: Material(
         color: Colors.transparent,
@@ -179,10 +181,10 @@ class NoteCard extends StatelessWidget {
         child: InkWell(
           borderRadius: BorderRadius.circular(20),
           onTap: onTap ??
-              () => Navigator.push(
-                    context,
-                    _SlideRoute(builder: (_) => NoteEditorScreen(note: note)),
-                  ),
+                  () => Navigator.push(
+                context,
+                _SlideRoute(builder: (_) => NoteEditorScreen(note: note)),
+              ),
           onLongPress: onLongPress,
           child: Stack(
             children: [
@@ -377,17 +379,25 @@ class NoteCard extends StatelessWidget {
               style: TextStyle(fontSize: 12, color: accent.withAlpha(160))),
         ]);
       }
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(8),
-        child: SizedBox(
-          height: 80,
-          child: CustomPaint(
-            painter: _StrokeThumbnailPainter(
-              strokes: strokes,
-              isDark: isDark,
-            ),
-            child: const SizedBox.expand(),
+      return Container(
+        height: 80,
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E2128) : Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isDark
+                ? const Color(0xFF3A3F4D)
+                : const Color(0xFFD0D4DE),
+            width: 1,
           ),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: CustomPaint(
+          painter: _StrokeThumbnailPainter(
+            strokes: strokes,
+            isDark: isDark,
+          ),
+          child: const SizedBox.expand(),
         ),
       );
     } catch (_) {
@@ -432,13 +442,13 @@ class _NeuTypeChip extends StatelessWidget {
 
   /// Human-readable label including space for MealPlan
   static String _noteTypeLabel(NoteType type) => switch (type) {
-        NoteType.normal => AppTranslations.translate('note'),
-        NoteType.checklist => AppTranslations.translate('checklist'),
-        NoteType.itinerary => AppTranslations.translate('itinerary'),
-        NoteType.mealPlan => AppTranslations.translate('meal_plan'),
-        NoteType.recipe => AppTranslations.translate('recipe'),
-        NoteType.drawing => AppTranslations.translate('drawing'),
-      };
+    NoteType.normal => AppTranslations.translate('note'),
+    NoteType.checklist => AppTranslations.translate('checklist'),
+    NoteType.itinerary => AppTranslations.translate('itinerary'),
+    NoteType.mealPlan => AppTranslations.translate('meal_plan'),
+    NoteType.recipe => AppTranslations.translate('recipe'),
+    NoteType.drawing => AppTranslations.translate('drawing'),
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -475,13 +485,13 @@ class _NeuTypeChip extends StatelessWidget {
   }
 
   static IconData _noteTypeIconData(NoteType type) => switch (type) {
-        NoteType.normal => Icons.note_rounded,
-        NoteType.checklist => Icons.check_box_rounded,
-        NoteType.itinerary => Icons.flight_rounded,
-        NoteType.mealPlan => Icons.restaurant_menu_rounded,
-        NoteType.recipe => Icons.menu_book_rounded,
-        NoteType.drawing => Icons.brush_rounded,
-      };
+    NoteType.normal => Icons.note_rounded,
+    NoteType.checklist => Icons.check_box_rounded,
+    NoteType.itinerary => Icons.flight_rounded,
+    NoteType.mealPlan => Icons.restaurant_menu_rounded,
+    NoteType.recipe => Icons.menu_book_rounded,
+    NoteType.drawing => Icons.brush_rounded,
+  };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -497,11 +507,11 @@ class _NeuCategoryChip extends StatelessWidget {
       {required this.note, required this.isDark, required this.accent});
 
   static IconData _categoryIcon(String category) => switch (category) {
-        'Work' => Icons.work_outline_rounded,
-        'Personal' => Icons.person_outline_rounded,
-        'Ideas' => Icons.lightbulb_outline_rounded,
-        _ => Icons.notes_rounded, // General + any custom category
-      };
+    'Work' => Icons.work_outline_rounded,
+    'Personal' => Icons.person_outline_rounded,
+    'Ideas' => Icons.lightbulb_outline_rounded,
+    _ => Icons.notes_rounded, // General + any custom category
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -577,7 +587,7 @@ class _NoteListScreenState extends State<NoteListScreen> {
     if (!kIsWeb) {
       // Silently check for updates — result surfaces in Settings screen only
       WidgetsBinding.instance.addPostFrameCallback(
-          (_) => UpdateStateNotifier.instance.checkForUpdate(silent: true));
+              (_) => UpdateStateNotifier.instance.checkForUpdate(silent: true));
     }
   }
 
@@ -667,7 +677,7 @@ class _NoteListScreenState extends State<NoteListScreen> {
 
   Future<void> _shareSelected(BuildContext context, NotesProvider prov) async {
     final notes =
-        prov.notes.where((n) => _selectedNoteIds.contains(n.id)).toList();
+    prov.notes.where((n) => _selectedNoteIds.contains(n.id)).toList();
     if (notes.isEmpty) return;
 
     final buffer = StringBuffer();
@@ -751,7 +761,7 @@ class _NoteListScreenState extends State<NoteListScreen> {
               buffer.writeln(
                   '\n${AppTranslations.translate("ingredients").toUpperCase()}');
               for (final row
-                  in r.ingredientRows.where((row) => row.name.isNotEmpty)) {
+              in r.ingredientRows.where((row) => row.name.isNotEmpty)) {
                 final qty = [row.quantity, row.unit]
                     .where((s) => s.isNotEmpty)
                     .join(' ');
@@ -797,15 +807,15 @@ class _NoteListScreenState extends State<NoteListScreen> {
         return true;
       }
       if (n.itineraryItems.any((i) =>
-          i.location.toLowerCase().contains(q) ||
+      i.location.toLowerCase().contains(q) ||
           i.notes.toLowerCase().contains(q) ||
           i.date.toLowerCase().contains(q))) {
         return true;
       }
       if (n.mealPlanItems.any((i) =>
-          i.day.toLowerCase().contains(q) ||
+      i.day.toLowerCase().contains(q) ||
           i.meals.any((m) =>
-              (m['value'] as String?)?.toLowerCase().contains(q) ?? false))) {
+          (m['value'] as String?)?.toLowerCase().contains(q) ?? false))) {
         return true;
       }
       if (n.recipeData != null) {
@@ -840,8 +850,8 @@ class _NoteListScreenState extends State<NoteListScreen> {
       body: allNotes.isEmpty
           ? _buildEmptyState(isDark)
           : _sortMode == _SortMode.category
-              ? _buildCategoryList(context, prov, isDark, notes)
-              : _buildNoteList(context, prov, isDark, pinned, unpinned),
+          ? _buildCategoryList(context, prov, isDark, notes)
+          : _buildNoteList(context, prov, isDark, pinned, unpinned),
       floatingActionButton: _isSelecting ? null : _buildFAB(context, isDark),
     );
   }
@@ -903,7 +913,7 @@ class _NoteListScreenState extends State<NoteListScreen> {
           NeuIconButton(
             isDark: isDark,
             icon:
-                Icon(Icons.delete_outline_rounded, color: Colors.red.shade400),
+            Icon(Icons.delete_outline_rounded, color: Colors.red.shade400),
             onTap: () => _deleteSelected(context, prov),
           ),
           const SizedBox(width: 10),
@@ -931,6 +941,13 @@ class _NoteListScreenState extends State<NoteListScreen> {
               ),
               onTap: () => _showConflictsSheet(context, prov),
             ),
+          const SizedBox(width: 6),
+          NeuIconButton(
+            isDark: isDark,
+            icon: Icon(Icons.help_outline_rounded, color: subColor),
+            onTap: () => Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const HelpScreen())),
+          ),
           const SizedBox(width: 6),
           // Sort button — badge dot when non-default
           Stack(
@@ -974,7 +991,7 @@ class _NoteListScreenState extends State<NoteListScreen> {
             onPressed: _deactivateSearch,
             child: Text(context.tr('cancel'),
                 style:
-                    TextStyle(color: accentColor, fontWeight: FontWeight.w600)),
+                TextStyle(color: accentColor, fontWeight: FontWeight.w600)),
           ),
         ],
         const SizedBox(width: 10),
@@ -982,7 +999,15 @@ class _NoteListScreenState extends State<NoteListScreen> {
     );
   }
 
-  Widget _buildLogoTitle(bool isDark, Color accent, Color textColor) =>
+  Widget _buildLogoTitle(bool isDark, Color accent, Color textColor) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      SvgPicture.asset(
+        'assets/icons/noteliha.svg',
+        width: 28,
+        height: 28,
+      ),
+      const SizedBox(width: 8),
       RichText(
         text: TextSpan(
           children: [
@@ -1006,7 +1031,9 @@ class _NoteListScreenState extends State<NoteListScreen> {
             ),
           ],
         ),
-      );
+      ),
+    ],
+  );
 
   Widget _buildSearchField(bool isDark) {
     final textColor = Neu.textPrimary(isDark);
@@ -1036,14 +1063,14 @@ class _NoteListScreenState extends State<NoteListScreen> {
           prefixIcon: Icon(Icons.search_rounded, color: subColor, size: 18),
           suffixIcon: _searchQuery.isNotEmpty
               ? IconButton(
-                  icon: Icon(Icons.close_rounded, size: 16, color: subColor),
-                  onPressed: () {
-                    _debounceTimer?.cancel();
-                    _searchController.clear();
-                    setState(() => _searchQuery = '');
-                    _searchFocus.requestFocus();
-                  },
-                )
+            icon: Icon(Icons.close_rounded, size: 16, color: subColor),
+            onPressed: () {
+              _debounceTimer?.cancel();
+              _searchController.clear();
+              setState(() => _searchQuery = '');
+              _searchFocus.requestFocus();
+            },
+          )
               : null,
         ),
         style: TextStyle(
@@ -1103,7 +1130,7 @@ class _NoteListScreenState extends State<NoteListScreen> {
     final list = List<Note>.from(notes);
     switch (_sortMode) {
       case _SortMode.dateDesc:
-        // Provider already returns pinned-first then date-desc; preserve it
+      // Provider already returns pinned-first then date-desc; preserve it
         return list;
       case _SortMode.dateAsc:
         list.sort((a, b) {
@@ -1112,7 +1139,7 @@ class _NoteListScreenState extends State<NoteListScreen> {
         });
         return list;
       case _SortMode.category:
-        // Sorted by category order, then pinned within each group, then date
+      // Sorted by category order, then pinned within each group, then date
         list.sort((a, b) {
           final aiRaw = _categoryOrder.indexOf(a.category);
           final biRaw = _categoryOrder.indexOf(b.category);
@@ -1167,19 +1194,19 @@ class _NoteListScreenState extends State<NoteListScreen> {
               ),
               ...[
                 (
-                  _SortMode.dateDesc,
-                  Icons.arrow_downward_rounded,
-                  context.tr('newest_first')
+                _SortMode.dateDesc,
+                Icons.arrow_downward_rounded,
+                context.tr('newest_first')
                 ),
                 (
-                  _SortMode.dateAsc,
-                  Icons.arrow_upward_rounded,
-                  context.tr('oldest_first')
+                _SortMode.dateAsc,
+                Icons.arrow_upward_rounded,
+                context.tr('oldest_first')
                 ),
                 (
-                  _SortMode.category,
-                  Icons.label_outline_rounded,
-                  context.tr('category')
+                _SortMode.category,
+                Icons.label_outline_rounded,
+                context.tr('category')
                 ),
               ].map((entry) {
                 final (mode, icon, label) = entry;
@@ -1242,11 +1269,11 @@ class _NoteListScreenState extends State<NoteListScreen> {
   // Category view: one collapsible section per category that has notes.
   // Sections are collapsed by default; tapping the header toggles them open.
   Widget _buildCategoryList(
-    BuildContext context,
-    NotesProvider prov,
-    bool isDark,
-    List<Note> notes,
-  ) {
+      BuildContext context,
+      NotesProvider prov,
+      bool isDark,
+      List<Note> notes,
+      ) {
     // Build ordered list of categories that actually have notes
     final present = <String>[];
     for (final cat in _categoryOrder) {
@@ -1275,8 +1302,8 @@ class _NoteListScreenState extends State<NoteListScreen> {
               count: notes.where((n) => n.category == cat).length,
               expanded: _expandedCategories[cat] ?? false,
               onTap: () => setState(
-                () => _expandedCategories[cat] =
-                    !(_expandedCategories[cat] ?? false),
+                    () => _expandedCategories[cat] =
+                !(_expandedCategories[cat] ?? false),
               ),
             ),
           ),
@@ -1284,12 +1311,12 @@ class _NoteListScreenState extends State<NoteListScreen> {
           if (_expandedCategories[cat] ?? false)
             SliverPadding(
               padding:
-                  EdgeInsets.fromLTRB(14, 0, 14, present.last == cat ? 100 : 4),
+              EdgeInsets.fromLTRB(14, 0, 14, present.last == cat ? 100 : 4),
               sliver: SliverList(
                 delegate: SliverChildBuilderDelegate(
-                  (ctx, i) {
+                      (ctx, i) {
                     final catNotes =
-                        notes.where((n) => n.category == cat).toList();
+                    notes.where((n) => n.category == cat).toList();
                     return _buildDismissibleCard(
                         ctx, prov, catNotes[i], isDark);
                   },
@@ -1298,7 +1325,7 @@ class _NoteListScreenState extends State<NoteListScreen> {
               ),
             )
           else
-            // Collapsed: just add a small gap so headers don't stack flush
+          // Collapsed: just add a small gap so headers don't stack flush
             const SliverToBoxAdapter(child: SizedBox(height: 2)),
         ],
         // Always provide FAB clearance at the bottom
@@ -1308,12 +1335,12 @@ class _NoteListScreenState extends State<NoteListScreen> {
   }
 
   Widget _buildNoteList(
-    BuildContext context,
-    NotesProvider prov,
-    bool isDark,
-    List<Note> pinned,
-    List<Note> unpinned,
-  ) {
+      BuildContext context,
+      NotesProvider prov,
+      bool isDark,
+      List<Note> pinned,
+      List<Note> unpinned,
+      ) {
     return CustomScrollView(
       slivers: [
         if (pinned.isNotEmpty) ...[
@@ -1327,7 +1354,7 @@ class _NoteListScreenState extends State<NoteListScreen> {
             padding: const EdgeInsets.fromLTRB(14, 0, 14, 4),
             sliver: SliverList(
               delegate: SliverChildBuilderDelegate(
-                (ctx, i) => _buildDismissibleCard(ctx, prov, pinned[i], isDark),
+                    (ctx, i) => _buildDismissibleCard(ctx, prov, pinned[i], isDark),
                 childCount: pinned.length,
               ),
             ),
@@ -1347,7 +1374,7 @@ class _NoteListScreenState extends State<NoteListScreen> {
             padding: const EdgeInsets.fromLTRB(14, 0, 14, 100),
             sliver: SliverList(
               delegate: SliverChildBuilderDelegate(
-                (ctx, i) =>
+                    (ctx, i) =>
                     _buildDismissibleCard(ctx, prov, unpinned[i], isDark),
                 childCount: unpinned.length,
               ),
@@ -1376,9 +1403,9 @@ class _NoteListScreenState extends State<NoteListScreen> {
           onTap: _isSelecting
               ? () => _toggleSelection(n.id)
               : () => Navigator.push(
-                    context,
-                    _SlideRoute(builder: (_) => NoteEditorScreen(note: n)),
-                  ),
+            context,
+            _SlideRoute(builder: (_) => NoteEditorScreen(note: n)),
+          ),
         ),
         if (hasConflict)
           Positioned(
@@ -1432,9 +1459,9 @@ class _NoteListScreenState extends State<NoteListScreen> {
         direction: DismissDirection.endToStart,
         confirmDismiss: (_) async {
           return await showDialog<bool>(
-                context: context,
-                builder: (ctx) => _NeuAlertDialog(isDark: isDark),
-              ) ??
+            context: context,
+            builder: (ctx) => _NeuAlertDialog(isDark: isDark),
+          ) ??
               false;
         },
         onDismissed: (_) =>
@@ -1631,7 +1658,7 @@ class _NoteListScreenState extends State<NoteListScreen> {
                     isDark: isDark,
                     radius: 20,
                     padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     child: Text(
                       '${prov.syncConflicts.length}',
                       style: TextStyle(
@@ -1652,7 +1679,7 @@ class _NoteListScreenState extends State<NoteListScreen> {
                     controller: scrollCtrl,
                     children: prov.syncConflicts.map((ns) {
                       final localNote = prov.notes.firstWhere(
-                        (n) => n.id == ns.noteId,
+                            (n) => n.id == ns.noteId,
                         orElse: () => Note(
                             id: ns.noteId,
                             title: '(Deleted)',
@@ -1845,7 +1872,7 @@ class _NeuTextButtonState extends State<_NeuTextButton> {
           color: Neu.base(widget.isDark),
           borderRadius: BorderRadius.circular(12),
           boxShadow:
-              _pressed ? Neu.inset(widget.isDark) : Neu.raisedSm(widget.isDark),
+          _pressed ? Neu.inset(widget.isDark) : Neu.raisedSm(widget.isDark),
         ),
         child: Text(widget.label,
             style: TextStyle(
@@ -1882,12 +1909,12 @@ class _NeuDeleteButtonState extends State<_NeuDeleteButton> {
         decoration: BoxDecoration(
           color: _pressed
               ? (widget.isDark
-                  ? const Color(0xFF2A1A1A)
-                  : const Color(0xFFFFE8E8))
+              ? const Color(0xFF2A1A1A)
+              : const Color(0xFFFFE8E8))
               : Neu.base(widget.isDark),
           borderRadius: BorderRadius.circular(12),
           boxShadow:
-              _pressed ? Neu.inset(widget.isDark) : Neu.raisedSm(widget.isDark),
+          _pressed ? Neu.inset(widget.isDark) : Neu.raisedSm(widget.isDark),
         ),
         child: Text(context.tr('delete'),
             style: TextStyle(
@@ -1910,9 +1937,9 @@ class _SectionLabel extends StatelessWidget {
   final int? count; // optional note count shown at right end
   const _SectionLabel(
       {required this.text,
-      required this.icon,
-      required this.isDark,
-      this.count});
+        required this.icon,
+        required this.isDark,
+        this.count});
 
   @override
   Widget build(BuildContext context) {
@@ -2069,9 +2096,9 @@ class _NeuConflictButton extends StatefulWidget {
   final VoidCallback onTap;
   const _NeuConflictButton(
       {required this.label,
-      required this.icon,
-      required this.isDark,
-      required this.onTap});
+        required this.icon,
+        required this.isDark,
+        required this.onTap});
 
   @override
   State<_NeuConflictButton> createState() => _NeuConflictButtonState();
@@ -2097,7 +2124,7 @@ class _NeuConflictButtonState extends State<_NeuConflictButton> {
           color: Neu.base(widget.isDark),
           borderRadius: BorderRadius.circular(12),
           boxShadow:
-              _pressed ? Neu.inset(widget.isDark) : Neu.raisedSm(widget.isDark),
+          _pressed ? Neu.inset(widget.isDark) : Neu.raisedSm(widget.isDark),
         ),
         child: Column(
           children: [
@@ -2308,17 +2335,17 @@ class _NotePreviewContent extends StatelessWidget {
       Color textPrimary, Color textSub) {
     return switch (note.noteType) {
       NoteType.normal =>
-        _previewNormal(context, textPrimary, textSub), // Pass context
+          _previewNormal(context, textPrimary, textSub), // Pass context
       NoteType.checklist =>
-        _previewChecklist(context, isDark, accent, textPrimary, textSub),
+          _previewChecklist(context, isDark, accent, textPrimary, textSub),
       NoteType.itinerary =>
-        _previewItinerary(context, isDark, accent, textPrimary, textSub),
+          _previewItinerary(context, isDark, accent, textPrimary, textSub),
       NoteType.mealPlan =>
-        _previewMealPlan(context, isDark, accent, textPrimary, textSub),
+          _previewMealPlan(context, isDark, accent, textPrimary, textSub),
       NoteType.recipe =>
-        _previewRecipe(context, isDark, accent, textPrimary, textSub),
+          _previewRecipe(context, isDark, accent, textPrimary, textSub),
       NoteType.drawing =>
-        _previewDrawing(context, isDark, accent, textPrimary, textSub),
+          _previewDrawing(context, isDark, accent, textPrimary, textSub),
     };
   }
 
@@ -2359,18 +2386,26 @@ class _NotePreviewContent extends StatelessWidget {
           ),
         );
       }
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: SizedBox(
-          width: double.infinity,
-          height: 320,
-          child: CustomPaint(
-            painter: _StrokeThumbnailPainter(
-              strokes: strokes,
-              isDark: isDark,
-            ),
-            child: const SizedBox.expand(),
+      return Container(
+        width: double.infinity,
+        height: 320,
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E2128) : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isDark
+                ? const Color(0xFF3A3F4D)
+                : const Color(0xFFD0D4DE),
+            width: 1.5,
           ),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: CustomPaint(
+          painter: _StrokeThumbnailPainter(
+            strokes: strokes,
+            isDark: isDark,
+          ),
+          child: const SizedBox.expand(),
         ),
       );
     } catch (_) {
@@ -2386,10 +2421,10 @@ class _NotePreviewContent extends StatelessWidget {
       BuildContext context, Color textPrimary, Color textSub) {
     // For preview sheet, we need decrypted content too
     final decryptedContent =
-        note.noteType == NoteType.normal || note.noteType == NoteType.drawing
-            ? Provider.of<NotesProvider>(context, listen: false)
-                .getDecryptedContent(note)
-            : note.content;
+    note.noteType == NoteType.normal || note.noteType == NoteType.drawing
+        ? Provider.of<NotesProvider>(context, listen: false)
+        .getDecryptedContent(note)
+        : note.content;
 
     // Guard: note was encrypted with a different key — show a clear message
     // instead of attempting to decode ciphertext as rich text.
@@ -2405,9 +2440,9 @@ class _NotePreviewContent extends StatelessWidget {
             Expanded(
               child: Text(
                 'This note was encrypted with a different key and cannot be displayed.\n\n'
-                'This happens after a reinstall when the encryption salt is lost. '
-                'If you had a Drive backup from the original device, sync from that '
-                'backup to recover the note.',
+                    'This happens after a reinstall when the encryption salt is lost. '
+                    'If you had a Drive backup from the original device, sync from that '
+                    'backup to recover the note.',
                 style: TextStyle(
                     fontSize: 14, color: Colors.orange.shade700, height: 1.6),
               ),
@@ -2530,35 +2565,35 @@ class _NotePreviewContent extends StatelessWidget {
           ]),
         ),
         ...note.checklistItems.map((item) => Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(top: 1, right: 10),
-                    child: Icon(
-                      item.checked
-                          ? Icons.check_box_rounded
-                          : Icons.check_box_outline_blank_rounded,
-                      size: 18,
-                      color: item.checked ? accent : textSub,
-                    ),
-                  ),
-                  Expanded(
-                    child: Text(
-                      item.text.isNotEmpty ? item.text : '(empty)',
-                      style: TextStyle(
-                        fontSize: 14,
-                        height: 1.5,
-                        color: item.checked ? textSub : textPrimary,
-                        decoration:
-                            item.checked ? TextDecoration.lineThrough : null,
-                      ),
-                    ),
-                  ),
-                ],
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(top: 1, right: 10),
+                child: Icon(
+                  item.checked
+                      ? Icons.check_box_rounded
+                      : Icons.check_box_outline_blank_rounded,
+                  size: 18,
+                  color: item.checked ? accent : textSub,
+                ),
               ),
-            )),
+              Expanded(
+                child: Text(
+                  item.text.isNotEmpty ? item.text : '(empty)',
+                  style: TextStyle(
+                    fontSize: 14,
+                    height: 1.5,
+                    color: item.checked ? textSub : textPrimary,
+                    decoration:
+                    item.checked ? TextDecoration.lineThrough : null,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        )),
       ],
     );
   }
@@ -2627,8 +2662,8 @@ class _NotePreviewContent extends StatelessWidget {
                         const SizedBox(width: 5),
                         Text(
                           '${item.arrivalTime.isNotEmpty ? item.arrivalTime : 'TBD'}'
-                          ' → '
-                          '${item.departureTime.isNotEmpty ? item.departureTime : 'TBD'}',
+                              ' → '
+                              '${item.departureTime.isNotEmpty ? item.departureTime : 'TBD'}',
                           style: TextStyle(fontSize: 12, color: textSub),
                         ),
                       ]),
@@ -2684,27 +2719,27 @@ class _NotePreviewContent extends StatelessWidget {
                 if (meals.isNotEmpty) ...[
                   const SizedBox(height: 8),
                   ...meals.map((m) => Padding(
-                        padding: const EdgeInsets.only(bottom: 4),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              '\${m["name"] ?? context.tr("meal")}: ',
-                              style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  color: textSub),
-                            ),
-                            Expanded(
-                              child: Text(
-                                m['value'] as String,
-                                style:
-                                    TextStyle(fontSize: 13, color: textPrimary),
-                              ),
-                            ),
-                          ],
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${m["name"] ?? context.tr("meal")}: ',
+                          style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: textSub),
                         ),
-                      )),
+                        Expanded(
+                          child: Text(
+                            m['value'] as String,
+                            style:
+                            TextStyle(fontSize: 13, color: textPrimary),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )),
                 ],
               ],
             ),
@@ -2762,27 +2797,27 @@ class _NotePreviewContent extends StatelessWidget {
           ...r.ingredientRows
               .where((row) => row.name.isNotEmpty)
               .map((row) => Padding(
-                    padding: const EdgeInsets.only(bottom: 5),
-                    child: Row(children: [
-                      Text('• ',
-                          style: TextStyle(
-                              color: accent,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 13)),
-                      if (row.quantity.isNotEmpty || row.unit.isNotEmpty)
-                        Text(
-                          '${row.quantity}${row.unit.isNotEmpty ? ' ${row.unit}' : ''}  ',
-                          style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: textPrimary),
-                        ),
-                      Expanded(
-                        child: Text(row.name,
-                            style: TextStyle(fontSize: 13, color: textSub)),
-                      ),
-                    ]),
-                  )),
+            padding: const EdgeInsets.only(bottom: 5),
+            child: Row(children: [
+              Text('• ',
+                  style: TextStyle(
+                      color: accent,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13)),
+              if (row.quantity.isNotEmpty || row.unit.isNotEmpty)
+                Text(
+                  '${row.quantity}${row.unit.isNotEmpty ? ' ${row.unit}' : ''}  ',
+                  style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: textPrimary),
+                ),
+              Expanded(
+                child: Text(row.name,
+                    style: TextStyle(fontSize: 13, color: textSub)),
+              ),
+            ]),
+          )),
           const SizedBox(height: 16),
         ],
         if (r.steps.any((s) => s.text.isNotEmpty)) ...[
@@ -2796,37 +2831,37 @@ class _NotePreviewContent extends StatelessWidget {
               .entries
               .where((e) => e.value.text.isNotEmpty)
               .map((e) => Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          width: 22,
-                          height: 22,
-                          margin: const EdgeInsets.only(right: 10, top: 1),
-                          decoration: BoxDecoration(
-                            color: Neu.base(isDark),
-                            borderRadius: BorderRadius.circular(6),
-                            boxShadow: Neu.inset(isDark),
-                          ),
-                          child: Center(
-                            child: Text('${e.key + 1}',
-                                style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w800,
-                                    color: accent)),
-                          ),
-                        ),
-                        Expanded(
-                          child: Text(e.value.text,
-                              style: TextStyle(
-                                  fontSize: 14,
-                                  color: textPrimary,
-                                  height: 1.5)),
-                        ),
-                      ],
-                    ),
-                  )),
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 22,
+                  height: 22,
+                  margin: const EdgeInsets.only(right: 10, top: 1),
+                  decoration: BoxDecoration(
+                    color: Neu.base(isDark),
+                    borderRadius: BorderRadius.circular(6),
+                    boxShadow: Neu.inset(isDark),
+                  ),
+                  child: Center(
+                    child: Text('${e.key + 1}',
+                        style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            color: accent)),
+                  ),
+                ),
+                Expanded(
+                  child: Text(e.value.text,
+                      style: TextStyle(
+                          fontSize: 14,
+                          color: textPrimary,
+                          height: 1.5)),
+                ),
+              ],
+            ),
+          )),
         ],
       ],
     );
@@ -2879,15 +2914,15 @@ class _PreviewSectionLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Row(children: [
-        Icon(icon, size: 13, color: color),
-        const SizedBox(width: 6),
-        Text(text,
-            style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: color,
-                letterSpacing: 0.5)),
-      ]);
+    Icon(icon, size: 13, color: color),
+    const SizedBox(width: 6),
+    Text(text,
+        style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            color: color,
+            letterSpacing: 0.5)),
+  ]);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -2906,47 +2941,52 @@ class _StrokeThumbnailPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    // Draw canvas background so the thumbnail matches what the user sees
+    // in the editor (white in light mode, dark in dark mode).
+    final bg = isDark ? const Color(0xFF1E2128) : Colors.white;
+    canvas.drawRect(Offset.zero & size, Paint()..color = bg);
+
     if (strokes.isEmpty) return;
 
-    // Compute bounding box of all strokes so we can scale to fit.
-    double minX = double.infinity, minY = double.infinity;
-    double maxX = double.negativeInfinity, maxY = double.negativeInfinity;
+    // Scale from the canvas origin (0,0) rather than the stroke bounding box.
+    // This preserves the spatial layout — a stroke drawn in the top-left of
+    // the canvas stays in the top-left of the thumbnail, matching the editor.
+    //
+    // We use the furthest point across all strokes as the logical canvas size,
+    // which gives a consistent scale regardless of where strokes are drawn.
+    double maxX = 0, maxY = 0;
     for (final stroke in strokes) {
       for (final pt in stroke.points) {
-        if (pt.x < minX) minX = pt.x;
-        if (pt.y < minY) minY = pt.y;
         if (pt.x > maxX) maxX = pt.x;
         if (pt.y > maxY) maxY = pt.y;
       }
     }
-
-    if (minX == double.infinity) return; // no points
+    if (maxX <= 0 || maxY <= 0) return;
 
     const padding = 8.0;
-    final strokeW = maxX - minX;
-    final strokeH = maxY - minY;
-    if (strokeW <= 0 || strokeH <= 0) return;
-
-    final scaleX = (size.width - padding * 2) / strokeW;
-    final scaleY = (size.height - padding * 2) / strokeH;
+    final scaleX = (size.width - padding * 2) / maxX;
+    final scaleY = (size.height - padding * 2) / maxY;
     final scale = scaleX < scaleY ? scaleX : scaleY;
 
-    final offsetX = padding + (size.width - padding * 2 - strokeW * scale) / 2;
-    final offsetY = padding + (size.height - padding * 2 - strokeH * scale) / 2;
-
-    Offset transform(pt) => Offset(
-          (pt.x - minX) * scale + offsetX,
-          (pt.y - minY) * scale + offsetY,
-        );
+    Offset transform(DrawPoint pt) => Offset(
+      pt.x * scale + padding,
+      pt.y * scale + padding,
+    );
 
     for (final stroke in strokes) {
       if (stroke.points.length < 2) continue;
       final paint = Paint()
-        ..color = stroke.color
+        ..color = stroke.isEraser ? bg : stroke.color
         ..strokeWidth = (stroke.width * scale).clamp(0.5, 6.0)
         ..strokeCap = StrokeCap.round
         ..strokeJoin = StrokeJoin.round
         ..style = PaintingStyle.stroke;
+
+      if (stroke.tool == DrawTool.highlighter) {
+        paint
+          ..color = stroke.color.withAlpha(80)
+          ..blendMode = BlendMode.multiply;
+      }
 
       final path = Path();
       path.moveTo(

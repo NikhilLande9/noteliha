@@ -16,6 +16,7 @@ import 'neu_theme.dart';
 import 'notes_provider.dart';
 import 'update_state.dart';
 import 'language.dart';
+import 'help_screen.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Connectivity helper
@@ -117,7 +118,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   child: prov.user == null
                       ? _SignInTile(prov: prov, isDark: isDark, accent: accent)
                       : _LoggedInTile(
-                          prov: prov, isDark: isDark, accent: accent),
+                      prov: prov, isDark: isDark, accent: accent),
                 ),
 
                 const SizedBox(height: 24),
@@ -156,15 +157,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                () {
+                                    () {
                                   final flag = AppTranslations.getLanguageFlag(
                                       currentLangCode);
                                   final english =
-                                      AppTranslations.getLanguageName(
-                                          currentLangCode);
+                                  AppTranslations.getLanguageName(
+                                      currentLangCode);
                                   final native =
-                                      AppTranslations.getNativeLanguageName(
-                                          currentLangCode);
+                                  AppTranslations.getNativeLanguageName(
+                                      currentLangCode);
                                   return native != english
                                       ? '$flag  $english · $native'
                                       : '$flag  $english';
@@ -244,14 +245,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                           : null,
                                       border: isSelected
                                           ? Border.all(
-                                              color: Neu.textPrimary(isDark)
-                                                  .withAlpha(120),
-                                              width: 2.5)
+                                          color: Neu.textPrimary(isDark)
+                                              .withAlpha(120),
+                                          width: 2.5)
                                           : null,
                                     ),
                                     child: isSelected
                                         ? const Icon(Icons.check_rounded,
-                                            color: Colors.white, size: 20)
+                                        color: Colors.white, size: 20)
                                         : null,
                                   ),
                                   const SizedBox(height: 5),
@@ -347,7 +348,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                     const SizedBox(height: 5),
                                     AnimatedContainer(
                                       duration:
-                                          const Duration(milliseconds: 200),
+                                      const Duration(milliseconds: 200),
                                       width: isSelected ? 18 : 6,
                                       height: 4,
                                       decoration: BoxDecoration(
@@ -387,6 +388,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       MaterialPageRoute(
                           builder: (_) => const RecycleBinScreen()),
                     ),
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                // ── Storage ──────────────────────────────────────────────────
+                _SectionHeader(text: context.tr('storage'), isDark: isDark),
+                NeuContainer(
+                  isDark: isDark,
+                  radius: 16,
+                  child: _BackupRestoreSection(
+                    prov: prov,
+                    isDark: isDark,
+                    accent: accent,
                   ),
                 ),
 
@@ -464,6 +479,62 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                 const SizedBox(height: 24),
 
+                // ── Help & Support ───────────────────────────────────────────
+                _SectionHeader(
+                    text: context.tr('help_and_support'), isDark: isDark),
+                NeuContainer(
+                  isDark: isDark,
+                  radius: 16,
+                  child: NeuPressable(
+                    isDark: isDark,
+                    radius: 16,
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const HelpScreen()),
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 14),
+                    child: Row(
+                      children: [
+                        NeuContainer(
+                          isDark: isDark,
+                          radius: 10,
+                          padding: const EdgeInsets.all(8),
+                          child: Icon(Icons.help_outline_rounded,
+                              size: 18, color: accent),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                context.tr('help_and_support'),
+                                style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 14,
+                                    color: Neu.textPrimary(isDark)),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                context.tr('help_and_support_subtitle'),
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    color: Neu.textSecondary(isDark)),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Icon(Icons.chevron_right_rounded,
+                            size: 18, color: Neu.textTertiary(isDark)),
+                      ],
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
                 // ── About ────────────────────────────────────────────────────
                 _SectionHeader(text: context.tr('about'), isDark: isDark),
                 NeuContainer(
@@ -492,8 +563,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       _NeuLinkTile(
                         icon: Icons.menu_book_rounded,
                         label: context.tr('documentation'),
-                        subtitle: 'noteliha.navkon.com',
-                        url: 'https://noteliha.navkon.com',
+                        subtitle: 'noteliha.navkon.com', // cspell:disable-line
+                        url: 'https://noteliha.navkon.com', // cspell:disable-line
                         isDark: isDark,
                         accent: accent,
                       ),
@@ -502,7 +573,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         icon: Icons.privacy_tip_outlined,
                         label: context.tr('privacy_policy'),
                         subtitle: context.tr('privacy_policy_subtitle'),
-                        url: 'https://noteliha.navkon.com/PRIVACY_POLICY.html',
+                        url: 'https://noteliha.navkon.com/PRIVACY_POLICY.html', // cspell:disable-line
                         isDark: isDark,
                         accent: accent,
                       ),
@@ -512,7 +583,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         label: context.tr('terms_of_service'),
                         subtitle: context.tr('terms_subtitle'),
                         url:
-                            'https://noteliha.navkon.com/TERMS_OF_SERVICE.html',
+                        'https://noteliha.navkon.com/TERMS_OF_SERVICE.html', // cspell:disable-line
                         isDark: isDark,
                         accent: accent,
                       ),
@@ -547,21 +618,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
               if (query.isEmpty) return true;
               final code = locale.languageCode;
               final englishName =
-                  AppTranslations.getLanguageName(code).toLowerCase();
+              AppTranslations.getLanguageName(code).toLowerCase();
               final nativeName =
-                  AppTranslations.getNativeLanguageName(code).toLowerCase();
+              AppTranslations.getNativeLanguageName(code).toLowerCase();
               final q = query.toLowerCase();
               return englishName.contains(q) || nativeName.contains(q);
             }).toList();
 
             return Padding(
               padding:
-                  EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+              EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
               child: Container(
                 decoration: BoxDecoration(
                   color: base,
                   borderRadius:
-                      const BorderRadius.vertical(top: Radius.circular(24)),
+                  const BorderRadius.vertical(top: Radius.circular(24)),
                   boxShadow: Neu.raised(isDark),
                 ),
                 padding: EdgeInsets.fromLTRB(
@@ -599,12 +670,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               letterSpacing: -0.3,
                             ),
                           ),
-                          () {
+                              () {
                             final native =
-                                AppTranslations.getNativeLanguageName(
-                                    AppTranslations.currentLocale.languageCode);
+                            AppTranslations.getNativeLanguageName(
+                                AppTranslations.currentLocale.languageCode);
                             final english =
-                                AppTranslations.translate('language');
+                            AppTranslations.translate('language');
                             if (native == english) return const TextSpan();
                             return TextSpan(
                               text: '  ·  $native',
@@ -633,18 +704,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             fontSize: 14, color: Neu.textPrimary(isDark)),
                         decoration: InputDecoration(
                           hintText:
-                              AppTranslations.translate('search_language'),
+                          AppTranslations.translate('search_language'),
                           hintStyle: TextStyle(
                               fontSize: 14, color: Neu.textTertiary(isDark)),
                           prefixIcon: Icon(Icons.search_rounded,
                               size: 18, color: Neu.textTertiary(isDark)),
                           suffixIcon: query.isNotEmpty
                               ? GestureDetector(
-                                  onTap: () => setSheetState(() => query = ''),
-                                  child: Icon(Icons.close_rounded,
-                                      size: 16,
-                                      color: Neu.textTertiary(isDark)),
-                                )
+                            onTap: () => setSheetState(() => query = ''),
+                            child: Icon(Icons.close_rounded,
+                                size: 16,
+                                color: Neu.textTertiary(isDark)),
+                          )
                               : null,
                           border: InputBorder.none,
                           contentPadding: const EdgeInsets.symmetric(
@@ -658,87 +729,87 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     Flexible(
                       child: filtered.isEmpty
                           ? Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 24),
-                              child: Center(
-                                child: Text(
-                                  AppTranslations.translate(
-                                      'no_languages_found'),
-                                  style: TextStyle(
-                                      fontSize: 14,
-                                      color: Neu.textSecondary(isDark)),
-                                ),
-                              ),
-                            )
+                        padding: const EdgeInsets.symmetric(vertical: 24),
+                        child: Center(
+                          child: Text(
+                            AppTranslations.translate(
+                                'no_languages_found'),
+                            style: TextStyle(
+                                fontSize: 14,
+                                color: Neu.textSecondary(isDark)),
+                          ),
+                        ),
+                      )
                           : ListView.builder(
-                              shrinkWrap: true,
-                              itemCount: filtered.length,
-                              itemBuilder: (_, i) {
-                                final locale = filtered[i];
-                                final code = locale.languageCode;
-                                final isSelected =
-                                    langProv.languageCode == code;
-                                final englishName =
-                                    AppTranslations.getLanguageName(code);
-                                final nativeName =
-                                    AppTranslations.getNativeLanguageName(code);
-                                return NeuPressable(
-                                  isDark: isDark,
-                                  radius: 14,
-                                  onTap: () async {
-                                    await langProv.setLocale(locale);
-                                    if (ctx.mounted) Navigator.pop(ctx);
-                                  },
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 14, vertical: 11),
-                                  child: Row(
+                        shrinkWrap: true,
+                        itemCount: filtered.length,
+                        itemBuilder: (_, i) {
+                          final locale = filtered[i];
+                          final code = locale.languageCode;
+                          final isSelected =
+                              langProv.languageCode == code;
+                          final englishName =
+                          AppTranslations.getLanguageName(code);
+                          final nativeName =
+                          AppTranslations.getNativeLanguageName(code);
+                          return NeuPressable(
+                            isDark: isDark,
+                            radius: 14,
+                            onTap: () async {
+                              await langProv.setLocale(locale);
+                              if (ctx.mounted) Navigator.pop(ctx);
+                            },
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 14, vertical: 11),
+                            child: Row(
+                              children: [
+                                Text(
+                                  AppTranslations.getLanguageFlag(code),
+                                  style: const TextStyle(fontSize: 22),
+                                ),
+                                const SizedBox(width: 14),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                    CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        AppTranslations.getLanguageFlag(code),
-                                        style: const TextStyle(fontSize: 22),
-                                      ),
-                                      const SizedBox(width: 14),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              englishName,
-                                              style: TextStyle(
-                                                fontSize: 14,
-                                                fontWeight: isSelected
-                                                    ? FontWeight.w700
-                                                    : FontWeight.w600,
-                                                color: isSelected
-                                                    ? accent
-                                                    : Neu.textPrimary(isDark),
-                                              ),
-                                            ),
-                                            if (nativeName != englishName) ...[
-                                              const SizedBox(height: 1),
-                                              Text(
-                                                nativeName,
-                                                style: TextStyle(
-                                                  fontSize: 12,
-                                                  fontWeight: FontWeight.w400,
-                                                  color: isSelected
-                                                      ? accent.withAlpha(180)
-                                                      : Neu.textSecondary(
-                                                          isDark),
-                                                ),
-                                              ),
-                                            ],
-                                          ],
+                                        englishName,
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: isSelected
+                                              ? FontWeight.w700
+                                              : FontWeight.w600,
+                                          color: isSelected
+                                              ? accent
+                                              : Neu.textPrimary(isDark),
                                         ),
                                       ),
-                                      if (isSelected)
-                                        Icon(Icons.check_rounded,
-                                            size: 18, color: accent),
+                                      if (nativeName != englishName) ...[
+                                        const SizedBox(height: 1),
+                                        Text(
+                                          nativeName,
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w400,
+                                            color: isSelected
+                                                ? accent.withAlpha(180)
+                                                : Neu.textSecondary(
+                                                isDark),
+                                          ),
+                                        ),
+                                      ],
                                     ],
                                   ),
-                                );
-                              },
+                                ),
+                                if (isSelected)
+                                  Icon(Icons.check_rounded,
+                                      size: 18, color: accent),
+                              ],
                             ),
+                          );
+                        },
+                      ),
                     ),
                   ],
                 ),
@@ -783,7 +854,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 context.tr('premium_unlock_desc'),
                 textAlign: TextAlign.center,
                 style:
-                    TextStyle(fontSize: 13, color: Neu.textSecondary(isDark)),
+                TextStyle(fontSize: 13, color: Neu.textSecondary(isDark)),
               ),
               const SizedBox(height: 20),
               NeuPressable(
@@ -791,7 +862,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 radius: 12,
                 onTap: () => Navigator.pop(ctx),
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
+                const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
                 child: Text(context.tr('maybe_later'),
                     style: TextStyle(
                         fontWeight: FontWeight.w600,
@@ -834,7 +905,7 @@ class _UpdateChecker extends StatelessWidget {
           UpdateAvailableState.upToDate => context.tr('all_up_to_date'),
           UpdateAvailableState.downloading => context.tr('downloading'),
           UpdateAvailableState.error =>
-            updater.errorMessage ?? context.tr('error'),
+          updater.errorMessage ?? context.tr('error'),
         };
 
         final icon = switch (state) {
@@ -857,69 +928,69 @@ class _UpdateChecker extends StatelessWidget {
           onTap: isLoading
               ? () {}
               : state == UpdateAvailableState.available
-                  ? () async {
-                      final success =
-                          await UpdateStateNotifier.instance.startUpdate();
-                      if (success && context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          // ignore: prefer_const_constructors
-                          SnackBar(
-                            content: Text(context.tr('update_downloaded')),
-                            behavior: SnackBarBehavior.floating,
-                            // ignore: prefer_const_constructors
-                            action: SnackBarAction(
-                              label: context.tr('restart'),
-                              onPressed: UpdateStateNotifier.completeUpdate,
-                            ),
-                            duration: const Duration(seconds: 8),
-                          ),
-                        );
-                      }
-                    }
-                  : () async {
-                      final result = await UpdateStateNotifier.instance
-                          .checkForUpdate(silent: false);
-                      if (context.mounted) {
-                        if (result == UpdateAvailableState.upToDate) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Row(
-                                children: [
-                                  const Icon(Icons.check_circle_rounded,
-                                      color: Colors.white, size: 18),
-                                  const SizedBox(width: 10),
-                                  Text(context.tr('all_up_to_date')),
-                                ],
-                              ),
-                              backgroundColor: Colors.green.shade600,
-                              behavior: SnackBarBehavior.floating,
-                              duration: const Duration(seconds: 3),
-                            ),
-                          );
-                        } else if (result == UpdateAvailableState.error) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                  UpdateStateNotifier.instance.errorMessage ??
-                                      context.tr('update_check_failed')),
-                              backgroundColor: Colors.red.shade600,
-                              behavior: SnackBarBehavior.floating,
-                              duration: const Duration(seconds: 4),
-                            ),
-                          );
-                        }
-                      }
-                    },
+              ? () async {
+            final success =
+            await UpdateStateNotifier.instance.startUpdate();
+            if (success && context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                // ignore: prefer_const_constructors
+                SnackBar(
+                  content: Text(context.tr('update_downloaded')),
+                  behavior: SnackBarBehavior.floating,
+                  // ignore: prefer_const_constructors
+                  action: SnackBarAction(
+                    label: context.tr('restart'),
+                    onPressed: UpdateStateNotifier.completeUpdate,
+                  ),
+                  duration: const Duration(seconds: 8),
+                ),
+              );
+            }
+          }
+              : () async {
+            final result = await UpdateStateNotifier.instance
+                .checkForUpdate(silent: false);
+            if (context.mounted) {
+              if (result == UpdateAvailableState.upToDate) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Row(
+                      children: [
+                        const Icon(Icons.check_circle_rounded,
+                            color: Colors.white, size: 18),
+                        const SizedBox(width: 10),
+                        Text(context.tr('all_up_to_date')),
+                      ],
+                    ),
+                    backgroundColor: Colors.green.shade600,
+                    behavior: SnackBarBehavior.floating,
+                    duration: const Duration(seconds: 3),
+                  ),
+                );
+              } else if (result == UpdateAvailableState.error) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                        UpdateStateNotifier.instance.errorMessage ??
+                            context.tr('update_check_failed')),
+                    backgroundColor: Colors.red.shade600,
+                    behavior: SnackBarBehavior.floating,
+                    duration: const Duration(seconds: 4),
+                  ),
+                );
+              }
+            }
+          },
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Row(
             children: [
               isLoading
                   ? SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                          strokeWidth: 2.5, color: accent),
-                    )
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                    strokeWidth: 2.5, color: accent),
+              )
                   : Icon(icon, size: 20, color: iconColor),
               const SizedBox(width: 14),
               Expanded(
@@ -1091,7 +1162,7 @@ class _SyncBanner extends StatelessWidget {
                       : Icons.check_circle_outline_rounded,
                   size: 18,
                   color:
-                      isError ? Colors.red.shade400 : Neu.textSecondary(isDark),
+                  isError ? Colors.red.shade400 : Neu.textSecondary(isDark),
                 ),
               const SizedBox(width: 12),
               Expanded(
@@ -1310,8 +1381,8 @@ class _LoggedInTile extends StatelessWidget {
 
   bool get _isChecking =>
       prov.isCheckingDrive ||
-      (prov.driveAccountState == DriveAccountState.unknown &&
-          !prov.driveCheckFailed);
+          (prov.driveAccountState == DriveAccountState.unknown &&
+              !prov.driveCheckFailed);
 
   bool get _checkFailed => prov.driveCheckFailed;
 
@@ -1320,9 +1391,9 @@ class _LoggedInTile extends StatelessWidget {
 
   // ── Internet-guarded action runner ─────────────────────────────────────────
   Future<void> _runWithNetworkCheck(
-    BuildContext context,
-    VoidCallback action,
-  ) async {
+      BuildContext context,
+      VoidCallback action,
+      ) async {
     final online = await _hasInternet();
     if (!online) {
       if (context.mounted) {
@@ -1366,14 +1437,14 @@ class _LoggedInTile extends StatelessWidget {
                     child: prov.user!.photoUrl != null
                         ? Image.network(prov.user!.photoUrl!, fit: BoxFit.cover)
                         : Center(
-                            child: Text(
-                              prov.user!.email[0].toUpperCase(),
-                              style: TextStyle(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.w800,
-                                  color: accent),
-                            ),
-                          ),
+                      child: Text(
+                        prov.user!.email[0].toUpperCase(),
+                        style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w800,
+                            color: accent),
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -1413,7 +1484,7 @@ class _LoggedInTile extends StatelessWidget {
                   width: 16,
                   height: 16,
                   child:
-                      CircularProgressIndicator(strokeWidth: 2, color: accent),
+                  CircularProgressIndicator(strokeWidth: 2, color: accent),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -1446,7 +1517,7 @@ class _LoggedInTile extends StatelessWidget {
                   onTap: () =>
                       _runWithNetworkCheck(context, prov.retryDriveCheck),
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   child: Text(
                     context.tr('retry'),
                     style: TextStyle(
@@ -1465,10 +1536,10 @@ class _LoggedInTile extends StatelessWidget {
           subtitle: _isChecking
               ? context.tr('waiting_drive_check')
               : _checkFailed
-                  ? context.tr('retry_drive_check_first')
-                  : _hasRemoteBackup
-                      ? context.tr('push_local_to_drive')
-                      : context.tr('create_first_backup'),
+              ? context.tr('retry_drive_check_first')
+              : _hasRemoteBackup
+              ? context.tr('push_local_to_drive')
+              : context.tr('create_first_backup'),
           isDark: isDark,
           accent: accent,
           enabled: !_isChecking && !_checkFailed,
@@ -1476,7 +1547,7 @@ class _LoggedInTile extends StatelessWidget {
             context,
             context.tr('upload_backup'),
             context.tr('upload_backup_confirm'),
-            () => _runWithNetworkCheck(context, prov.uploadNotes),
+                () => _runWithNetworkCheck(context, prov.uploadNotes),
           ),
         ),
 
@@ -1488,10 +1559,10 @@ class _LoggedInTile extends StatelessWidget {
           subtitle: _isChecking
               ? context.tr('checking_drive_short')
               : _checkFailed
-                  ? context.tr('retry_drive_check_first')
-                  : _hasRemoteBackup
-                      ? context.tr('merge_from_drive')
-                      : context.tr('no_backup_found'),
+              ? context.tr('retry_drive_check_first')
+              : _hasRemoteBackup
+              ? context.tr('merge_from_drive')
+              : context.tr('no_backup_found'),
           isDark: isDark,
           accent: accent,
           enabled: !_isChecking && !_checkFailed && _hasRemoteBackup,
@@ -1499,32 +1570,8 @@ class _LoggedInTile extends StatelessWidget {
             context,
             context.tr('restore_from_drive'),
             context.tr('restore_from_drive_confirm'),
-            () => _runWithNetworkCheck(context, prov.downloadNotes),
+                () => _runWithNetworkCheck(context, prov.downloadNotes),
           ),
-        ),
-
-        _NeuDivider(isDark: isDark),
-
-        _NeuActionTile(
-          icon: Icons.download_for_offline_outlined,
-          title: context.tr('download_notes_json'),
-          subtitle: context.tr('download_notes_json_subtitle'),
-          isDark: isDark,
-          accent: accent,
-          enabled: true,
-          onTap: () => _exportNotesJson(context),
-        ),
-
-        _NeuDivider(isDark: isDark),
-
-        _NeuActionTile(
-          icon: Icons.upload_file_outlined,
-          title: context.tr('upload_notes_json'),
-          subtitle: context.tr('upload_notes_json_subtitle'),
-          isDark: isDark,
-          accent: accent,
-          enabled: true,
-          onTap: () => _importNotesJson(context),
         ),
 
         _NeuDivider(isDark: isDark),
@@ -1547,12 +1594,221 @@ class _LoggedInTile extends StatelessWidget {
     );
   }
 
+  Future<void> _confirmAction(BuildContext context, String title,
+      String message, VoidCallback action) async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final base = Neu.base(isDark);
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: base,
+        shape:
+        RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Container(
+          decoration: BoxDecoration(
+            color: base,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: Neu.raised(isDark),
+          ),
+          padding: const EdgeInsets.all(22),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title,
+                  style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 17,
+                      color: Neu.textPrimary(isDark))),
+              const SizedBox(height: 8),
+              Text(message,
+                  style: TextStyle(
+                      fontSize: 13, color: Neu.textSecondary(isDark))),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  _NeuDialogBtn(
+                      label: context.tr('cancel'),
+                      isDark: isDark,
+                      onTap: () => Navigator.pop(ctx, false)),
+                  const SizedBox(width: 10),
+                  _NeuDialogBtn(
+                      label: context.tr('confirm'),
+                      isDark: isDark,
+                      isPrimary: true,
+                      onTap: () => Navigator.pop(ctx, true)),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    ) ??
+        false;
+    if (ok) action();
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Backup & Restore Section — works independently of Google Sign-In
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _BackupRestoreSection extends StatelessWidget {
+  final NotesProvider prov;
+  final bool isDark;
+  final Color accent;
+
+  const _BackupRestoreSection({
+    required this.prov,
+    required this.isDark,
+    required this.accent,
+  });
+
+  // ── Auth gate — biometric or master password before export ─────────────────
+
+  Future<bool> _authenticateBeforeExport(BuildContext context) async {
+    // Attempt biometric first; fall back to master-password dialog.
+    try {
+      final authenticated = await prov.authenticateWithBiometrics();
+      if (authenticated) return true;
+    } catch (_) {
+      // Biometrics unavailable or cancelled — fall through to password.
+    }
+    // Check mounted after the biometrics await before using context again.
+    if (!context.mounted) return false;
+    return _showPasswordConfirmDialog(context);
+  }
+
+  Future<bool> _showPasswordConfirmDialog(BuildContext context) async {
+    final base = Neu.base(isDark);
+    final controller = TextEditingController();
+    bool obscure = true;
+    String? errorText;
+
+    final ok = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setS) => Dialog(
+          backgroundColor: base,
+          shape:
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          child: Container(
+            decoration: BoxDecoration(
+              color: base,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: Neu.raised(isDark),
+            ),
+            padding: const EdgeInsets.all(22),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.lock_outline_rounded, size: 20, color: accent),
+                    const SizedBox(width: 10),
+                    Text(
+                      context.tr('enter_password'),
+                      style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 17,
+                          color: Neu.textPrimary(isDark)),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  context.tr('export_auth_desc'),
+                  style: TextStyle(
+                      fontSize: 13, color: Neu.textSecondary(isDark)),
+                ),
+                const SizedBox(height: 16),
+                NeuContainer(
+                  isDark: isDark,
+                  radius: 12,
+                  padding: EdgeInsets.zero,
+                  child: TextField(
+                    controller: controller,
+                    obscureText: obscure,
+                    autofocus: true,
+                    style: TextStyle(
+                        fontSize: 14, color: Neu.textPrimary(isDark)),
+                    decoration: InputDecoration(
+                      hintText: context.tr('password'),
+                      hintStyle: TextStyle(color: Neu.textTertiary(isDark)),
+                      errorText: errorText,
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          obscure
+                              ? Icons.visibility_off_rounded
+                              : Icons.visibility_rounded,
+                          size: 18,
+                          color: Neu.textTertiary(isDark),
+                        ),
+                        onPressed: () => setS(() => obscure = !obscure),
+                      ),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 12),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    _NeuDialogBtn(
+                        label: context.tr('cancel'),
+                        isDark: isDark,
+                        onTap: () => Navigator.pop(ctx, false)),
+                    const SizedBox(width: 10),
+                    _NeuDialogBtn(
+                      label: context.tr('confirm'),
+                      isDark: isDark,
+                      isPrimary: true,
+                      onTap: () async {
+                        final correct =
+                        await prov.verifyMasterPassword(controller.text);
+                        if (!ctx.mounted) return;
+                        if (correct) {
+                          Navigator.pop(ctx, true);
+                        } else {
+                          setS(() =>
+                          errorText = context.tr('incorrect_password'));
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ) ??
+        false;
+
+    controller.dispose();
+    return ok;
+  }
+
   // ── Export JSON ────────────────────────────────────────────────────────────
 
   Future<void> _exportNotesJson(BuildContext context) async {
-    final prov = Provider.of<NotesProvider>(context, listen: false);
+    // Require biometric or master-password confirmation before exporting.
+    final authed = await _authenticateBeforeExport(context);
+    if (!authed) return;
+    if (!context.mounted) return;
 
-    _showLoadingSnackbar(context, context.tr('preparing_backup'));
+    // Capture context-dependent values before any further async gaps.
+    final messenger = ScaffoldMessenger.of(context);
+    final loadingMsg = context.tr('preparing_backup');
+    final backupReadyMsg = context.tr('backup_ready');
+    final exportFailedPrefix = context.tr('export_failed');
+
+    _showLoadingSnackbar(context, loadingMsg);
 
     try {
       final bytes = await prov.exportNotesJson();
@@ -1574,24 +1830,17 @@ class _LoggedInTile extends StatelessWidget {
         );
       }
 
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        _showSuccessSnackbar(context, context.tr('backup_ready'));
-      }
+      messenger.hideCurrentSnackBar();
+      _showSuccessSnackbarOn(messenger, backupReadyMsg);
     } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        _showErrorSnackbar(context, '${context.tr('export_failed')}: $e');
-      }
+      messenger.hideCurrentSnackBar();
+      _showErrorSnackbarOn(messenger, '$exportFailedPrefix: $e');
     }
   }
 
   // ── Import JSON ────────────────────────────────────────────────────────────
 
   Future<void> _importNotesJson(BuildContext context) async {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final prov = Provider.of<NotesProvider>(context, listen: false);
-
     FilePickerResult? result;
     try {
       result = await FilePicker.platform.pickFiles(
@@ -1623,102 +1872,191 @@ class _LoggedInTile extends StatelessWidget {
     }
 
     if (!context.mounted) return;
-    final confirmed = await _showImportConfirmDialog(context, isDark);
+
+    // Detect whether the backup belongs to a different vault/salt and warn.
+    final bool differentVault = await prov.isFromDifferentVault(bytes);
+    if (differentVault) {
+      if (!context.mounted) return;
+      final proceed = await _showVaultMismatchDialog(context);
+      if (!proceed) return;
+    }
+
+    if (!context.mounted) return;
+    final confirmed = await _showImportConfirmDialog(context);
     if (!confirmed) return;
 
-    if (context.mounted) {
-      _showLoadingSnackbar(context, context.tr('importing_notes'));
-    }
+    // Capture context-dependent values before any further async gaps.
+    if (!context.mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final importingMsg = context.tr('importing_notes');
+    final nothingNewMsg = context.tr('import_nothing_new');
+    final importedPrefix = context.tr('imported');
+    final noteSingular = context.tr('note');
+    final notePlural = context.tr('notes_lower');
+    final successSuffix = context.tr('successfully');
+    final importFailedPrefix = context.tr('import_failed');
+
+    _showLoadingSnackbarOn(messenger, importingMsg);
 
     try {
       final count = await prov.importNotesJson(bytes);
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        _showSuccessSnackbar(
-          context,
-          count == 0
-              ? context.tr('import_nothing_new')
-              : '${context.tr('imported')} $count ${count == 1 ? context.tr('note') : context.tr('notes_lower')} ${context.tr('successfully')}',
-        );
-      }
+      messenger.hideCurrentSnackBar();
+      _showSuccessSnackbarOn(
+        messenger,
+        count == 0
+            ? nothingNewMsg
+            : '$importedPrefix $count ${count == 1 ? noteSingular : notePlural} $successSuffix',
+      );
     } on FormatException catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        _showErrorSnackbar(context, e.message);
-      }
+      messenger.hideCurrentSnackBar();
+      _showErrorSnackbarOn(messenger, e.message);
     } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        _showErrorSnackbar(context, '${context.tr('import_failed')}: $e');
-      }
+      messenger.hideCurrentSnackBar();
+      _showErrorSnackbarOn(messenger, '$importFailedPrefix: $e');
     }
   }
 
-  Future<bool> _showImportConfirmDialog(
-      BuildContext context, bool isDark) async {
+  // ── Vault mismatch warning dialog ──────────────────────────────────────────
+
+  Future<bool> _showVaultMismatchDialog(BuildContext context) async {
     final base = Neu.base(isDark);
     final ok = await showDialog<bool>(
-          context: context,
-          builder: (ctx) => Dialog(
-            backgroundColor: base,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            child: Container(
-              decoration: BoxDecoration(
-                color: base,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: Neu.raised(isDark),
-              ),
-              padding: const EdgeInsets.all(22),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: base,
+        shape:
+        RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Container(
+          decoration: BoxDecoration(
+            color: base,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: Neu.raised(isDark),
+          ),
+          padding: const EdgeInsets.all(22),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
                 children: [
-                  Text(context.tr('import_notes_title'),
+                  Icon(Icons.warning_amber_rounded,
+                      size: 22, color: Colors.orange.shade400),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      context.tr('vault_mismatch_title'),
                       style: TextStyle(
                           fontWeight: FontWeight.w700,
                           fontSize: 17,
-                          color: Neu.textPrimary(isDark))),
-                  const SizedBox(height: 8),
-                  Text(
-                    context.tr('import_notes_desc'),
-                    style: TextStyle(
-                        fontSize: 13, color: Neu.textSecondary(isDark)),
-                  ),
-                  const SizedBox(height: 20),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      _NeuDialogBtn(
-                          label: context.tr('cancel'),
-                          isDark: isDark,
-                          onTap: () => Navigator.pop(ctx, false)),
-                      const SizedBox(width: 10),
-                      _NeuDialogBtn(
-                          label: context.tr('import'),
-                          isDark: isDark,
-                          isPrimary: true,
-                          onTap: () => Navigator.pop(ctx, true)),
-                    ],
+                          color: Neu.textPrimary(isDark)),
+                    ),
                   ),
                 ],
               ),
-            ),
+              const SizedBox(height: 10),
+              Text(
+                context.tr('vault_mismatch_desc'),
+                style: TextStyle(
+                    fontSize: 13, color: Neu.textSecondary(isDark)),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  _NeuDialogBtn(
+                      label: context.tr('cancel'),
+                      isDark: isDark,
+                      onTap: () => Navigator.pop(ctx, false)),
+                  const SizedBox(width: 10),
+                  _NeuDialogBtn(
+                      label: context.tr('import'),
+                      isDark: isDark,
+                      isPrimary: true,
+                      onTap: () => Navigator.pop(ctx, true)),
+                ],
+              ),
+            ],
           ),
-        ) ??
+        ),
+      ),
+    ) ??
         false;
     return ok;
   }
 
-  // ── Snackbar helpers ───────────────────────────────────────────────────────
+  // ── Import confirm dialog ──────────────────────────────────────────────────
 
-  void _showLoadingSnackbar(BuildContext context, String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+  Future<bool> _showImportConfirmDialog(BuildContext context) async {
+    final base = Neu.base(isDark);
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: base,
+        shape:
+        RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Container(
+          decoration: BoxDecoration(
+            color: base,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: Neu.raised(isDark),
+          ),
+          padding: const EdgeInsets.all(22),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(context.tr('import_notes_title'),
+                  style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 17,
+                      color: Neu.textPrimary(isDark))),
+              const SizedBox(height: 8),
+              Text(
+                context.tr('import_notes_desc'),
+                style: TextStyle(
+                    fontSize: 13, color: Neu.textSecondary(isDark)),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  _NeuDialogBtn(
+                      label: context.tr('cancel'),
+                      isDark: isDark,
+                      onTap: () => Navigator.pop(ctx, false)),
+                  const SizedBox(width: 10),
+                  _NeuDialogBtn(
+                      label: context.tr('import'),
+                      isDark: isDark,
+                      isPrimary: true,
+                      onTap: () => Navigator.pop(ctx, true)),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    ) ??
+        false;
+    return ok;
+  }
+
+  // ── SnackBar helpers ───────────────────────────────────────────────────────
+
+  void _showLoadingSnackbar(BuildContext context, String message) =>
+      _showLoadingSnackbarOn(ScaffoldMessenger.of(context), message);
+
+  void _showErrorSnackbar(BuildContext context, String message) =>
+      _showErrorSnackbarOn(ScaffoldMessenger.of(context), message);
+
+  void _showLoadingSnackbarOn(ScaffoldMessengerState messenger, String message) {
+    messenger.showSnackBar(SnackBar(
       content: Row(children: [
         const SizedBox(
           width: 16,
           height: 16,
-          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+          child:
+          CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
         ),
         const SizedBox(width: 12),
         Text(message),
@@ -1728,8 +2066,8 @@ class _LoggedInTile extends StatelessWidget {
     ));
   }
 
-  void _showSuccessSnackbar(BuildContext context, String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+  void _showSuccessSnackbarOn(ScaffoldMessengerState messenger, String message) {
+    messenger.showSnackBar(SnackBar(
       content: Row(children: [
         const Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
         const SizedBox(width: 10),
@@ -1741,8 +2079,8 @@ class _LoggedInTile extends StatelessWidget {
     ));
   }
 
-  void _showErrorSnackbar(BuildContext context, String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+  void _showErrorSnackbarOn(ScaffoldMessengerState messenger, String message) {
+    messenger.showSnackBar(SnackBar(
       content: Row(children: [
         const Icon(Icons.error_outline_rounded, color: Colors.white, size: 18),
         const SizedBox(width: 10),
@@ -1754,59 +2092,35 @@ class _LoggedInTile extends StatelessWidget {
     ));
   }
 
-  Future<void> _confirmAction(BuildContext context, String title,
-      String message, VoidCallback action) async {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final base = Neu.base(isDark);
-    final ok = await showDialog<bool>(
-          context: context,
-          builder: (ctx) => Dialog(
-            backgroundColor: base,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            child: Container(
-              decoration: BoxDecoration(
-                color: base,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: Neu.raised(isDark),
-              ),
-              padding: const EdgeInsets.all(22),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title,
-                      style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 17,
-                          color: Neu.textPrimary(isDark))),
-                  const SizedBox(height: 8),
-                  Text(message,
-                      style: TextStyle(
-                          fontSize: 13, color: Neu.textSecondary(isDark))),
-                  const SizedBox(height: 20),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      _NeuDialogBtn(
-                          label: context.tr('cancel'),
-                          isDark: isDark,
-                          onTap: () => Navigator.pop(ctx, false)),
-                      const SizedBox(width: 10),
-                      _NeuDialogBtn(
-                          label: context.tr('confirm'),
-                          isDark: isDark,
-                          isPrimary: true,
-                          onTap: () => Navigator.pop(ctx, true)),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ) ??
-        false;
-    if (ok) action();
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        // ── Upload Notes JSON ──────────────────────────────────────────────
+        _NeuActionTile(
+          icon: Icons.upload_file_outlined,
+          title: context.tr('upload_notes_json'),
+          subtitle: context.tr('upload_notes_json_ui_subtitle'),
+          isDark: isDark,
+          accent: accent,
+          enabled: true,
+          onTap: () => _importNotesJson(context),
+        ),
+
+        _NeuDivider(isDark: isDark),
+
+        // ── Download Notes JSON ────────────────────────────────────────────
+        _NeuActionTile(
+          icon: Icons.download_for_offline_outlined,
+          title: context.tr('download_notes_json'),
+          subtitle: context.tr('download_notes_json_ui_subtitle'),
+          isDark: isDark,
+          accent: accent,
+          enabled: true,
+          onTap: () => _exportNotesJson(context),
+        ),
+      ],
+    );
   }
 }
 
@@ -1915,8 +2229,8 @@ class _NeuActionTile extends StatelessWidget {
                         fontSize: 14,
                         color: enabled
                             ? (isDestructive
-                                ? Colors.red.shade400
-                                : Neu.textPrimary(isDark))
+                            ? Colors.red.shade400
+                            : Neu.textPrimary(isDark))
                             : Neu.textTertiary(isDark))),
                 if (subtitle != null)
                   Text(subtitle!,
@@ -2055,12 +2369,12 @@ class _NeuDivider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Divider(
-        height: 1,
-        thickness: 1,
-        indent: 16,
-        endIndent: 16,
-        color: Neu.textSecondary(isDark).withAlpha(30),
-      );
+    height: 1,
+    thickness: 1,
+    indent: 16,
+    endIndent: 16,
+    color: Neu.textSecondary(isDark).withAlpha(30),
+  );
 }
 
 class _SectionHeader extends StatelessWidget {
@@ -2070,17 +2384,17 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(4, 0, 0, 10),
-        child: Text(
-          text.toUpperCase(),
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 1.2,
-            color: Theme.of(context).colorScheme.primary,
-          ),
-        ),
-      );
+    padding: const EdgeInsets.fromLTRB(4, 0, 0, 10),
+    child: Text(
+      text.toUpperCase(),
+      style: TextStyle(
+        fontSize: 11,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 1.2,
+        color: Theme.of(context).colorScheme.primary,
+      ),
+    ),
+  );
 }
 
 class _NeuDialogBtn extends StatefulWidget {
@@ -2106,7 +2420,7 @@ class _NeuDialogBtnState extends State<_NeuDialogBtn> {
   Widget build(BuildContext context) {
     final accent = Theme.of(context).colorScheme.primary;
     final labelColor =
-        widget.isPrimary ? accent : Neu.textSecondary(widget.isDark);
+    widget.isPrimary ? accent : Neu.textSecondary(widget.isDark);
     return GestureDetector(
       onTapDown: (_) => setState(() => _pressed = true),
       onTapUp: (_) {
@@ -2121,7 +2435,7 @@ class _NeuDialogBtnState extends State<_NeuDialogBtn> {
           color: Neu.base(widget.isDark),
           borderRadius: BorderRadius.circular(12),
           boxShadow:
-              _pressed ? Neu.inset(widget.isDark) : Neu.raisedSm(widget.isDark),
+          _pressed ? Neu.inset(widget.isDark) : Neu.raisedSm(widget.isDark),
         ),
         child: Text(widget.label,
             style: TextStyle(
@@ -2302,89 +2616,89 @@ class RecycleBinScreen extends StatelessWidget {
       ),
       body: items.isEmpty
           ? Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  NeuContainer(
-                    isDark: isDark,
-                    radius: 36,
-                    padding: const EdgeInsets.all(22),
-                    child: Icon(Icons.delete_outline_rounded,
-                        size: 36, color: Neu.textSecondary(isDark)),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(context.tr('recycle_bin_empty'),
-                      style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Neu.textPrimary(isDark))),
-                ],
-              ),
-            )
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            NeuContainer(
+              isDark: isDark,
+              radius: 36,
+              padding: const EdgeInsets.all(22),
+              child: Icon(Icons.delete_outline_rounded,
+                  size: 36, color: Neu.textSecondary(isDark)),
+            ),
+            const SizedBox(height: 16),
+            Text(context.tr('recycle_bin_empty'),
+                style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Neu.textPrimary(isDark))),
+          ],
+        ),
+      )
           : ListView.builder(
-              padding: EdgeInsets.fromLTRB(
-                  16, 12, 16, MediaQuery.of(context).padding.bottom + 24),
-              itemCount: items.length,
-              itemBuilder: (_, i) {
-                final n = items[i];
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: NeuContainer(
-                    isDark: isDark,
-                    radius: 16,
-                    padding: const EdgeInsets.all(14),
-                    child: Row(
+        padding: EdgeInsets.fromLTRB(
+            16, 12, 16, MediaQuery.of(context).padding.bottom + 24),
+        itemCount: items.length,
+        itemBuilder: (_, i) {
+          final n = items[i];
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: NeuContainer(
+              isDark: isDark,
+              radius: 16,
+              padding: const EdgeInsets.all(14),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                n.title.isNotEmpty
-                                    ? n.title
-                                    : '(${context.tr('untitled')})',
-                                style: TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 14,
-                                    color: Neu.textPrimary(isDark)),
-                              ),
-                              if (n.content.isNotEmpty) ...[
-                                const SizedBox(height: 4),
-                                Text(
-                                  n.content,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                      fontSize: 12,
-                                      color: Neu.textSecondary(isDark)),
-                                ),
-                              ],
-                            ],
+                        Text(
+                          n.title.isNotEmpty
+                              ? n.title
+                              : '(${context.tr('untitled')})',
+                          style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                              color: Neu.textPrimary(isDark)),
+                        ),
+                        if (n.content.isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            n.content,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                                fontSize: 12,
+                                color: Neu.textSecondary(isDark)),
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        NeuIconButton(
-                          isDark: isDark,
-                          size: 36,
-                          icon: Icon(Icons.restore_rounded,
-                              size: 18, color: accent),
-                          onTap: () => prov.restore(n.id),
-                        ),
-                        const SizedBox(width: 8),
-                        NeuIconButton(
-                          isDark: isDark,
-                          size: 36,
-                          icon: Icon(Icons.delete_forever_rounded,
-                              size: 18, color: Colors.red.shade400),
-                          onTap: () =>
-                              _confirmDelete(context, isDark, prov, n.id),
-                        ),
+                        ],
                       ],
                     ),
                   ),
-                );
-              },
+                  const SizedBox(width: 8),
+                  NeuIconButton(
+                    isDark: isDark,
+                    size: 36,
+                    icon: Icon(Icons.restore_rounded,
+                        size: 18, color: accent),
+                    onTap: () => prov.restore(n.id),
+                  ),
+                  const SizedBox(width: 8),
+                  NeuIconButton(
+                    isDark: isDark,
+                    size: 36,
+                    icon: Icon(Icons.delete_forever_rounded,
+                        size: 18, color: Colors.red.shade400),
+                    onTap: () =>
+                        _confirmDelete(context, isDark, prov, n.id),
+                  ),
+                ],
+              ),
             ),
+          );
+        },
+      ),
     );
   }
 
@@ -2416,52 +2730,52 @@ class RecycleBinScreen extends StatelessWidget {
       BuildContext context, bool isDark, String title, String message) async {
     final base = Neu.base(isDark);
     return await showDialog<bool>(
-          context: context,
-          builder: (ctx) => Dialog(
-            backgroundColor: base,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            child: Container(
-              decoration: BoxDecoration(
-                color: base,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: Neu.raised(isDark),
-              ),
-              padding: const EdgeInsets.all(22),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: base,
+        shape:
+        RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Container(
+          decoration: BoxDecoration(
+            color: base,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: Neu.raised(isDark),
+          ),
+          padding: const EdgeInsets.all(22),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title,
+                  style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 17,
+                      color: Neu.textPrimary(isDark))),
+              const SizedBox(height: 8),
+              Text(message,
+                  style: TextStyle(
+                      fontSize: 13, color: Neu.textSecondary(isDark))),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  Text(title,
-                      style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 17,
-                          color: Neu.textPrimary(isDark))),
-                  const SizedBox(height: 8),
-                  Text(message,
-                      style: TextStyle(
-                          fontSize: 13, color: Neu.textSecondary(isDark))),
-                  const SizedBox(height: 20),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      _NeuDialogBtn(
-                          label: context.tr('cancel'),
-                          isDark: isDark,
-                          onTap: () => Navigator.pop(ctx, false)),
-                      const SizedBox(width: 10),
-                      _NeuDialogBtn(
-                          label: context.tr('delete'),
-                          isDark: isDark,
-                          isPrimary: false,
-                          onTap: () => Navigator.pop(ctx, true)),
-                    ],
-                  ),
+                  _NeuDialogBtn(
+                      label: context.tr('cancel'),
+                      isDark: isDark,
+                      onTap: () => Navigator.pop(ctx, false)),
+                  const SizedBox(width: 10),
+                  _NeuDialogBtn(
+                      label: context.tr('delete'),
+                      isDark: isDark,
+                      isPrimary: false,
+                      onTap: () => Navigator.pop(ctx, true)),
                 ],
               ),
-            ),
+            ],
           ),
-        ) ??
+        ),
+      ),
+    ) ??
         false;
   }
 }

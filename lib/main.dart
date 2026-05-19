@@ -39,6 +39,11 @@ void main() async {
   // Initialize encryption service
   await EncryptionService.instance.init();
 
+  // Load saved locale before runApp so translations are ready before any
+  // widget calls AppTranslations.translate() — prevents raw keys showing up
+  // on first launch before LanguageProvider._init() completes asynchronously.
+  await AppTranslations.loadSavedLocale();
+
   runApp(
     MultiProvider(
       providers: [

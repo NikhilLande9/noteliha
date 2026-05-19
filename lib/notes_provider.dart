@@ -14,6 +14,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:uuid/uuid.dart';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:local_auth/local_auth.dart';
 
 import 'app_lock_gate.dart'
     show getStoredMasterPassword, kMasterPasswordForRederiveKey;
@@ -33,7 +34,7 @@ const String kSyncStateBox = 'sync_state_box_v3';
 // so this value is only used when running on the web.
 const String _kWebClientId =
     '986108762069-tfo8ft6c8od7f63untc9sgla36j97oba.apps.googleusercontent.com';
-const String kDriveRootName = '.liha_notes_app';
+const String kDriveRootName = '.liha_notes_app'; // cspell:disable-line
 const String kDriveNotesDir = 'notes';
 const String kDriveImagesDir = 'images';
 const String kManifestName = 'manifest.json';
@@ -264,7 +265,7 @@ class NotesProvider extends ChangeNotifier {
     final api = drive.DriveApi(client);
 
     final rootList = await _retry(
-      () => api.files.list(
+          () => api.files.list(
         q: "name = '$kDriveRootName' and mimeType = 'application/vnd.google-apps.folder' and trashed = false",
         $fields: 'files(id)',
         pageSize: 1,
@@ -303,7 +304,7 @@ class NotesProvider extends ChangeNotifier {
         knownDriveSaltBase64: driveSaltBase64);
 
     final manifestList = await _retry(
-      () => api.files.list(
+          () => api.files.list(
         q: "name = '$kManifestName' and '$rootId' in parents and trashed = false",
         $fields: 'files(id)',
         pageSize: 1,
@@ -335,7 +336,7 @@ class NotesProvider extends ChangeNotifier {
       drive.DriveApi api, String rootFolderId) async {
     try {
       final list = await _retry(
-        () => api.files.list(
+            () => api.files.list(
           q: "name = '$kSaltFileName' and '$rootFolderId' in parents and trashed = false",
           $fields: 'files(id)',
           pageSize: 1,
@@ -351,7 +352,7 @@ class NotesProvider extends ChangeNotifier {
 
       final fileId = list.files!.first.id!;
       final response = await _retry(
-        () => api.files
+            () => api.files
             .get(fileId, downloadOptions: drive.DownloadOptions.fullMedia),
         name: 'fetchSalt',
       );
@@ -448,7 +449,7 @@ class NotesProvider extends ChangeNotifier {
       String? driveTestCipher;
       try {
         final testList = await _retry(
-          () => api.files.list(
+              () => api.files.list(
             q: "name = '$kTestFileName' and '$rootFolderId' in parents and trashed = false",
             $fields: 'files(id)',
             pageSize: 1,
@@ -459,13 +460,13 @@ class NotesProvider extends ChangeNotifier {
         if (testList.files?.isNotEmpty ?? false) {
           final testFileId = testList.files!.first.id!;
           final testResponse = await _retry(
-            () => api.files.get(testFileId,
+                () => api.files.get(testFileId,
                 downloadOptions: drive.DownloadOptions.fullMedia),
             name: 'rederive:fetchTest',
           );
           if (testResponse is drive.Media) {
             final testBytes =
-                await testResponse.stream.expand((c) => c).toList();
+            await testResponse.stream.expand((c) => c).toList();
             driveTestCipher = utf8.decode(testBytes);
           }
         }
@@ -482,7 +483,7 @@ class NotesProvider extends ChangeNotifier {
         debugPrint(
             '[RederiveKey] No test.bin on Drive — skipping auto-verify, showing dialog.');
         final enteredPassword =
-            await _showPasswordMismatchDialog(driveSaltBase64, null);
+        await _showPasswordMismatchDialog(driveSaltBase64, null);
         if (enteredPassword == null) {
           debugPrint('[RederiveKey] User cancelled password re-entry.');
           return;
@@ -498,7 +499,7 @@ class NotesProvider extends ChangeNotifier {
         debugPrint(
             '[RederiveKey] No stored password — cannot auto-verify Drive salt.');
         final enteredPassword =
-            await _showPasswordMismatchDialog(driveSaltBase64, driveTestCipher);
+        await _showPasswordMismatchDialog(driveSaltBase64, driveTestCipher);
         if (enteredPassword == null) {
           debugPrint('[RederiveKey] User cancelled password re-entry.');
           return;
@@ -527,7 +528,7 @@ class NotesProvider extends ChangeNotifier {
       debugPrint(
           '[RederiveKey] Stored password does not match Drive salt. Showing dialog.');
       final enteredPassword =
-          await _showPasswordMismatchDialog(driveSaltBase64, driveTestCipher);
+      await _showPasswordMismatchDialog(driveSaltBase64, driveTestCipher);
 
       if (enteredPassword == null) {
         debugPrint('[RederiveKey] User cancelled password re-entry.');
@@ -604,7 +605,7 @@ class NotesProvider extends ChangeNotifier {
     final base = isDark ? const Color(0xFF1A1A1A) : const Color(0xFFFAF8F5);
     final subtle = isDark ? const Color(0xFF9E9E9E) : const Color(0xFF666666);
     final inputFill =
-        isDark ? const Color(0xFF2A2A2A) : const Color(0xFFF0F0F0);
+    isDark ? const Color(0xFF2A2A2A) : const Color(0xFFF0F0F0);
     final primary = isDark ? const Color(0xFFE0E0E0) : const Color(0xFF1A1A1A);
 
     final controller = TextEditingController();
@@ -668,7 +669,7 @@ class NotesProvider extends ChangeNotifier {
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child:
-                              Icon(Icons.key_rounded, size: 20, color: accent),
+                          Icon(Icons.key_rounded, size: 20, color: accent),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -767,22 +768,22 @@ class NotesProvider extends ChangeNotifier {
                             onPressed: isVerifying
                                 ? null
                                 : () async {
-                                    final pwd = controller.text.trim();
-                                    if (pwd.isEmpty) {
-                                      setDialogState(() => errorText =
-                                          AppTranslations.translate(
-                                              'password_cannot_be_empty'));
-                                      return;
-                                    }
-                                    setDialogState(() {
-                                      isVerifying = true;
-                                      errorText = null;
-                                    });
-                                    final valid =
-                                        await verifyInput(pwd, setDialogState);
-                                    if (!dialogCtx.mounted) return;
-                                    if (valid) Navigator.of(dialogCtx).pop(pwd);
-                                  },
+                              final pwd = controller.text.trim();
+                              if (pwd.isEmpty) {
+                                setDialogState(() => errorText =
+                                    AppTranslations.translate(
+                                        'password_cannot_be_empty'));
+                                return;
+                              }
+                              setDialogState(() {
+                                isVerifying = true;
+                                errorText = null;
+                              });
+                              final valid =
+                              await verifyInput(pwd, setDialogState);
+                              if (!dialogCtx.mounted) return;
+                              if (valid) Navigator.of(dialogCtx).pop(pwd);
+                            },
                             style: FilledButton.styleFrom(
                               backgroundColor: accent,
                               padding: const EdgeInsets.symmetric(vertical: 12),
@@ -791,13 +792,13 @@ class NotesProvider extends ChangeNotifier {
                             ),
                             child: isVerifying
                                 ? SizedBox(
-                                    width: 18,
-                                    height: 18,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: Colors.white.withAlpha(200),
-                                    ),
-                                  )
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white.withAlpha(200),
+                              ),
+                            )
                                 : Text(AppTranslations.translate('verify')),
                           ),
                         ),
@@ -884,12 +885,12 @@ class NotesProvider extends ChangeNotifier {
   /// Extracted so [uploadSaltToDrive] can reuse the same pattern for both
   /// salt.bin and test.bin without duplicating the list→update/create logic.
   Future<void> _upsertDriveFile(
-    drive.DriveApi api, {
-    required String fileName,
-    required List<int> content,
-    required String parentId,
-    required String logTag,
-  }) async {
+      drive.DriveApi api, {
+        required String fileName,
+        required List<int> content,
+        required String parentId,
+        required String logTag,
+      }) async {
     final encoded = content;
     final media = drive.Media(
       Stream.value(encoded),
@@ -898,7 +899,7 @@ class NotesProvider extends ChangeNotifier {
     );
 
     final list = await _retry(
-      () => api.files.list(
+          () => api.files.list(
         q: "name = '$fileName' and '$parentId' in parents and trashed = false",
         $fields: 'files(id)',
         pageSize: 1,
@@ -908,7 +909,7 @@ class NotesProvider extends ChangeNotifier {
 
     if (list.files?.isNotEmpty ?? false) {
       await _retry(
-        () => api.files
+            () => api.files
             .update(drive.File(), list.files!.first.id!, uploadMedia: media),
         name: 'update:$logTag',
       );
@@ -917,7 +918,7 @@ class NotesProvider extends ChangeNotifier {
         ..name = fileName
         ..parents = [parentId];
       await _retry(
-        () => api.files.create(file, uploadMedia: media),
+            () => api.files.create(file, uploadMedia: media),
         name: 'create:$logTag',
       );
     }
@@ -1031,12 +1032,12 @@ class NotesProvider extends ChangeNotifier {
   // ── CRUD with encryption ────────────────────────────────────────────────────
 
   Future<void> addNote(
-    String title,
-    String content, {
-    String category = 'General',
-    NoteType noteType = NoteType.normal,
-    ColorTheme colorTheme = ColorTheme.default_,
-  }) async {
+      String title,
+      String content, {
+        String category = 'General',
+        NoteType noteType = NoteType.normal,
+        ColorTheme colorTheme = ColorTheme.default_,
+      }) async {
     if (_notesBox == null) return;
     if (title.isEmpty && content.isEmpty) return;
 
@@ -1044,9 +1045,9 @@ class NotesProvider extends ChangeNotifier {
     // Web now derives the same key as mobile (salt fetched from Drive),
     // so encryption is safe and cross-platform.
     final encryptedContent =
-        (noteType == NoteType.normal || noteType == NoteType.drawing)
-            ? EncryptionService.instance.encrypt(content)
-            : content;
+    (noteType == NoteType.normal || noteType == NoteType.drawing)
+        ? EncryptionService.instance.encrypt(content)
+        : content;
 
     final note = Note(
       id: const Uuid().v4(),
@@ -1335,7 +1336,7 @@ class NotesProvider extends ChangeNotifier {
     final duplicate = remote.copyWith(
       id: const Uuid().v4(),
       title:
-          '${remote.title} ${AppTranslations.translate('conflict_copy_suffix')}',
+      '${remote.title} ${AppTranslations.translate('conflict_copy_suffix')}',
     );
     await _notesBox?.put(duplicate.id, duplicate);
     _updateSearchIndex(duplicate);
@@ -1354,8 +1355,8 @@ class NotesProvider extends ChangeNotifier {
     _syncStatus = msg == null
         ? SyncStatus.idle
         : (isError
-            ? SyncStatus.error
-            : (isSyncing ? SyncStatus.syncing : SyncStatus.idle));
+        ? SyncStatus.error
+        : (isSyncing ? SyncStatus.syncing : SyncStatus.idle));
     notifyListeners();
 
     if (msg != null && !isSyncing && !persistent) {
@@ -1413,8 +1414,8 @@ class NotesProvider extends ChangeNotifier {
 
     throw Exception(
         'Authentication failed: could not obtain an authenticated client '
-        'after $_kAuthMaxRetries attempts. '
-        'Please sign out and sign in again.');
+            'after $_kAuthMaxRetries attempts. '
+            'Please sign out and sign in again.');
   }
 
   // ── Retry logic ─────────────────────────────────────────────────────────────
@@ -1467,7 +1468,7 @@ class NotesProvider extends ChangeNotifier {
 
   Future<void> _ensureFolders(drive.DriveApi api) async {
     _syncState.rootFolderId ??=
-        await _findOrCreateFolder(api, kDriveRootName, parentId: null);
+    await _findOrCreateFolder(api, kDriveRootName, parentId: null);
     _syncState.notesFolderId ??= await _findOrCreateFolder(api, kDriveNotesDir,
         parentId: _syncState.rootFolderId!);
     _syncState.imagesFolderId ??= await _findOrCreateFolder(
@@ -1480,7 +1481,7 @@ class NotesProvider extends ChangeNotifier {
       {required String? parentId}) async {
     final parentClause = parentId != null ? " and '$parentId' in parents" : '';
     final list = await _retry(
-      () => api.files.list(
+          () => api.files.list(
         q: "name = '$name' and mimeType = 'application/vnd.google-apps.folder' and trashed = false$parentClause",
         $fields: 'files(id)',
         pageSize: 1,
@@ -1494,7 +1495,7 @@ class NotesProvider extends ChangeNotifier {
       ..mimeType = 'application/vnd.google-apps.folder'
       ..parents = parentId != null ? [parentId] : null;
     final created =
-        await _retry(() => api.files.create(meta), name: 'createFolder:$name');
+    await _retry(() => api.files.create(meta), name: 'createFolder:$name');
     return created.id!;
   }
 
@@ -1503,7 +1504,7 @@ class NotesProvider extends ChangeNotifier {
   Future<DriveManifest> _fetchManifest(drive.DriveApi api) async {
     if (_syncState.manifestFileId == null) {
       final list = await _retry(
-        () => api.files.list(
+            () => api.files.list(
           q: "name = '$kManifestName' and '${_syncState.rootFolderId}' in parents and trashed = false",
           $fields: 'files(id)',
           pageSize: 1,
@@ -1519,7 +1520,7 @@ class NotesProvider extends ChangeNotifier {
 
     try {
       final response = await _retry(
-        () => api.files.get(_syncState.manifestFileId!,
+            () => api.files.get(_syncState.manifestFileId!,
             downloadOptions: drive.DownloadOptions.fullMedia),
         name: 'fetchManifest',
       );
@@ -1545,7 +1546,7 @@ class NotesProvider extends ChangeNotifier {
       if (!referencedImages.contains(entry.key) && entry.value.existsOnDrive) {
         try {
           await _retry(
-            () => api.files.delete(entry.value.driveFileId!),
+                () => api.files.delete(entry.value.driveFileId!),
             name: 'deleteOrphanedImage:${entry.key}',
           );
           _syncState.images.remove(entry.key);
@@ -1584,7 +1585,7 @@ class NotesProvider extends ChangeNotifier {
 
     if (_syncState.manifestFileId != null) {
       await _retry(
-        () => api.files.update(drive.File(), _syncState.manifestFileId!,
+            () => api.files.update(drive.File(), _syncState.manifestFileId!,
             uploadMedia: media),
         name: 'updateManifest',
       );
@@ -1593,7 +1594,7 @@ class NotesProvider extends ChangeNotifier {
         ..name = kManifestName
         ..parents = [_syncState.rootFolderId!];
       final created = await _retry(
-          () => api.files.create(file, uploadMedia: media),
+              () => api.files.create(file, uploadMedia: media),
           name: 'createManifest');
       _syncState.manifestFileId = created.id;
       _persistSyncState();
@@ -1714,7 +1715,7 @@ class NotesProvider extends ChangeNotifier {
     String? fileId = imgSync?.driveFileId;
     if (fileId != null) {
       await _retry(
-        () => api.files.update(drive.File(), fileId!, uploadMedia: media),
+            () => api.files.update(drive.File(), fileId!, uploadMedia: media),
         name: 'updateImage:$imageId',
       );
     } else {
@@ -1722,7 +1723,7 @@ class NotesProvider extends ChangeNotifier {
         ..name = '$imageId.bin'
         ..parents = [_syncState.imagesFolderId!];
       final created = await _retry(
-          () => api.files.create(file, uploadMedia: media),
+              () => api.files.create(file, uploadMedia: media),
           name: 'createImage:$imageId');
       fileId = created.id;
     }
@@ -1746,7 +1747,7 @@ class NotesProvider extends ChangeNotifier {
 
     if (fileId != null) {
       await _retry(
-        () => api.files.update(drive.File(), fileId!, uploadMedia: media),
+            () => api.files.update(drive.File(), fileId!, uploadMedia: media),
         name: 'updateNote:${note.id}',
       );
     } else if (!note.deleted) {
@@ -1754,7 +1755,7 @@ class NotesProvider extends ChangeNotifier {
         ..name = '${note.id}.json'
         ..parents = [_syncState.notesFolderId!];
       final created = await _retry(
-          () => api.files.create(file, uploadMedia: media),
+              () => api.files.create(file, uploadMedia: media),
           name: 'createNote:${note.id}');
       fileId = created.id;
     }
@@ -1775,7 +1776,7 @@ class NotesProvider extends ChangeNotifier {
 
     for (int i = 0; i < imageIds.length; i += maxConcurrent) {
       final batch =
-          imageIds.sublist(i, min(i + maxConcurrent, imageIds.length));
+      imageIds.sublist(i, min(i + maxConcurrent, imageIds.length));
       await Future.wait(
         batch.map((imgId) async {
           final imgSync = _syncState.images[imgId];
@@ -1799,7 +1800,7 @@ class NotesProvider extends ChangeNotifier {
           String? fileId = imgSync?.driveFileId;
           if (fileId != null) {
             await _retry(
-              () => api.files.update(drive.File(), fileId!, uploadMedia: media),
+                  () => api.files.update(drive.File(), fileId!, uploadMedia: media),
               name: 'updateImage:$imgId',
             );
           } else {
@@ -1807,7 +1808,7 @@ class NotesProvider extends ChangeNotifier {
               ..name = '$imgId.bin'
               ..parents = [_syncState.imagesFolderId!];
             final created = await _retry(
-                () => api.files.create(file, uploadMedia: media),
+                    () => api.files.create(file, uploadMedia: media),
                 name: 'createImage:$imgId');
             fileId = created.id;
           }
@@ -1924,7 +1925,7 @@ class NotesProvider extends ChangeNotifier {
     String? fileId = _syncState.notes[noteId]?.driveFileId;
     if (fileId == null) {
       final list = await _retry(
-        () => api.files.list(
+            () => api.files.list(
           q: "name = '$noteId.json' and '${_syncState.notesFolderId}' in parents and trashed = false",
           $fields: 'files(id)',
           pageSize: 1,
@@ -1939,7 +1940,7 @@ class NotesProvider extends ChangeNotifier {
     }
 
     final response = await _retry(
-      () => api.files
+          () => api.files
           .get(fileId!, downloadOptions: drive.DownloadOptions.fullMedia),
       name: 'downloadNote:$noteId',
     );
@@ -1947,7 +1948,7 @@ class NotesProvider extends ChangeNotifier {
 
     final bytes = await response.stream.expand((c) => c).toList();
     final remoteNote =
-        Note.fromJson(jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>);
+    Note.fromJson(jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>);
 
     final localNote = _notesBox!.get(noteId) as Note?;
     final ns = _syncState.notes[noteId];
@@ -1965,7 +1966,7 @@ class NotesProvider extends ChangeNotifier {
         driveFileId: fileId,
         remoteVersion: remoteNote.updatedAt,
         conflict:
-            SyncConflict(remoteVersion: remoteNote, detectedAt: DateTime.now()),
+        SyncConflict(remoteVersion: remoteNote, detectedAt: DateTime.now()),
       );
       _persistSyncState();
       return;
@@ -2025,7 +2026,7 @@ class NotesProvider extends ChangeNotifier {
 
       if (fileId == null) {
         final list = await _retry(
-          () => api.files.list(
+              () => api.files.list(
             q: "name = '$imageId.bin' and '${_syncState.imagesFolderId}' in parents and trashed = false",
             $fields: 'files(id)',
             pageSize: 1,
@@ -2041,7 +2042,7 @@ class NotesProvider extends ChangeNotifier {
 
       try {
         final response = await _retry(
-          () => api.files
+              () => api.files
               .get(fileId!, downloadOptions: drive.DownloadOptions.fullMedia),
           name: 'downloadImage:$imageId',
         );
@@ -2184,6 +2185,71 @@ class NotesProvider extends ChangeNotifier {
     _persistSyncState();
     notifyListeners();
     return imported;
+  }
+
+  // ── Auth helpers (used by settings_screen) ──────────────────────────────────
+
+  /// Attempts biometric authentication (fingerprint / face ID).
+  ///
+  /// Returns `true` if the user was authenticated successfully, `false` if
+  /// they cancelled, and throws if biometrics are unavailable on this device.
+  /// The caller should catch and fall back to a master-password dialog.
+  Future<bool> authenticateWithBiometrics() async {
+    // Defer the local_auth import to avoid importing it at the top level on
+    // platforms that may not support it (e.g. web).  On web, biometrics are
+    // not available so we simply return false immediately.
+    if (kIsWeb) return false;
+    try {
+      final LocalAuthentication auth = LocalAuthentication();
+      final bool canCheck = await auth.canCheckBiometrics ||
+          await auth.isDeviceSupported();
+      if (!canCheck) return false;
+      return await auth.authenticate(
+        localizedReason: AppTranslations.translate('biometric_reason'),
+        options: const AuthenticationOptions(
+          biometricOnly: false,
+          stickyAuth: true,
+        ),
+      );
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Verifies [password] against the current encryption key.
+  ///
+  /// Returns `true` when the password matches the stored key, `false`
+  /// otherwise.  Uses [EncryptionService.verifyKey] with the current local
+  /// salt and test cipher as the oracle.
+  Future<bool> verifyMasterPassword(String password) async {
+    try {
+      final salt = await EncryptionService.instance.exportSalt();
+      final testCipher = await EncryptionService.instance.exportTestCipher();
+      if (salt == null || testCipher == null) return false;
+      return EncryptionService.instance.verifyKey(password, salt, testCipher);
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Returns `true` when [bytes] is a backup bundle whose embedded salt
+  /// differs from the device's current salt — meaning it was created in a
+  /// different vault (another device or a different password setup).
+  ///
+  /// Returns `false` for same-vault backups, malformed JSON, or when no salt
+  /// is present in the bundle (pre-salt backups are treated as same-vault).
+  Future<bool> isFromDifferentVault(Uint8List bytes) async {
+    try {
+      final Map<String, dynamic> bundle =
+      jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>;
+      final bundleSalt = bundle['salt'] as String?;
+      if (bundleSalt == null) return false; // pre-salt backup — treat as same vault
+      final localSalt = await EncryptionService.instance.exportSalt();
+      if (localSalt == null) return false; // no local salt yet — cannot compare
+      return bundleSalt != localSalt;
+    } catch (_) {
+      return false;
+    }
   }
 
   // ── Misc ────────────────────────────────────────────────────────────────────

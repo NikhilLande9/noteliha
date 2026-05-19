@@ -34,6 +34,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import 'encryption_service.dart';
 import 'language.dart';
@@ -88,6 +89,7 @@ class _AppLockGateState extends State<AppLockGate>
   bool _setupMode = false;
   bool _bioRunning = false;
   bool _checking = false;
+  bool _submitting = false;
 
   DateTime? _backgroundedAt;
 
@@ -370,6 +372,7 @@ class _AppLockGateState extends State<AppLockGate>
   // ── Password submission ────────────────────────────────────────────────────
 
   Future<void> _submitPassword() async {
+    if (_submitting) return;
     final password = _passwordCtrl.text.trim();
     final confirm = _passwordConfCtrl.text.trim();
 
@@ -379,41 +382,46 @@ class _AppLockGateState extends State<AppLockGate>
       return;
     }
 
-    if (_setupMode) {
-      // ── First-run password setup ────────────────────────────────────────
-      if (password.length < 4) {
-        setState(() =>
-        _passwordError = AppTranslations.translate('password_min_length'));
-        return;
-      }
-      if (password != confirm) {
-        setState(() => _passwordError =
-            AppTranslations.translate('passwords_do_not_match'));
-        return;
-      }
+    setState(() => _submitting = true);
+    try {
+      if (_setupMode) {
+        // ── First-run password setup ────────────────────────────────────────
+        if (password.length < 4) {
+          setState(() =>
+          _passwordError = AppTranslations.translate('password_min_length'));
+          return;
+        }
+        if (password != confirm) {
+          setState(() => _passwordError =
+              AppTranslations.translate('passwords_do_not_match'));
+          return;
+        }
 
-      await _storage.write(key: _kPinKey, value: password);
-      await _initializeEncryption(password);
-      setState(() {
-        _setupMode = false;
-        _passwordError = null;
-      });
-    } else {
-      // ── Unlock with stored password ─────────────────────────────────────
-      final stored = await _storage.read(key: _kPinKey);
-      if (stored == null) {
-        setState(() =>
-        _passwordError = AppTranslations.translate('no_password_stored'));
-        return;
-      }
+        await _storage.write(key: _kPinKey, value: password);
+        await _initializeEncryption(password);
+        setState(() {
+          _setupMode = false;
+          _passwordError = null;
+        });
+      } else {
+        // ── Unlock with stored password ─────────────────────────────────────
+        final stored = await _storage.read(key: _kPinKey);
+        if (stored == null) {
+          setState(() =>
+          _passwordError = AppTranslations.translate('no_password_stored'));
+          return;
+        }
 
-      if (password != stored) {
-        setState(() =>
-        _passwordError = AppTranslations.translate('incorrect_password'));
-        return;
-      }
+        if (password != stored) {
+          setState(() =>
+          _passwordError = AppTranslations.translate('incorrect_password'));
+          return;
+        }
 
-      await _initializeEncryption(password);
+        await _initializeEncryption(password);
+      }
+    } finally {
+      if (mounted) setState(() => _submitting = false);
     }
   }
 
@@ -431,6 +439,22 @@ class _AppLockGateState extends State<AppLockGate>
     final subtle = Neu.textSecondary(isDark);
     final accent = Theme.of(context).colorScheme.primary;
     final inputFill = Neu.inputFill(isDark);
+
+    // ── Initial check loader ────────────────────────────────────────────────
+    // Show a minimal centered spinner while reading secure storage / checking
+    // biometric availability. Prevents the lock screen from flashing in an
+    // incomplete state before the correct UI mode is determined.
+    if (_checking) {
+      return Scaffold(
+        backgroundColor: base,
+        body: Center(
+          child: CircularProgressIndicator(
+            strokeWidth: 2.5,
+            color: accent,
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
       backgroundColor: base,
@@ -507,19 +531,34 @@ class _AppLockGateState extends State<AppLockGate>
                           width: 72,
                           height: 72,
                           margin: const EdgeInsets.only(bottom: 24),
-                          decoration: BoxDecoration(
-                            color: accent.withAlpha(25),
-                            borderRadius: BorderRadius.circular(20),
+                          child: SvgPicture.asset(
+                            'assets/icons/noteliha.svg',
+                            width: 72,
+                            height: 72,
                           ),
-                          child: Icon(Icons.lock_rounded, size: 40, color: accent),
                         ),
-                        Text(
-                          'noteliha',
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.w800,
-                            color: primary,
-                            letterSpacing: -0.5,
+                        RichText(
+                          text: TextSpan(
+                            children: [
+                              TextSpan(
+                                text: 'note',
+                                style: TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w800,
+                                  color: primary,
+                                  letterSpacing: -0.5,
+                                ),
+                              ),
+                              TextSpan(
+                                text: 'liha',
+                                style: TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w800,
+                                  color: accent,
+                                  letterSpacing: -0.5,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -832,7 +871,8 @@ class _AppLockGateState extends State<AppLockGate>
         _PrimaryButton(
           label: AppTranslations.translate('set_password'),
           accent: accent,
-          onPressed: _submitPassword,
+          isLoading: _submitting,
+          onPressed: _submitting ? null : _submitPassword,
         ),
       ],
     );
@@ -871,7 +911,8 @@ class _AppLockGateState extends State<AppLockGate>
         _PrimaryButton(
           label: AppTranslations.translate('unlock'),
           accent: accent,
-          onPressed: _submitPassword,
+          isLoading: _submitting,
+          onPressed: _submitting ? null : _submitPassword,
         ),
 
         // Offer to retry biometrics (native only)
@@ -916,12 +957,12 @@ class _AppLockGateState extends State<AppLockGate>
   Widget _buildFeatureGrid(Color subtle, Color accent) {
     // 6 features in a 2×3 grid + 1 full-width item below
     const gridFeatures = [
-      (Icons.wifi_off_rounded, 'Offline first'),
-      (Icons.language_rounded, '80 languages + RTL'),
-      (Icons.select_all_rounded, 'Multi-select & share'),
-      (Icons.restaurant_menu_rounded, 'Meal plans & itineraries'),
-      (Icons.block_rounded, 'No ads · No IAP · No account'),
-      (Icons.cloud_sync_rounded, 'Google Drive sync'),
+      (Icons.wifi_off_rounded, 'Offline first, works without internet.'),
+      (Icons.language_rounded, '80 languages with RTL support.'),
+      (Icons.select_all_rounded, 'Multi-select notes & Share anywhere.'),
+      (Icons.restaurant_menu_rounded, 'Meal plans. Itineraries. Checklists.'),
+      (Icons.block_rounded, 'No ads · No IAP · No account required.'),
+      (Icons.cloud_sync_rounded, 'Optional Google Drive sync'),
     ];
     const fullWidthFeature = (
     Icons.fingerprint_rounded,
@@ -1207,24 +1248,43 @@ class _PasswordField extends StatelessWidget {
 class _PrimaryButton extends StatelessWidget {
   final String label;
   final Color accent;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
+  final bool isLoading;
 
-  const _PrimaryButton(
-      {required this.label, required this.accent, required this.onPressed});
+  const _PrimaryButton({
+    required this.label,
+    required this.accent,
+    required this.onPressed,
+    this.isLoading = false,
+  });
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       width: double.infinity,
-      child: FilledButton(
-        onPressed: onPressed,
-        style: FilledButton.styleFrom(
-          backgroundColor: accent,
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          shape:
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Theme(
+        // Remove the web ink-splash circle that makes the button look broken
+        data: Theme.of(context).copyWith(splashFactory: NoSplash.splashFactory),
+        child: FilledButton(
+          onPressed: onPressed,
+          style: FilledButton.styleFrom(
+            backgroundColor: accent,
+            disabledBackgroundColor: accent.withAlpha(180),
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+          child: isLoading
+              ? const SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(
+              strokeWidth: 2.5,
+              color: Colors.white,
+            ),
+          )
+              : Text(label, style: const TextStyle(fontSize: 16)),
         ),
-        child: Text(label, style: const TextStyle(fontSize: 16)),
       ),
     );
   }

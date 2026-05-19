@@ -67,3 +67,7 @@ pnpm-debug.log*
 # TypeScript
 *.tsbuildinfo
 next-env.d.ts
+
+# Translation patch tools
+lib/translations/patch.json
+lib/translations/patch_translations.dart

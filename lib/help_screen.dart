@@ -24,7 +24,7 @@ class HelpScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final base   = Neu.base(isDark);
+    final base = Neu.base(isDark);
     final accent = Theme.of(context).colorScheme.primary;
 
     return Scaffold(
@@ -81,8 +81,7 @@ class HelpScreen extends StatelessWidget {
                   title: context.tr('report_a_bug'),
                   subtitle: context.tr('report_a_bug_subtitle'),
                   emailSubject: '[Noteliha] Bug Report',
-                  emailBody:
-                  'Describe the bug:\n\n'
+                  emailBody: 'Describe the bug:\n\n'
                       'Steps to reproduce:\n1.\n2.\n3.\n\n'
                       'Expected behaviour:\n\n'
                       'Actual behaviour:\n\n'
@@ -96,8 +95,7 @@ class HelpScreen extends StatelessWidget {
                   title: context.tr('request_a_feature'),
                   subtitle: context.tr('request_a_feature_subtitle'),
                   emailSubject: '[Noteliha] Feature Request',
-                  emailBody:
-                  'Feature idea:\n\n'
+                  emailBody: 'Feature idea:\n\n'
                       'Why would this be useful?\n\n'
                       'Any additional details:\n',
                 ),
@@ -132,17 +130,17 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(4, 0, 0, 10),
-    child: Text(
-      text.toUpperCase(),
-      style: TextStyle(
-        fontSize: 11,
-        fontWeight: FontWeight.w700,
-        letterSpacing: 1.2,
-        color: Theme.of(context).colorScheme.primary,
-      ),
-    ),
-  );
+        padding: const EdgeInsets.fromLTRB(4, 0, 0, 10),
+        child: Text(
+          text.toUpperCase(),
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 1.2,
+            color: Theme.of(context).colorScheme.primary,
+          ),
+        ),
+      );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -155,12 +153,12 @@ class _NeuDivider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Divider(
-    height: 1,
-    thickness: 1,
-    indent: 16,
-    endIndent: 16,
-    color: Neu.textSecondary(isDark).withAlpha(30),
-  );
+        height: 1,
+        thickness: 1,
+        indent: 16,
+        endIndent: 16,
+        color: Neu.textSecondary(isDark).withAlpha(30),
+      );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -240,10 +238,11 @@ class _ExpandableQuickGuideState extends State<_ExpandableQuickGuide>
         // Animated content
         SizeTransition(
           sizeFactor: _anim,
-          axisAlignment: -1,
+          alignment: Alignment.topCenter,
           child: Padding(
             padding: const EdgeInsets.only(top: 12),
-            child: _QuickGuideGrid(isDark: widget.isDark, accent: widget.accent),
+            child:
+                _QuickGuideGrid(isDark: widget.isDark, accent: widget.accent),
           ),
         ),
       ],
@@ -288,117 +287,117 @@ class _QuickGuideGrid extends StatelessWidget {
   }
 
   List<Widget> _guideCards(BuildContext context) => [
-    _GuideCard(
-      isDark: isDark,
-      accent: accent,
-      icon: Icons.note_rounded,
-      title: context.tr('guide_notes_title'),
-      points: [
-        context.tr('guide_notes_p1'),
-        context.tr('guide_notes_p2'),
-        context.tr('guide_notes_p3'),
-      ],
-    ),
-    _GuideCard(
-      isDark: isDark,
-      accent: accent,
-      icon: Icons.check_box_rounded,
-      title: context.tr('guide_checklist_title'),
-      points: [
-        context.tr('guide_checklist_p1'),
-        context.tr('guide_checklist_p2'),
-        context.tr('guide_checklist_p3'),
-      ],
-    ),
-    _GuideCard(
-      isDark: isDark,
-      accent: accent,
-      icon: Icons.flight_rounded,
-      title: context.tr('guide_itinerary_title'),
-      points: [
-        context.tr('guide_itinerary_p1'),
-        context.tr('guide_itinerary_p2'),
-        context.tr('guide_itinerary_p3'),
-      ],
-    ),
-    _GuideCard(
-      isDark: isDark,
-      accent: accent,
-      icon: Icons.restaurant_menu_rounded,
-      title: context.tr('guide_meal_plan_title'),
-      points: [
-        context.tr('guide_meal_plan_p1'),
-        context.tr('guide_meal_plan_p2'),
-        context.tr('guide_meal_plan_p3'),
-      ],
-    ),
-    _GuideCard(
-      isDark: isDark,
-      accent: accent,
-      icon: Icons.menu_book_rounded,
-      title: context.tr('guide_recipe_title'),
-      points: [
-        context.tr('guide_recipe_p1'),
-        context.tr('guide_recipe_p2'),
-        context.tr('guide_recipe_p3'),
-      ],
-    ),
-    _GuideCard(
-      isDark: isDark,
-      accent: accent,
-      icon: Icons.brush_rounded,
-      title: context.tr('guide_drawing_title'),
-      points: [
-        context.tr('guide_drawing_p1'),
-        context.tr('guide_drawing_p2'),
-        context.tr('guide_drawing_p3'),
-      ],
-    ),
-    _GuideCard(
-      isDark: isDark,
-      accent: accent,
-      icon: Icons.lock_rounded,
-      title: context.tr('guide_security_title'),
-      points: [
-        context.tr('guide_security_p1'),
-        context.tr('guide_security_p2'),
-        context.tr('guide_security_p3'),
-      ],
-    ),
-    _GuideCard(
-      isDark: isDark,
-      accent: accent,
-      icon: Icons.cloud_sync_rounded,
-      title: context.tr('guide_sync_title'),
-      points: [
-        context.tr('guide_sync_p1'),
-        context.tr('guide_sync_p2'),
-        context.tr('guide_sync_p3'),
-      ],
-    ),
-    _GuideCard(
-      isDark: isDark,
-      accent: accent,
-      icon: Icons.touch_app_rounded,
-      title: context.tr('guide_controls_title'),
-      points: [
-        context.tr('guide_controls_p1'),
-        context.tr('guide_controls_p2'),
-        context.tr('guide_controls_p3'),
-      ],
-    ),
-    _GuideCard(
-      isDark: isDark,
-      accent: accent,
-      icon: Icons.manage_search_rounded,
-      title: context.tr('guide_organisation_title'),
-      points: [
-        context.tr('guide_organisation_p1'),
-        context.tr('guide_organisation_p2'),
-        context.tr('guide_organisation_p3'),
-      ],
-    ),
-  ];
+        _GuideCard(
+          isDark: isDark,
+          accent: accent,
+          icon: Icons.note_rounded,
+          title: context.tr('guide_notes_title'),
+          points: [
+            context.tr('guide_notes_p1'),
+            context.tr('guide_notes_p2'),
+            context.tr('guide_notes_p3'),
+          ],
+        ),
+        _GuideCard(
+          isDark: isDark,
+          accent: accent,
+          icon: Icons.check_box_rounded,
+          title: context.tr('guide_checklist_title'),
+          points: [
+            context.tr('guide_checklist_p1'),
+            context.tr('guide_checklist_p2'),
+            context.tr('guide_checklist_p3'),
+          ],
+        ),
+        _GuideCard(
+          isDark: isDark,
+          accent: accent,
+          icon: Icons.flight_rounded,
+          title: context.tr('guide_itinerary_title'),
+          points: [
+            context.tr('guide_itinerary_p1'),
+            context.tr('guide_itinerary_p2'),
+            context.tr('guide_itinerary_p3'),
+          ],
+        ),
+        _GuideCard(
+          isDark: isDark,
+          accent: accent,
+          icon: Icons.restaurant_menu_rounded,
+          title: context.tr('guide_meal_plan_title'),
+          points: [
+            context.tr('guide_meal_plan_p1'),
+            context.tr('guide_meal_plan_p2'),
+            context.tr('guide_meal_plan_p3'),
+          ],
+        ),
+        _GuideCard(
+          isDark: isDark,
+          accent: accent,
+          icon: Icons.menu_book_rounded,
+          title: context.tr('guide_recipe_title'),
+          points: [
+            context.tr('guide_recipe_p1'),
+            context.tr('guide_recipe_p2'),
+            context.tr('guide_recipe_p3'),
+          ],
+        ),
+        _GuideCard(
+          isDark: isDark,
+          accent: accent,
+          icon: Icons.brush_rounded,
+          title: context.tr('guide_drawing_title'),
+          points: [
+            context.tr('guide_drawing_p1'),
+            context.tr('guide_drawing_p2'),
+            context.tr('guide_drawing_p3'),
+          ],
+        ),
+        _GuideCard(
+          isDark: isDark,
+          accent: accent,
+          icon: Icons.lock_rounded,
+          title: context.tr('guide_security_title'),
+          points: [
+            context.tr('guide_security_p1'),
+            context.tr('guide_security_p2'),
+            context.tr('guide_security_p3'),
+          ],
+        ),
+        _GuideCard(
+          isDark: isDark,
+          accent: accent,
+          icon: Icons.cloud_sync_rounded,
+          title: context.tr('guide_sync_title'),
+          points: [
+            context.tr('guide_sync_p1'),
+            context.tr('guide_sync_p2'),
+            context.tr('guide_sync_p3'),
+          ],
+        ),
+        _GuideCard(
+          isDark: isDark,
+          accent: accent,
+          icon: Icons.touch_app_rounded,
+          title: context.tr('guide_controls_title'),
+          points: [
+            context.tr('guide_controls_p1'),
+            context.tr('guide_controls_p2'),
+            context.tr('guide_controls_p3'),
+          ],
+        ),
+        _GuideCard(
+          isDark: isDark,
+          accent: accent,
+          icon: Icons.manage_search_rounded,
+          title: context.tr('guide_organisation_title'),
+          points: [
+            context.tr('guide_organisation_p1'),
+            context.tr('guide_organisation_p2'),
+            context.tr('guide_organisation_p3'),
+          ],
+        ),
+      ];
 }
 
 class _GuideCard extends StatelessWidget {
@@ -482,36 +481,38 @@ class _GuideCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
-                  children: points.map((p) => Padding(
-                    padding: const EdgeInsets.only(bottom: 5),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.only(top: 5),
-                          child: Container(
-                            width: 4,
-                            height: 4,
-                            decoration: BoxDecoration(
-                              color: accent.withAlpha(180),
-                              shape: BoxShape.circle,
+                  children: points
+                      .map((p) => Padding(
+                            padding: const EdgeInsets.only(bottom: 5),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 5),
+                                  child: Container(
+                                    width: 4,
+                                    height: 4,
+                                    decoration: BoxDecoration(
+                                      color: accent.withAlpha(180),
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 7),
+                                Expanded(
+                                  child: Text(
+                                    p,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      height: 1.45,
+                                      color: Neu.textSecondary(isDark),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
-                          ),
-                        ),
-                        const SizedBox(width: 7),
-                        Expanded(
-                          child: Text(
-                            p,
-                            style: TextStyle(
-                              fontSize: 12,
-                              height: 1.45,
-                              color: Neu.textSecondary(isDark),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  )).toList(),
+                          ))
+                      .toList(),
                 ),
               ),
             ],
@@ -726,9 +727,7 @@ class _ExpandableFaqSectionState extends State<_ExpandableFaqSection>
               Expanded(
                 child: Text(
                   // FIX: was hardcoded 'Hide FAQ' / 'Show FAQ'
-                  _expanded
-                      ? context.tr('hide_faq')
-                      : context.tr('show_faq'),
+                  _expanded ? context.tr('hide_faq') : context.tr('show_faq'),
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
@@ -748,7 +747,7 @@ class _ExpandableFaqSectionState extends State<_ExpandableFaqSection>
         // Animated content
         SizeTransition(
           sizeFactor: _anim,
-          axisAlignment: -1,
+          alignment: Alignment.topCenter,
           child: Padding(
             padding: const EdgeInsets.only(top: 12),
             child: _FaqSection(isDark: widget.isDark, accent: widget.accent),
@@ -789,59 +788,59 @@ class _FaqSection extends StatelessWidget {
   // FIX: All FAQ entries now use short snake_case translation keys instead of
   // full English sentences as lookup keys.
   List<(String, String)> _faqItems(BuildContext context) => [
-    (
-    context.tr('faq_lock_icon_q'),
-    context.tr('faq_lock_icon_a'),
-    ),
-    (
-    context.tr('faq_forgot_password_q'),
-    context.tr('faq_forgot_password_a'),
-    ),
-    (
-    context.tr('faq_sync_devices_q'),
-    context.tr('faq_sync_devices_a'),
-    ),
-    (
-    context.tr('faq_notes_missing_q'),
-    context.tr('faq_notes_missing_a'),
-    ),
-    (
-    context.tr('faq_no_account_q'),
-    context.tr('faq_no_account_a'),
-    ),
-    (
-    context.tr('faq_export_backup_q'),
-    context.tr('faq_export_backup_a'),
-    ),
-    (
-    context.tr('faq_canvas_preview_q'),
-    context.tr('faq_canvas_preview_a'),
-    ),
-    (
-    context.tr('faq_biometrics_q'),
-    context.tr('faq_biometrics_a'),
-    ),
-    (
-    context.tr('faq_reorder_checklist_q'),
-    context.tr('faq_reorder_checklist_a'),
-    ),
-    (
-    context.tr('faq_delete_note_q'),
-    context.tr('faq_delete_note_a'),
-    ),
-    (
-    context.tr('faq_recover_note_q'),
-    context.tr('faq_recover_note_a'),
-    ),
-    (
-    context.tr('faq_share_note_q'),
-    context.tr('faq_share_note_a'),
-    ),
-    (
-    context.tr('faq_change_colour_q'),
-    context.tr('faq_change_colour_a'),
-    ),
-  ];
+        (
+          context.tr('faq_lock_icon_q'),
+          context.tr('faq_lock_icon_a'),
+        ),
+        (
+          context.tr('faq_forgot_password_q'),
+          context.tr('faq_forgot_password_a'),
+        ),
+        (
+          context.tr('faq_sync_devices_q'),
+          context.tr('faq_sync_devices_a'),
+        ),
+        (
+          context.tr('faq_notes_missing_q'),
+          context.tr('faq_notes_missing_a'),
+        ),
+        (
+          context.tr('faq_no_account_q'),
+          context.tr('faq_no_account_a'),
+        ),
+        (
+          context.tr('faq_export_backup_q'),
+          context.tr('faq_export_backup_a'),
+        ),
+        (
+          context.tr('faq_canvas_preview_q'),
+          context.tr('faq_canvas_preview_a'),
+        ),
+        (
+          context.tr('faq_biometrics_q'),
+          context.tr('faq_biometrics_a'),
+        ),
+        (
+          context.tr('faq_reorder_checklist_q'),
+          context.tr('faq_reorder_checklist_a'),
+        ),
+        (
+          context.tr('faq_delete_note_q'),
+          context.tr('faq_delete_note_a'),
+        ),
+        (
+          context.tr('faq_recover_note_q'),
+          context.tr('faq_recover_note_a'),
+        ),
+        (
+          context.tr('faq_share_note_q'),
+          context.tr('faq_share_note_a'),
+        ),
+        (
+          context.tr('faq_change_colour_q'),
+          context.tr('faq_change_colour_a'),
+        ),
+      ];
 }
 
 class _FaqItem extends StatefulWidget {
@@ -943,7 +942,7 @@ class _FaqItemState extends State<_FaqItem>
         // Answer — animated expand/collapse
         SizeTransition(
           sizeFactor: _anim,
-          axisAlignment: -1,
+          alignment: Alignment.topCenter,
           child: Padding(
             padding: const EdgeInsets.fromLTRB(52, 0, 16, 14),
             child: Text(

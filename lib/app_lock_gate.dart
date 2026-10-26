@@ -383,6 +383,7 @@ class _AppLockGateState extends State<AppLockGate>
     }
 
     setState(() => _submitting = true);
+    await Future.delayed(const Duration(milliseconds: 50)); // let Flutter repaint the button spinner
     try {
       if (_setupMode) {
         // ── First-run password setup ────────────────────────────────────────
@@ -439,22 +440,6 @@ class _AppLockGateState extends State<AppLockGate>
     final subtle = Neu.textSecondary(isDark);
     final accent = Theme.of(context).colorScheme.primary;
     final inputFill = Neu.inputFill(isDark);
-
-    // ── Initial check loader ────────────────────────────────────────────────
-    // Show a minimal centered spinner while reading secure storage / checking
-    // biometric availability. Prevents the lock screen from flashing in an
-    // incomplete state before the correct UI mode is determined.
-    if (_checking) {
-      return Scaffold(
-        backgroundColor: base,
-        body: Center(
-          child: CircularProgressIndicator(
-            strokeWidth: 2.5,
-            color: accent,
-          ),
-        ),
-      );
-    }
 
     return Scaffold(
       backgroundColor: base,

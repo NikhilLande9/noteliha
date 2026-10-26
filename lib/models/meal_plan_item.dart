@@ -60,49 +60,50 @@ class _ModernMealPlanBuilderState extends State<ModernMealPlanBuilder> {
           child: widget.items.isEmpty
               ? _buildEmptyState(isDark)
               : CustomScrollView(
-            controller: widget.scrollController,
-            slivers: [
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-                sliver: SliverList.builder(
-                  itemCount: widget.items.length,
-                  itemBuilder: (context, index) {
-                    final item = widget.items[index];
-                    final isLast = index == widget.items.length - 1;
-                    final isExpanded = _expandedItems[item.id] ?? false;
-                    final itemKey = widget.itemKeys.putIfAbsent(
-                        item.id, () => GlobalKey());
-                    final isActive = item.id == widget.activeItemId &&
-                        widget.searchQuery.isNotEmpty;
-                    return Container(
-                      key: itemKey,
-                      decoration: isActive
-                          ? BoxDecoration(
-                        color: const Color(0xFFFFD600).withAlpha(45),
-                        borderRadius: BorderRadius.circular(14),
-                      )
-                          : null,
-                      child: _MealPlanTimelineItem(
-                        key: ValueKey(item.id),
-                        item: item,
-                        index: index,
-                        isLast: isLast,
-                        isExpanded: isExpanded,
-                        isDark: isDark,
-                        searchQuery: widget.searchQuery,
-                        onToggleExpanded: () => _toggleExpanded(item.id),
-                        onDelete: () {
-                          widget.onDelete(index);
-                          setState(() => _expandedItems.remove(item.id));
+                  controller: widget.scrollController,
+                  slivers: [
+                    SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+                      sliver: SliverList.builder(
+                        itemCount: widget.items.length,
+                        itemBuilder: (context, index) {
+                          final item = widget.items[index];
+                          final isLast = index == widget.items.length - 1;
+                          final isExpanded = _expandedItems[item.id] ?? false;
+                          final itemKey = widget.itemKeys
+                              .putIfAbsent(item.id, () => GlobalKey());
+                          final isActive = item.id == widget.activeItemId &&
+                              widget.searchQuery.isNotEmpty;
+                          return Container(
+                            key: itemKey,
+                            decoration: isActive
+                                ? BoxDecoration(
+                                    color:
+                                        const Color(0xFFFFD600).withAlpha(45),
+                                    borderRadius: BorderRadius.circular(14),
+                                  )
+                                : null,
+                            child: _MealPlanTimelineItem(
+                              key: ValueKey(item.id),
+                              item: item,
+                              index: index,
+                              isLast: isLast,
+                              isExpanded: isExpanded,
+                              isDark: isDark,
+                              searchQuery: widget.searchQuery,
+                              onToggleExpanded: () => _toggleExpanded(item.id),
+                              onDelete: () {
+                                widget.onDelete(index);
+                                setState(() => _expandedItems.remove(item.id));
+                              },
+                              onChanged: widget.onChanged,
+                            ),
+                          );
                         },
-                        onChanged: widget.onChanged,
                       ),
-                    );
-                  },
+                    ),
+                  ],
                 ),
-              ),
-            ],
-          ),
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -201,12 +202,12 @@ class _MealPlanTimelineItemState extends State<_MealPlanTimelineItem>
     _mealControllers = {
       for (final meal in widget.item.meals)
         meal['id'] as String:
-        TextEditingController(text: meal['value'] as String? ?? ''),
+            TextEditingController(text: meal['value'] as String? ?? ''),
     };
     _calorieControllers = {
       for (final meal in widget.item.meals)
         meal['id'] as String:
-        TextEditingController(text: meal['calories'] as String? ?? ''),
+            TextEditingController(text: meal['calories'] as String? ?? ''),
     };
   }
 
@@ -253,7 +254,8 @@ class _MealPlanTimelineItemState extends State<_MealPlanTimelineItem>
   void _addMeal() {
     setState(() {
       final newId = const Uuid().v4();
-      widget.item.meals.add({'id': newId, 'name': 'Meal', 'value': '', 'calories': ''});
+      widget.item.meals
+          .add({'id': newId, 'name': 'Meal', 'value': '', 'calories': ''});
       _mealControllers[newId] = TextEditingController();
       _calorieControllers[newId] = TextEditingController();
       widget.onChanged();
@@ -341,7 +343,7 @@ class _MealPlanTimelineItemState extends State<_MealPlanTimelineItem>
                     ),
                     SizeTransition(
                       sizeFactor: _expandAnimation,
-                      axisAlignment: -1,
+                      alignment: Alignment.topCenter,
                       child: _MealPlanItemExpanded(
                         item: widget.item,
                         mealControllers: _mealControllers,
@@ -442,7 +444,8 @@ class _MealPlanItemHeader extends StatelessWidget {
             if (_totalCalories() > 0) ...[
               const SizedBox(height: 4),
               Row(children: [
-                Icon(Icons.local_fire_department_rounded, size: 12, color: subColor),
+                Icon(Icons.local_fire_department_rounded,
+                    size: 12, color: subColor),
                 const SizedBox(width: 5),
                 Text(
                   '${_totalCalories()} kcal total',
@@ -471,7 +474,9 @@ class _MealPlanItemHeader extends StatelessWidget {
     for (final m in item.meals) {
       final raw = (m['calories'] as String?)?.trim() ?? '';
       final parsed = int.tryParse(raw);
-      if (parsed != null) { total += parsed; }
+      if (parsed != null) {
+        total += parsed;
+      }
     }
     return total;
   }
@@ -495,7 +500,7 @@ class _DatePickerButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textColor = Neu.textPrimary(isDark);
-    final subColor  = Neu.textSecondary(isDark);
+    final subColor = Neu.textSecondary(isDark);
 
     return GestureDetector(
       onTap: () async {
@@ -588,7 +593,9 @@ class _MealPlanItemExpanded extends StatelessWidget {
     for (final m in item.meals) {
       final raw = (m['calories'] as String?)?.trim() ?? '';
       final parsed = int.tryParse(raw);
-      if (parsed != null) { total += parsed; }
+      if (parsed != null) {
+        total += parsed;
+      }
     }
     return total;
   }
@@ -596,8 +603,8 @@ class _MealPlanItemExpanded extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final subColor = Neu.textSecondary(isDark);
-    final accent   = Theme.of(context).colorScheme.primary;
-    final total    = _totalCalories();
+    final accent = Theme.of(context).colorScheme.primary;
+    final total = _totalCalories();
 
     return NeuContainer(
       isDark: isDark,
@@ -643,7 +650,8 @@ class _MealPlanItemExpanded extends StatelessWidget {
               calorieController: calorieControllers[item.meals[i]['id']]!,
               isDark: isDark,
               onChanged: (v) => onUpdateMeal(item.meals[i]['id'] as String, v),
-              onCaloriesChanged: (v) => onUpdateCalories(item.meals[i]['id'] as String, v),
+              onCaloriesChanged: (v) =>
+                  onUpdateCalories(item.meals[i]['id'] as String, v),
               onRemove: () => onRemoveMeal(item.meals[i]['id'] as String),
               showRemoveButton: item.meals.length > 1,
             ),
@@ -769,15 +777,15 @@ class _MealField extends StatelessWidget {
           width: 36,
           child: showRemoveButton
               ? Padding(
-            padding: const EdgeInsets.only(left: 8),
-            child: NeuIconButton(
-              isDark: isDark,
-              size: 36,
-              icon: Icon(Icons.close_rounded,
-                  size: 16, color: Colors.red.shade400),
-              onTap: onRemove,
-            ),
-          )
+                  padding: const EdgeInsets.only(left: 8),
+                  child: NeuIconButton(
+                    isDark: isDark,
+                    size: 36,
+                    icon: Icon(Icons.close_rounded,
+                        size: 16, color: Colors.red.shade400),
+                    onTap: onRemove,
+                  ),
+                )
               : const SizedBox.shrink(),
         ),
       ],
@@ -856,7 +864,7 @@ class _CalorieFieldState extends State<_CalorieField> {
           ),
           border: InputBorder.none,
           contentPadding:
-          const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+              const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
         ),
       ),
     );
@@ -921,11 +929,12 @@ class _HighlightedText extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (query.isEmpty) {
-      return Text(text, style: baseStyle, maxLines: maxLines, overflow: overflow);
+      return Text(text,
+          style: baseStyle, maxLines: maxLines, overflow: overflow);
     }
-    final lower  = text.toLowerCase();
+    final lower = text.toLowerCase();
     final qLower = query.toLowerCase();
-    final spans  = <TextSpan>[];
+    final spans = <TextSpan>[];
     int start = 0;
     while (start < text.length) {
       final idx = lower.indexOf(qLower, start);
@@ -970,22 +979,22 @@ class MealPlanItem {
   }) : meals = meals ?? _defaultMeals();
 
   static List<Map<String, dynamic>> _defaultMeals() => [
-    {'id': const Uuid().v4(), 'name': 'Breakfast', 'value': ''},
-    {'id': const Uuid().v4(), 'name': 'Lunch',     'value': ''},
-    {'id': const Uuid().v4(), 'name': 'Dinner',    'value': ''},
-    {'id': const Uuid().v4(), 'name': 'Snacks',    'value': ''},
-  ];
+        {'id': const Uuid().v4(), 'name': 'Breakfast', 'value': ''},
+        {'id': const Uuid().v4(), 'name': 'Lunch', 'value': ''},
+        {'id': const Uuid().v4(), 'name': 'Dinner', 'value': ''},
+        {'id': const Uuid().v4(), 'name': 'Snacks', 'value': ''},
+      ];
 
   Map<String, dynamic> toJson() => {'id': id, 'day': day, 'meals': meals};
 
   factory MealPlanItem.fromJson(Map<String, dynamic> json) => MealPlanItem(
-    id: json['id'] ?? const Uuid().v4(),
-    day: json['day'] ?? '',
-    meals: (json['meals'] as List?)
-        ?.map((m) => Map<String, dynamic>.from(m as Map))
-        .toList() ??
-        _defaultMeals(),
-  );
+        id: json['id'] ?? const Uuid().v4(),
+        day: json['day'] ?? '',
+        meals: (json['meals'] as List?)
+                ?.map((m) => Map<String, dynamic>.from(m as Map))
+                .toList() ??
+            _defaultMeals(),
+      );
 
   MealPlanItem copyWith({
     String? id,

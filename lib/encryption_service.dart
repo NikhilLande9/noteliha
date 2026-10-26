@@ -12,6 +12,8 @@
 //   6. rederiveKeyWithNewSalt() — re-derives key after Drive salt is fetched
 //      on reinstall, replacing the temporary local salt so all notes decrypt.
 //   7. verifyKey() — non-throwing key validation used before re-derivation.
+//   8. ANR FIX: PBKDF2 key derivation offloaded to a background isolate via
+//      compute() so the main thread (and UI) never blocks during unlock.
 //
 // USAGE
 // ─────
@@ -78,6 +80,21 @@ const _storage = FlutterSecureStorage(
   aOptions: AndroidOptions(encryptedSharedPreferences: true),
   iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
 );
+
+// ─── Isolate entry point for PBKDF2 ──────────────────────────────────────────
+//
+// compute() requires a top-level function. This receives (password, saltBase64)
+// as a two-element list and returns the raw 32-byte derived key.
+// It runs in a separate isolate so the main thread / UI never blocks.
+
+Uint8List _pbkdf2Isolate(List<String> args) {
+  final password = args[0];
+  final saltBase64 = args[1];
+  final salt = base64Url.decode(saltBase64);
+  final keyDeriver = PBKDF2KeyDerivator(HMac(SHA256Digest(), 64))
+    ..init(Pbkdf2Parameters(salt, _kPbkdf2Iterations, 32));
+  return keyDeriver.process(Uint8List.fromList(utf8.encode(password)));
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -468,22 +485,16 @@ class EncryptionService {
 
   /// Derive a 32-byte AES key from a master password using PBKDF2-SHA256.
   /// Returns the same key for the same password + salt combination.
+  ///
+  /// Runs in a background isolate via compute() to avoid blocking the main
+  /// thread — 100k PBKDF2 iterations take ~300–800ms on mobile and would
+  /// otherwise cause an ANR / frozen UI.
   static Future<enc.Key> _deriveKeyFromPassword(
       String password,
       String saltBase64,
       ) async {
     try {
-      final salt = base64Url.decode(saltBase64);
-
-      // PBKDF2-SHA256 derivation
-      // Using pointycastle's PBKDF2
-      final keyDeriver = PBKDF2KeyDerivator(HMac(SHA256Digest(), 64))
-        ..init(Pbkdf2Parameters(salt, _kPbkdf2Iterations, 32));
-
-      final derivedBytes = keyDeriver.process(
-        Uint8List.fromList(utf8.encode(password)),
-      );
-
+      final derivedBytes = await compute(_pbkdf2Isolate, [password, saltBase64]);
       return enc.Key(derivedBytes);
     } catch (e) {
       throw EncryptionKeyException('PBKDF2 key derivation failed: $e');

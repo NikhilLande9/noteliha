@@ -17,6 +17,7 @@ import 'notes_provider.dart';
 import 'touch_writing_canvas.dart';
 import 'language.dart';
 import 'widgets/image_viewer.dart';
+import 'package:flutter/rendering.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Note Editor Screen
@@ -1122,8 +1123,13 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
     setState(() => _editing.checklistItems.insert(index + 1, newItem));
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _focusForItem(newItem.id).requestFocus();
-      _scrollToKey(_keyFor(_checklistItemKeys, newItem.id),
-          controller: _checklistScrollCtrl);
+      if (_checklistScrollCtrl.hasClients) {
+        _checklistScrollCtrl.animateTo(
+          _checklistScrollCtrl.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 280),
+          curve: Curves.easeOut,
+        );
+      }
     });
   }
 
@@ -1258,8 +1264,13 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
             setState(() => _editing.checklistItems.add(newItem));
             WidgetsBinding.instance.addPostFrameCallback((_) {
               _focusForItem(newItem.id).requestFocus();
-              _scrollToKey(_keyFor(_checklistItemKeys, newItem.id),
-                  controller: _checklistScrollCtrl);
+              if (_checklistScrollCtrl.hasClients) {
+                _checklistScrollCtrl.animateTo(
+                  _checklistScrollCtrl.position.maxScrollExtent,
+                  duration: const Duration(milliseconds: 280),
+                  curve: Curves.easeOut,
+                );
+              }
             });
           },
         ),
@@ -1277,8 +1288,15 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
     onAddItem: () {
       final newItem = ItineraryItem(id: const Uuid().v4());
       setState(() => _editing.itineraryItems.add(newItem));
-      _scrollToKey(_keyFor(_itineraryItemKeys, newItem.id),
-          controller: _itineraryScrollCtrl);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_itineraryScrollCtrl.hasClients) {
+          _itineraryScrollCtrl.animateTo(
+            _itineraryScrollCtrl.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 280),
+            curve: Curves.easeOut,
+          );
+        }
+      });
     },
     onChanged: () => setState(() {}),
   );
@@ -1293,8 +1311,15 @@ class _NoteEditorScreenState extends State<NoteEditorScreen>
     onAddItem: () {
       final newItem = MealPlanItem(id: const Uuid().v4());
       setState(() => _editing.mealPlanItems.add(newItem));
-      _scrollToKey(_keyFor(_mealPlanItemKeys, newItem.id),
-          controller: _mealPlanScrollCtrl);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_mealPlanScrollCtrl.hasClients) {
+          _mealPlanScrollCtrl.animateTo(
+            _mealPlanScrollCtrl.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 280),
+            curve: Curves.easeOut,
+          );
+        }
+      });
     },
     onChanged: () => setState(() {}),
   );
@@ -2283,24 +2308,101 @@ class _RichTextFieldState extends State<_RichTextField> {
   }
 
   // Scrolls the TextField to make the character at [charOffset] visible.
-  // Estimates Y position from line count × line-height, then centres the
-  // matched line in the viewport using the attached ScrollController.
+  //
+  // Uses the actual RenderEditable caret rect so the position is correct
+  // regardless of line wrapping, system text-scale factor, or padding changes.
+  // Falls back to a TextPainter estimate only when the render tree is not yet
+  // attached (e.g. very first frame).
   void _scrollToMatch(int charOffset) {
     if (!_scrollCtrl.hasClients) return;
     final text = _richCtrl.text;
-    if (charOffset < 0 || charOffset >= text.length) return;
 
-    // Count newlines before the offset to determine the line number (0-based).
-    final linesBefore = text.substring(0, charOffset).split('\n').length - 1;
+    // ── 1. Try to get the real caret Y from the RenderEditable ────────────────
+    // Walk the render subtree of this widget to find the RenderEditable that
+    // Flutter's TextField owns internally.  getLocalRectForCaret() returns the
+    // caret rectangle in the RenderEditable's own coordinate space, which maps
+    // 1-to-1 with the ScrollController's scroll axis.
+    final caretY = _caretYFromRenderEditable(charOffset);
+    if (caretY != null) {
+      _animateToRevealY(caretY);
+      return;
+    }
 
-    // Line height matches _RichTextController._base: fontSize 15.5 × height 1.6
-    const lineHeight = 15.5 * 1.6;
-    const verticalPadding = 12.0; // contentPadding.vertical / 2
-    final estimatedY = verticalPadding + linesBefore * lineHeight;
+    // ── 2. Fallback: TextPainter with runtime metrics ─────────────────────────
+    // Used on the very first frame before the render tree is ready.
+    // Reads fontSize and textScaleFactor from the live MediaQuery so it stays
+    // accurate even when the user has changed their system font size.
+    if (charOffset < 0) return;
+    final clampedOffset = charOffset.clamp(0, text.length);
 
+    final textScaler = MediaQuery.textScalerOf(context);
+    final scaledFontSize = textScaler.scale(15.5);
+
+    // Measure actual wrapped-line count using TextPainter so line wrapping is
+    // accounted for (unlike a raw '\n' count).
+    final viewportWidth = _scrollCtrl.position.viewportDimension;
+    final painter = TextPainter(
+      text: TextSpan(
+        text: text.substring(0, clampedOffset),
+        style: TextStyle(fontSize: scaledFontSize, height: 1.6),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout(maxWidth: viewportWidth > 0 ? viewportWidth - 28 : double.infinity);
+    // 28 = horizontal contentPadding (14) × 2
+
+    final estimatedY = 12.0 + painter.height;
+    painter.dispose();
+    _animateToRevealY(estimatedY);
+  }
+
+  // Walk the render subtree to find Flutter's internal RenderEditable and
+  // return the caret's Y coordinate in scroll-axis space.
+  double? _caretYFromRenderEditable(int charOffset) {
+    RenderEditable? renderEditable;
+
+    void visitor(RenderObject obj) {
+      if (renderEditable != null) return;
+      if (obj is RenderEditable) {
+        renderEditable = obj;
+        return;
+      }
+      obj.visitChildren(visitor);
+    }
+
+    final rootRender = context.findRenderObject();
+    if (rootRender == null) return null;
+    visitor(rootRender);
+    if (renderEditable == null) return null;
+
+    final clampedOffset = charOffset.clamp(0, _richCtrl.text.length);
+    try {
+      final caretRect = renderEditable!.getLocalRectForCaret(
+        TextPosition(offset: clampedOffset),
+      );
+      // caretRect.top is in RenderEditable local coords, which equals the
+      // scroll offset space used by _scrollCtrl.
+      return caretRect.top;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  // Animate the scroll so that [caretY] (in content coordinates) ends up
+  // roughly centred in the visible viewport.  Uses a small top bias (1/3
+  // from the top) so the user can see text above the cursor too.
+  void _animateToRevealY(double caretY) {
+    if (!_scrollCtrl.hasClients) return;
     final maxScroll = _scrollCtrl.position.maxScrollExtent;
     final viewportHeight = _scrollCtrl.position.viewportDimension;
-    final target = (estimatedY - viewportHeight / 2).clamp(0.0, maxScroll);
+    // Position the caret at 40 % from the top of the viewport.
+    final target = (caretY - viewportHeight * 0.4).clamp(0.0, maxScroll);
+    // Skip the animation when the caret is already fully visible to avoid
+    // jittery micro-scrolls on every keystroke.
+    final currentScroll = _scrollCtrl.offset;
+    final caretVisible = caretY >= currentScroll &&
+        caretY <= currentScroll + viewportHeight - 24.0;
+    // 24 px bottom margin keeps the caret above the keyboard edge / toolbar.
+    if (caretVisible) return;
 
     _scrollCtrl.animateTo(
       target,
@@ -3807,6 +3909,15 @@ class _RecipeCardState extends State<_RecipeCard> {
       _unitCtrl[row.id] = TextEditingController();
       widget.onChanged();
     });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (widget.scrollController?.hasClients ?? false) {
+        widget.scrollController!.animateTo(
+          widget.scrollController!.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 280),
+          curve: Curves.easeOut,
+        );
+      }
+    });
   }
 
   void _removeIngredientRow(String id) {
@@ -3836,6 +3947,13 @@ class _RecipeCardState extends State<_RecipeCard> {
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _stepFocus[step.id]?.requestFocus();
+      if (widget.scrollController?.hasClients ?? false) {
+        widget.scrollController!.animateTo(
+          widget.scrollController!.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 280),
+          curve: Curves.easeOut,
+        );
+      }
     });
   }
 

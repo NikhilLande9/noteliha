@@ -60,49 +60,50 @@ class _ModernItineraryBuilderState extends State<ModernItineraryBuilder> {
           child: widget.items.isEmpty
               ? _buildEmptyState(isDark)
               : CustomScrollView(
-            controller: widget.scrollController,
-            slivers: [
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-                sliver: SliverList.builder(
-                  itemCount: widget.items.length,
-                  itemBuilder: (context, index) {
-                    final item = widget.items[index];
-                    final isLast = index == widget.items.length - 1;
-                    final isExpanded = _expandedItems[item.id] ?? false;
-                    final itemKey = widget.itemKeys.putIfAbsent(
-                        item.id, () => GlobalKey());
-                    final isActive = item.id == widget.activeItemId &&
-                        widget.searchQuery.isNotEmpty;
-                    return Container(
-                      key: itemKey,
-                      decoration: isActive
-                          ? BoxDecoration(
-                        color: const Color(0xFFFFD600).withAlpha(45),
-                        borderRadius: BorderRadius.circular(14),
-                      )
-                          : null,
-                      child: _ItineraryTimelineItem(
-                        key: ValueKey(item.id),
-                        item: item,
-                        index: index,
-                        isLast: isLast,
-                        isExpanded: isExpanded,
-                        isDark: isDark,
-                        searchQuery: widget.searchQuery,
-                        onToggleExpanded: () => _toggleExpanded(item.id),
-                        onDelete: () {
-                          widget.onDelete(index);
-                          setState(() => _expandedItems.remove(item.id));
+                  controller: widget.scrollController,
+                  slivers: [
+                    SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+                      sliver: SliverList.builder(
+                        itemCount: widget.items.length,
+                        itemBuilder: (context, index) {
+                          final item = widget.items[index];
+                          final isLast = index == widget.items.length - 1;
+                          final isExpanded = _expandedItems[item.id] ?? false;
+                          final itemKey = widget.itemKeys
+                              .putIfAbsent(item.id, () => GlobalKey());
+                          final isActive = item.id == widget.activeItemId &&
+                              widget.searchQuery.isNotEmpty;
+                          return Container(
+                            key: itemKey,
+                            decoration: isActive
+                                ? BoxDecoration(
+                                    color:
+                                        const Color(0xFFFFD600).withAlpha(45),
+                                    borderRadius: BorderRadius.circular(14),
+                                  )
+                                : null,
+                            child: _ItineraryTimelineItem(
+                              key: ValueKey(item.id),
+                              item: item,
+                              index: index,
+                              isLast: isLast,
+                              isExpanded: isExpanded,
+                              isDark: isDark,
+                              searchQuery: widget.searchQuery,
+                              onToggleExpanded: () => _toggleExpanded(item.id),
+                              onDelete: () {
+                                widget.onDelete(index);
+                                setState(() => _expandedItems.remove(item.id));
+                              },
+                              onChanged: widget.onChanged,
+                            ),
+                          );
                         },
-                        onChanged: widget.onChanged,
                       ),
-                    );
-                  },
+                    ),
+                  ],
                 ),
-              ),
-            ],
-          ),
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -200,7 +201,7 @@ class _ItineraryTimelineItemState extends State<_ItineraryTimelineItem>
     if (widget.isExpanded) _expandController.forward();
 
     _locationCtrl = TextEditingController(text: widget.item.location);
-    _notesCtrl    = TextEditingController(text: widget.item.notes);
+    _notesCtrl = TextEditingController(text: widget.item.notes);
   }
 
   @override
@@ -225,13 +226,13 @@ class _ItineraryTimelineItemState extends State<_ItineraryTimelineItem>
 
   void _notifyChanged() {
     widget.item.location = _locationCtrl.text;
-    widget.item.notes    = _notesCtrl.text;
+    widget.item.notes = _notesCtrl.text;
     widget.onChanged();
   }
 
   @override
   Widget build(BuildContext context) {
-    final isDark      = widget.isDark;
+    final isDark = widget.isDark;
     final accentColor = Theme.of(context).colorScheme.primary;
 
     return Column(
@@ -298,13 +299,13 @@ class _ItineraryTimelineItemState extends State<_ItineraryTimelineItem>
                     ),
                     SizeTransition(
                       sizeFactor: _expandAnimation,
-                      axisAlignment: -1,
+                      alignment: Alignment.topCenter,
                       child: _TimelineItemExpanded(
-                        item:         widget.item,
+                        item: widget.item,
                         locationCtrl: _locationCtrl,
-                        notesCtrl:    _notesCtrl,
-                        isDark:       isDark,
-                        onChanged:    _notifyChanged,
+                        notesCtrl: _notesCtrl,
+                        isDark: isDark,
+                        onChanged: _notifyChanged,
                       ),
                     ),
                   ],
@@ -343,7 +344,7 @@ class _TimelineItemHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textColor = Neu.textPrimary(isDark);
-    final subColor  = Neu.textSecondary(isDark);
+    final subColor = Neu.textSecondary(isDark);
 
     return NeuPressable(
       isDark: isDark,
@@ -357,7 +358,8 @@ class _TimelineItemHeader extends StatelessWidget {
             children: [
               Expanded(
                 child: _HighlightedText(
-                  text: item.location.isNotEmpty ? item.location : 'Destination',
+                  text:
+                      item.location.isNotEmpty ? item.location : 'Destination',
                   query: searchQuery,
                   baseStyle: TextStyle(
                     fontSize: 14,
@@ -388,8 +390,7 @@ class _TimelineItemHeader extends StatelessWidget {
             Row(children: [
               Icon(Icons.calendar_today_outlined, size: 12, color: subColor),
               const SizedBox(width: 5),
-              Text(item.date,
-                  style: TextStyle(fontSize: 12, color: subColor)),
+              Text(item.date, style: TextStyle(fontSize: 12, color: subColor)),
             ]),
           ],
           if (item.arrivalTime.isNotEmpty || item.departureTime.isNotEmpty) ...[
@@ -425,7 +426,7 @@ class _TimelineItemHeader extends StatelessWidget {
   }
 
   String _formatTimeRange() {
-    final a = item.arrivalTime.isNotEmpty   ? item.arrivalTime   : 'TBD';
+    final a = item.arrivalTime.isNotEmpty ? item.arrivalTime : 'TBD';
     final d = item.departureTime.isNotEmpty ? item.departureTime : 'TBD';
     return '$a → $d';
   }
@@ -445,25 +446,24 @@ class _TimelineItemHeader extends StatelessWidget {
       return TimeOfDay(hour: h, minute: m);
     }
 
-    final arrival   = parseTime(item.arrivalTime);
+    final arrival = parseTime(item.arrivalTime);
     final departure = parseTime(item.departureTime);
     if (arrival == null || departure == null) return null;
 
-    final arrMins = arrival.hour   * 60 + arrival.minute;
+    final arrMins = arrival.hour * 60 + arrival.minute;
     final depMins = departure.hour * 60 + departure.minute;
 
     // Handle overnight spans (e.g. 22:00 → 02:00 = 4 hrs)
-    final diff = depMins >= arrMins
-        ? depMins - arrMins
-        : (24 * 60 - arrMins) + depMins;
+    final diff =
+        depMins >= arrMins ? depMins - arrMins : (24 * 60 - arrMins) + depMins;
 
     if (diff <= 0) return null;
 
     final hrs = diff ~/ 60;
     final min = diff % 60;
 
-    if (hrs == 0)         return '$min min';
-    if (min == 0)         return '$hrs ${hrs == 1 ? 'hr' : 'hrs'}';
+    if (hrs == 0) return '$min min';
+    if (min == 0) return '$hrs ${hrs == 1 ? 'hr' : 'hrs'}';
     return '$hrs ${hrs == 1 ? 'hr' : 'hrs'} $min min';
   }
 }
@@ -520,7 +520,7 @@ class _TimelineItemExpandedState extends State<_TimelineItemExpanded> {
     if (picked != null && mounted) {
       setState(() {
         widget.item.date =
-        '${DateFormat('EEE').format(picked)}, ${DateFormat('MMM d').format(picked)}';
+            '${DateFormat('EEE').format(picked)}, ${DateFormat('MMM d').format(picked)}';
       });
       widget.onChanged();
     }
@@ -598,16 +598,14 @@ class _TimelineItemExpandedState extends State<_TimelineItemExpanded> {
           _PickerButton(
             isDark: isDark,
             icon: Icons.calendar_today_rounded,
-            label: widget.item.date.isNotEmpty
-                ? widget.item.date
-                : 'Pick date',
+            label: widget.item.date.isNotEmpty ? widget.item.date : 'Pick date',
             hasValue: widget.item.date.isNotEmpty,
             onTap: _pickDate,
             onClear: widget.item.date.isNotEmpty
                 ? () => setState(() {
-              widget.item.date = '';
-              widget.onChanged();
-            })
+                      widget.item.date = '';
+                      widget.onChanged();
+                    })
                 : null,
           ),
 
@@ -627,9 +625,9 @@ class _TimelineItemExpandedState extends State<_TimelineItemExpanded> {
                   onTap: _pickArrival,
                   onClear: widget.item.arrivalTime.isNotEmpty
                       ? () => setState(() {
-                    widget.item.arrivalTime = '';
-                    widget.onChanged();
-                  })
+                            widget.item.arrivalTime = '';
+                            widget.onChanged();
+                          })
                       : null,
                 ),
               ),
@@ -645,9 +643,9 @@ class _TimelineItemExpandedState extends State<_TimelineItemExpanded> {
                   onTap: _pickDeparture,
                   onClear: widget.item.departureTime.isNotEmpty
                       ? () => setState(() {
-                    widget.item.departureTime = '';
-                    widget.onChanged();
-                  })
+                            widget.item.departureTime = '';
+                            widget.onChanged();
+                          })
                       : null,
                 ),
               ),
@@ -695,9 +693,8 @@ class _PickerButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textColor = hasValue
-        ? Neu.textPrimary(isDark)
-        : Neu.textSecondary(isDark);
+    final textColor =
+        hasValue ? Neu.textPrimary(isDark) : Neu.textSecondary(isDark);
     final subColor = Neu.textSecondary(isDark);
 
     return GestureDetector(
@@ -716,8 +713,7 @@ class _PickerButton extends StatelessWidget {
                 label,
                 style: TextStyle(
                   fontSize: 13,
-                  fontWeight:
-                  hasValue ? FontWeight.w600 : FontWeight.w400,
+                  fontWeight: hasValue ? FontWeight.w600 : FontWeight.w400,
                   color: textColor,
                 ),
                 overflow: TextOverflow.ellipsis,
@@ -794,7 +790,8 @@ class _HighlightedText extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (query.isEmpty) {
-      return Text(text, style: baseStyle, maxLines: maxLines, overflow: overflow);
+      return Text(text,
+          style: baseStyle, maxLines: maxLines, overflow: overflow);
     }
     final lower = text.toLowerCase();
     final qLower = query.toLowerCase();
@@ -849,22 +846,22 @@ class ItineraryItem {
   });
 
   Map<String, dynamic> toJson() => {
-    'id': id,
-    'location': location,
-    'date': date,
-    'arrivalTime': arrivalTime,
-    'departureTime': departureTime,
-    'notes': notes,
-  };
+        'id': id,
+        'location': location,
+        'date': date,
+        'arrivalTime': arrivalTime,
+        'departureTime': departureTime,
+        'notes': notes,
+      };
 
   factory ItineraryItem.fromJson(Map<String, dynamic> json) => ItineraryItem(
-    id: json['id'] ?? const Uuid().v4(),
-    location: json['location'] ?? '',
-    date: json['date'] ?? '',
-    arrivalTime: json['arrivalTime'] ?? '',
-    departureTime: json['departureTime'] ?? '',
-    notes: json['notes'] ?? '',
-  );
+        id: json['id'] ?? const Uuid().v4(),
+        location: json['location'] ?? '',
+        date: json['date'] ?? '',
+        arrivalTime: json['arrivalTime'] ?? '',
+        departureTime: json['departureTime'] ?? '',
+        notes: json['notes'] ?? '',
+      );
 
   ItineraryItem copyWith({
     String? id,

@@ -11,7 +11,6 @@ import 'theme_helper.dart';
 import 'neu_theme.dart';
 import 'notes_provider.dart';
 import 'note_list_screen.dart';
-import 'encryption_service.dart';
 import 'language.dart';
 
 void main() async {
@@ -35,9 +34,6 @@ void main() async {
 
   await Hive.initFlutter();
   Hive.registerAdapter(NoteAdapter());
-
-  // Initialize encryption service
-  await EncryptionService.instance.init();
 
   // Load saved locale before runApp so translations are ready before any
   // widget calls AppTranslations.translate() — prevents raw keys showing up
